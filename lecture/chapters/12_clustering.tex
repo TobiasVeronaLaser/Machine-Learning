@@ -1,0 +1,1616 @@
+\chapter{Clustering}
+
+\section{Ziel dieses Kapitels}
+
+In den bisherigen Kapiteln haben wir hauptsächlich überwachte Lernverfahren (supervised learning) betrachtet.
+Dort gibt es Trainingsdaten mit Eingaben und Zielwerten:
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}.
+\]
+
+Beim Clustering ist die Situation anders.
+Wir haben nur Eingaben:
+
+\[
+    \mathcal{D}
+    =
+    \{\vec{x}_1,\dots,\vec{x}_N\}.
+\]
+
+Es gibt keine beobachteten Zielwerte \(t_n\).
+Das Ziel ist, Struktur in den Daten zu finden.
+
+\begin{conceptbox}
+Clustering ist ein unüberwachtes Lernverfahren (unsupervised learning).
+
+Das Ziel ist, Datenpunkte in Gruppen einzuteilen, sodass Punkte innerhalb einer Gruppe ähnlich sind und Punkte aus verschiedenen Gruppen möglichst unterschiedlich sind.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist Clustering?
+    \item Was ist der Unterschied zwischen Klassifikation und Clustering?
+    \item Was bedeutet Ähnlichkeit oder Distanz zwischen Datenpunkten?
+    \item Was ist \(k\)-means?
+    \item Wie funktioniert der \(k\)-means-Algorithmus?
+    \item Welche Zielfunktion minimiert \(k\)-means?
+    \item Warum besteht \(k\)-means aus einem Zuordnungsschritt und einem Aktualisierungsschritt?
+    \item Warum konvergiert \(k\)-means?
+    \item Warum hängt \(k\)-means von der Initialisierung ab?
+    \item Wie wählt man die Anzahl der Cluster \(K\)?
+    \item Was sind Elbow-Methode und Silhouette-Koeffizient?
+    \item Was sind hierarchisches Clustering und DBSCAN?
+    \item Welche Grenzen hat Clustering?
+\end{itemize}
+
+\section{Was ist Clustering?}
+
+Clustering bezeichnet Methoden, die Datenpunkte automatisch in Gruppen einteilen.
+Diese Gruppen nennt man Cluster.
+
+Gegeben seien Datenpunkte
+
+\[
+    \vec{x}_1,\dots,\vec{x}_N
+    \in
+    \mathbb{R}^D.
+\]
+
+Ein Clustering ordnet jedem Datenpunkt eine Clusterzugehörigkeit zu.
+Wenn es \(K\) Cluster gibt, dann ist die Zuordnung:
+
+\[
+    z_n \in \{1,\dots,K\}.
+\]
+
+Dabei bedeutet
+
+\[
+    z_n=k,
+\]
+
+dass der Datenpunkt \(\vec{x}_n\) zum Cluster \(k\) gehört.
+
+\begin{definitionbox}
+Ein Clustering ist eine Zuordnung
+
+\[
+    z_n \in \{1,\dots,K\}
+\]
+
+für jeden Datenpunkt \(\vec{x}_n\).
+
+Der Wert \(z_n\) gibt an, zu welchem Cluster der Datenpunkt gehört.
+\end{definitionbox}
+
+\begin{examplebox}
+Beispiele für Clustering:
+
+\begin{itemize}
+    \item Kundinnen und Kunden in Gruppen ähnlichen Kaufverhaltens einteilen.
+    \item Patientinnen und Patienten mit ähnlichen Messwerten gruppieren.
+    \item Bilder nach visueller Ähnlichkeit gruppieren.
+    \item Dokumente nach Themen gruppieren.
+    \item Messdaten in typische Zustände eines Systems aufteilen.
+\end{itemize}
+\end{examplebox}
+
+\section{Clustering versus Klassifikation}
+
+Clustering und Klassifikation wirken ähnlich, sind aber grundlegend verschieden.
+
+Bei Klassifikation (classification) gibt es Labels:
+
+\[
+    t_n \in \{1,\dots,K\}.
+\]
+
+Das Modell lernt aus Beispielen mit bekannten Klassen.
+
+Bei Clustering gibt es keine Labels.
+Das Modell muss Gruppen selbst finden.
+
+\begin{definitionbox}
+Klassifikation ist überwachtes Lernen (supervised learning):
+
+\[
+    (\vec{x}_n,t_n)
+\]
+
+sind gegeben.
+
+Clustering ist unüberwachtes Lernen (unsupervised learning):
+
+\[
+    \vec{x}_n
+\]
+
+sind gegeben, aber keine Labels \(t_n\).
+\end{definitionbox}
+
+\begin{conceptbox}
+Klassifikation beantwortet:
+
+\[
+    \text{Welche bekannte Klasse hat dieser Datenpunkt?}
+\]
+
+Clustering beantwortet:
+
+\[
+    \text{Welche Gruppenstruktur scheint in den Daten vorhanden zu sein?}
+\]
+\end{conceptbox}
+
+\section{Ähnlichkeit und Distanz}
+
+Clustering braucht eine Vorstellung davon, wann Datenpunkte ähnlich sind.
+Oft wird Ähnlichkeit über eine Distanz definiert.
+
+Für zwei Datenpunkte
+
+\[
+    \vec{x}_n,\vec{x}_m\in\mathbb{R}^D
+\]
+
+ist die euklidische Distanz:
+
+\[
+    d(\vec{x}_n,\vec{x}_m)
+    =
+    \|\vec{x}_n-\vec{x}_m\|.
+\]
+
+Ausgeschrieben:
+
+\[
+    \|\vec{x}_n-\vec{x}_m\|
+    =
+    \sqrt{
+        \sum_{j=1}^{D}
+        (x_{nj}-x_{mj})^2
+    }.
+\]
+
+Häufig verwendet man auch die quadrierte euklidische Distanz:
+
+\[
+    \|\vec{x}_n-\vec{x}_m\|^2
+    =
+    \sum_{j=1}^{D}
+    (x_{nj}-x_{mj})^2.
+\]
+
+\begin{definitionbox}
+Die euklidische Distanz zwischen zwei Datenpunkten ist:
+
+\[
+    d(\vec{x}_n,\vec{x}_m)
+    =
+    \sqrt{
+        \sum_{j=1}^{D}
+        (x_{nj}-x_{mj})^2
+    }.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Welche Distanz sinnvoll ist, hängt vom Problem ab.
+
+Für numerische Vektoren ist die euklidische Distanz häufig.
+Für Texte, Sequenzen oder kategoriale Daten können andere Ähnlichkeitsmaße sinnvoller sein.
+\end{notebox}
+
+\section{Feature-Skalierung}
+
+Clustering ist oft stark abhängig von der Skalierung der Merkmale.
+Wenn ein Merkmal sehr große Zahlenwerte hat, dominiert es die Distanz.
+
+\begin{examplebox}
+Angenommen, ein Datenpunkt enthält:
+
+\[
+    x_1 = \text{Alter in Jahren}
+\]
+
+und
+
+\[
+    x_2 = \text{Einkommen in Euro}.
+\]
+
+Dann kann das Einkommen numerisch viel größere Werte haben als das Alter.
+Ohne Skalierung wird die euklidische Distanz fast nur durch das Einkommen bestimmt.
+\end{examplebox}
+
+Eine Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei sind \(\mu_j\) und \(\sigma_j\) Mittelwert und Standardabweichung des Merkmals \(j\).
+
+\begin{examtipbox}
+Vor distanzbasiertem Clustering sollte man prüfen, ob die Merkmale sinnvoll skaliert sind.
+
+Bei unterschiedlichen Einheiten oder Größenordnungen ist Standardisierung oft notwendig.
+\end{examtipbox}
+
+\section{\(k\)-means: Grundidee}
+
+Der bekannteste Clustering-Algorithmus ist \(k\)-means.
+Dabei wird die Anzahl der Cluster \(K\) vorgegeben.
+
+Die Idee ist:
+Jeder Cluster wird durch einen Mittelpunkt beschrieben.
+Diese Mittelpunkte heißen Clusterzentren (cluster centers) oder Zentroiden (centroids).
+
+Wir schreiben die Zentren als
+
+\[
+    \vec{\mu}_1,\dots,\vec{\mu}_K
+    \in
+    \mathbb{R}^D.
+\]
+
+Jeder Datenpunkt wird dem nächstgelegenen Zentrum zugeordnet.
+
+\begin{definitionbox}
+Beim \(k\)-means-Clustering gibt es \(K\) Clusterzentren
+
+\[
+    \vec{\mu}_1,\dots,\vec{\mu}_K.
+\]
+
+Jeder Datenpunkt \(\vec{x}_n\) wird dem nächstgelegenen Zentrum zugeordnet.
+\end{definitionbox}
+
+\begin{conceptbox}
+\(k\)-means versucht, Cluster so zu finden, dass Datenpunkte möglichst nahe am Zentrum ihres Clusters liegen.
+\end{conceptbox}
+
+\section{Cluster-Zuordnungen}
+
+Für jeden Datenpunkt \(\vec{x}_n\) gibt es eine Zuordnung
+
+\[
+    z_n\in\{1,\dots,K\}.
+\]
+
+Wenn
+
+\[
+    z_n=k,
+\]
+
+dann gehört \(\vec{x}_n\) zu Cluster \(k\).
+
+Die Zuordnung bei gegebenen Zentren ist:
+
+\[
+    z_n
+    =
+    \arg\min_{k\in\{1,\dots,K\}}
+    \|\vec{x}_n-\vec{\mu}_k\|^2.
+\]
+
+\begin{definitionbox}
+Der Zuordnungsschritt bei \(k\)-means ist:
+
+\[
+    z_n
+    =
+    \arg\min_k
+    \|\vec{x}_n-\vec{\mu}_k\|^2.
+\]
+\end{definitionbox}
+
+Man kann statt der quadrierten Distanz auch die normale euklidische Distanz verwenden.
+Da die Wurzelfunktion monoton wachsend ist, ist das nächstgelegene Zentrum dasselbe:
+
+\[
+    \arg\min_k
+    \|\vec{x}_n-\vec{\mu}_k\|
+    =
+    \arg\min_k
+    \|\vec{x}_n-\vec{\mu}_k\|^2.
+\]
+
+\section{Zielfunktion von \(k\)-means}
+
+\(k\)-means minimiert die Summe der quadrierten Abstände jedes Datenpunkts zu seinem Clusterzentrum.
+
+\[
+    J
+    =
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\vec{\mu}_{z_n}\|^2.
+\]
+
+Diese Größe heißt innerhalb-Cluster-Quadratsumme (within-cluster sum of squares).
+
+\begin{definitionbox}
+Die \(k\)-means-Zielfunktion ist:
+
+\[
+    J(\{z_n\},\{\vec{\mu}_k\})
+    =
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\vec{\mu}_{z_n}\|^2.
+\]
+
+Dabei ist \(z_n\) die Clusterzuordnung von \(\vec{x}_n\).
+\end{definitionbox}
+
+Äquivalent kann man mit Indikatorvariablen schreiben:
+
+\[
+    r_{nk}
+    =
+    \begin{cases}
+        1, & z_n=k, \\
+        0, & z_n\neq k.
+    \end{cases}
+\]
+
+Dann ist:
+
+\[
+    J
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    r_{nk}
+    \|\vec{x}_n-\vec{\mu}_k\|^2.
+\]
+
+\begin{notebox}
+Für jeden Datenpunkt gilt:
+
+\[
+    \sum_{k=1}^{K} r_{nk}=1.
+\]
+
+Jeder Punkt gehört also genau zu einem Cluster.
+\end{notebox}
+
+\section{Der \(k\)-means-Algorithmus}
+
+Die Zielfunktion hängt von zwei Arten von Variablen ab:
+
+\begin{itemize}
+    \item Zuordnungen \(z_n\) oder \(r_{nk}\),
+    \item Clusterzentren \(\vec{\mu}_k\).
+\end{itemize}
+
+Wenn die Zentren fest sind, sind die optimalen Zuordnungen leicht zu bestimmen.
+Wenn die Zuordnungen fest sind, sind die optimalen Zentren leicht zu bestimmen.
+
+Der \(k\)-means-Algorithmus wechselt daher zwischen zwei Schritten:
+
+\begin{enumerate}
+    \item Zuordnungsschritt (assignment step),
+    \item Aktualisierungsschritt (update step).
+\end{enumerate}
+
+\begin{definitionbox}
+Der \(k\)-means-Algorithmus:
+
+\begin{enumerate}
+    \item Wähle initiale Zentren \(\vec{\mu}_1,\dots,\vec{\mu}_K\).
+    \item Ordne jeden Datenpunkt dem nächsten Zentrum zu:
+    \[
+        z_n
+        =
+        \arg\min_k
+        \|\vec{x}_n-\vec{\mu}_k\|^2.
+    \]
+    \item Aktualisiere jedes Zentrum als Mittelwert der zugeordneten Punkte:
+    \[
+        \vec{\mu}_k
+        =
+        \frac{1}{N_k}
+        \sum_{n:z_n=k}
+        \vec{x}_n.
+    \]
+    \item Wiederhole Schritt \(2\) und \(3\), bis sich die Zuordnungen oder Zentren nicht mehr ändern.
+\end{enumerate}
+\end{definitionbox}
+
+Dabei ist
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    r_{nk}
+\]
+
+die Anzahl der Punkte in Cluster \(k\).
+
+\section{Herleitung des Aktualisierungsschritts}
+
+Wir nehmen an, dass die Zuordnungen \(r_{nk}\) fest sind.
+Dann minimieren wir
+
+\[
+    J
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    r_{nk}
+    \|\vec{x}_n-\vec{\mu}_k\|^2
+\]
+
+nach den Zentren \(\vec{\mu}_k\).
+
+Für ein bestimmtes Cluster \(k\) betrachten wir nur die Terme, die \(\vec{\mu}_k\) enthalten:
+
+\[
+    J_k
+    =
+    \sum_{n=1}^{N}
+    r_{nk}
+    \|\vec{x}_n-\vec{\mu}_k\|^2.
+\]
+
+Wir leiten nach \(\vec{\mu}_k\) ab:
+
+\[
+    \frac{\partial J_k}{\partial \vec{\mu}_k}
+    =
+    \sum_{n=1}^{N}
+    r_{nk}
+    2(\vec{\mu}_k-\vec{x}_n).
+\]
+
+Setze gleich \(\vec{0}\):
+
+\[
+    \sum_{n=1}^{N}
+    r_{nk}
+    2(\vec{\mu}_k-\vec{x}_n)
+    =
+    \vec{0}.
+\]
+
+Teilen durch \(2\):
+
+\[
+    \sum_{n=1}^{N}
+    r_{nk}
+    (\vec{\mu}_k-\vec{x}_n)
+    =
+    \vec{0}.
+\]
+
+Ausmultiplizieren:
+
+\[
+    \left(
+        \sum_{n=1}^{N}
+        r_{nk}
+    \right)
+    \vec{\mu}_k
+    -
+    \sum_{n=1}^{N}
+    r_{nk}\vec{x}_n
+    =
+    \vec{0}.
+\]
+
+Also:
+
+\[
+    \left(
+        \sum_{n=1}^{N}
+        r_{nk}
+    \right)
+    \vec{\mu}_k
+    =
+    \sum_{n=1}^{N}
+    r_{nk}\vec{x}_n.
+\]
+
+Damit:
+
+\[
+    \vec{\mu}_k
+    =
+    \frac{
+        \sum_{n=1}^{N}
+        r_{nk}\vec{x}_n
+    }{
+        \sum_{n=1}^{N}
+        r_{nk}
+    }.
+\]
+
+Da
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    r_{nk},
+\]
+
+ist:
+
+\[
+    \vec{\mu}_k
+    =
+    \frac{1}{N_k}
+    \sum_{n:z_n=k}
+    \vec{x}_n.
+\]
+
+\begin{conceptbox}
+Das optimale Zentrum eines Clusters ist der Mittelwert aller Datenpunkte in diesem Cluster.
+\end{conceptbox}
+
+\section{Warum \(k\)-means konvergiert}
+
+In jedem Zuordnungsschritt wird jeder Punkt dem nächstgelegenen Zentrum zugeordnet.
+Dadurch kann die Zielfunktion \(J\) nicht steigen.
+
+In jedem Aktualisierungsschritt wird jedes Zentrum als Mittelwert seiner Punkte gesetzt.
+Das minimiert \(J\) für feste Zuordnungen.
+Auch dadurch kann \(J\) nicht steigen.
+
+Also gilt nach jeder Iteration:
+
+\[
+    J^{(\tau+1)}
+    \leq
+    J^{(\tau)}.
+\]
+
+Da
+
+\[
+    J \geq 0,
+\]
+
+kann \(J\) nicht unbegrenzt fallen.
+
+\begin{conceptbox}
+\(k\)-means konvergiert, weil die Zielfunktion in jedem Schritt nicht steigt und nach unten durch \(0\) beschränkt ist.
+\end{conceptbox}
+
+\begin{notebox}
+Konvergenz bedeutet hier:
+Der Algorithmus erreicht ein lokales Minimum oder einen festen Punkt.
+
+Es bedeutet nicht, dass immer das globale Minimum gefunden wird.
+\end{notebox}
+
+\section{Lokale Minima und Initialisierung}
+
+Die \(k\)-means-Zielfunktion ist nicht konvex in allen Variablen gemeinsam.
+Der Algorithmus kann daher in verschiedenen lokalen Minima landen.
+
+Das Ergebnis hängt stark von der Initialisierung der Zentren ab.
+
+\begin{examplebox}
+Wenn zwei initiale Zentren zufällig sehr nahe beieinander liegen, können sie anfangs denselben Bereich der Daten erklären.
+Ein anderer Bereich bekommt dann vielleicht kein gutes Zentrum.
+Das kann zu einem schlechteren lokalen Minimum führen.
+\end{examplebox}
+
+\begin{conceptbox}
+\(k\)-means sollte oft mehrfach mit verschiedenen Initialisierungen gestartet werden.
+
+Dann wählt man die Lösung mit dem kleinsten Wert der Zielfunktion \(J\).
+\end{conceptbox}
+
+\section{\(k\)-means++}
+
+Eine bessere Initialisierungsmethode ist \(k\)-means++.
+
+Die Idee:
+Zentren sollen nicht nur zufällig gewählt werden, sondern möglichst gut über den Datensatz verteilt sein.
+
+Vereinfacht:
+
+\begin{enumerate}
+    \item Wähle das erste Zentrum zufällig aus den Datenpunkten.
+    \item Für jeden Datenpunkt berechne die Distanz zum nächsten bereits gewählten Zentrum.
+    \item Wähle das nächste Zentrum mit Wahrscheinlichkeit proportional zur quadrierten Distanz.
+    \item Wiederhole, bis \(K\) Zentren gewählt sind.
+\end{enumerate}
+
+\begin{conceptbox}
+\(k\)-means++ wählt initiale Zentren tendenziell weit voneinander entfernt.
+
+Dadurch startet \(k\)-means oft in einer besseren Ausgangslage.
+\end{conceptbox}
+
+\section{Leere Cluster}
+
+Während des \(k\)-means-Algorithmus kann es passieren, dass einem Cluster kein Datenpunkt zugeordnet wird.
+Dann ist
+
+\[
+    N_k=0.
+\]
+
+Die Aktualisierung
+
+\[
+    \vec{\mu}_k
+    =
+    \frac{1}{N_k}
+    \sum_{n:z_n=k}
+    \vec{x}_n
+\]
+
+ist dann nicht definiert.
+
+\begin{notebox}
+Leere Cluster müssen speziell behandelt werden.
+
+Mögliche Strategien:
+
+\begin{itemize}
+    \item Zentrum zufällig neu initialisieren.
+    \item Zentrum auf einen weit entfernten Datenpunkt setzen.
+    \item Cluster entfernen, falls weniger als \(K\) Cluster erlaubt sind.
+\end{itemize}
+\end{notebox}
+
+\section{Wahl der Clusterzahl \(K\)}
+
+Bei \(k\)-means muss \(K\) vorgegeben werden.
+Das ist oft schwierig.
+
+Wenn \(K\) zu klein ist, werden unterschiedliche Gruppen zusammengelegt.
+Wenn \(K\) zu groß ist, werden natürliche Gruppen künstlich aufgeteilt.
+
+\begin{conceptbox}
+Die Wahl von \(K\) ist ein Modellselektionsproblem.
+
+Es gibt selten eine eindeutig richtige Clusterzahl.
+Die sinnvolle Wahl hängt von Daten, Ziel und Interpretation ab.
+\end{conceptbox}
+
+\section{Elbow-Methode}
+
+Die Elbow-Methode betrachtet die \(k\)-means-Zielfunktion als Funktion von \(K\).
+
+Für jedes \(K\) berechnet man:
+
+\[
+    J_K
+    =
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\vec{\mu}_{z_n}\|^2.
+\]
+
+Wenn \(K\) größer wird, kann \(J_K\) nur sinken oder gleich bleiben.
+Mehr Cluster können die Daten immer mindestens genauso gut erklären.
+
+Man zeichnet \(J_K\) gegen \(K\).
+Oft sucht man nach einem Knickpunkt, dem sogenannten Ellenbogen.
+
+\begin{definitionbox}
+Die Elbow-Methode wählt \(K\) anhand eines Knickpunkts in der Kurve
+
+\[
+    K
+    \longmapsto
+    J_K.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Die Elbow-Methode ist heuristisch.
+
+Manchmal gibt es keinen klaren Knick.
+Dann ist die Wahl von \(K\) nicht eindeutig.
+\end{notebox}
+
+\section{Silhouette-Koeffizient}
+
+Der Silhouette-Koeffizient misst, wie gut ein Datenpunkt zu seinem eigenen Cluster passt im Vergleich zu anderen Clustern.
+
+Für einen Datenpunkt \(\vec{x}_n\):
+
+\begin{itemize}
+    \item \(a_n\): durchschnittliche Distanz zu Punkten im eigenen Cluster,
+    \item \(b_n\): kleinste durchschnittliche Distanz zu Punkten in einem anderen Cluster.
+\end{itemize}
+
+Der Silhouette-Wert ist:
+
+\[
+    s_n
+    =
+    \frac{b_n-a_n}{\max(a_n,b_n)}.
+\]
+
+Es gilt:
+
+\[
+    -1 \leq s_n \leq 1.
+\]
+
+\begin{definitionbox}
+Der Silhouette-Koeffizient eines Datenpunkts ist:
+
+\[
+    s_n
+    =
+    \frac{b_n-a_n}{\max(a_n,b_n)}.
+\]
+
+Dabei misst \(a_n\) die Nähe zum eigenen Cluster und \(b_n\) die Nähe zum nächsten anderen Cluster.
+\end{definitionbox}
+
+Interpretation:
+
+\begin{itemize}
+    \item \(s_n\approx 1\): Punkt passt gut zum eigenen Cluster.
+    \item \(s_n\approx 0\): Punkt liegt zwischen Clustern.
+    \item \(s_n<0\): Punkt passt besser zu einem anderen Cluster.
+\end{itemize}
+
+Der mittlere Silhouette-Wert ist:
+
+\[
+    s
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    s_n.
+\]
+
+\begin{notebox}
+Der Silhouette-Koeffizient kann helfen, \(K\) zu wählen.
+Aber auch er ist nur ein internes Qualitätsmaß und ersetzt keine fachliche Interpretation.
+\end{notebox}
+
+\section{Grenzen von \(k\)-means}
+
+\(k\)-means ist einfach und effizient, hat aber wichtige Einschränkungen.
+
+\subsection{Sphärische Cluster}
+
+\(k\)-means funktioniert besonders gut, wenn Cluster ungefähr kugelförmig sind und ähnliche Größe haben.
+
+Das liegt an der euklidischen Distanz zu Zentren.
+
+\subsection{Empfindlichkeit gegenüber Ausreißern}
+
+Da Mittelwerte verwendet werden, können Ausreißer die Zentren stark verschieben.
+
+\subsection{Feste Clusterzahl}
+
+Die Anzahl \(K\) muss vorher festgelegt werden.
+
+\subsection{Harte Zuordnungen}
+
+Jeder Punkt gehört genau zu einem Cluster.
+Unsicherheit wird nicht modelliert.
+
+\subsection{Skalierung}
+
+Unterschiedliche Merkmalsskalen können das Ergebnis stark verzerren.
+
+\begin{examtipbox}
+Typische Grenzen von \(k\)-means:
+
+\begin{itemize}
+    \item \(K\) muss vorgegeben werden.
+    \item Ergebnis hängt von Initialisierung ab.
+    \item Cluster sollten ungefähr konvex und kugelförmig sein.
+    \item Ausreißer können starke Effekte haben.
+    \item Feature-Skalierung ist wichtig.
+    \item Es gibt keine probabilistische Unsicherheit der Zuordnung.
+\end{itemize}
+\end{examtipbox}
+
+\section{Harte und weiche Clusterzuordnung}
+
+Bei \(k\)-means ist die Zuordnung hart:
+
+\[
+    r_{nk}\in\{0,1\}.
+\]
+
+Ein Datenpunkt gehört genau zu einem Cluster.
+
+Bei weichem Clustering (soft clustering) kann ein Punkt teilweise mehreren Clustern zugeordnet sein.
+Dann sind die Verantwortlichkeiten (responsibilities):
+
+\[
+    r_{nk}\in[0,1],
+\]
+
+mit
+
+\[
+    \sum_{k=1}^{K}
+    r_{nk}
+    =
+    1.
+\]
+
+\begin{definitionbox}
+Hartes Clustering (hard clustering) ordnet jeden Punkt genau einem Cluster zu.
+
+Weiches Clustering (soft clustering) ordnet jedem Punkt Wahrscheinlichkeiten oder Verantwortlichkeiten für mehrere Cluster zu.
+\end{definitionbox}
+
+\begin{conceptbox}
+Gaussian Mixture Models verwenden weiche Clusterzuordnungen.
+
+\(k\)-means kann als harte und vereinfachte Variante einer Mischungsidee verstanden werden.
+\end{conceptbox}
+
+\section{Hierarchisches Clustering}
+
+Hierarchisches Clustering erzeugt nicht nur eine einzelne Clusterlösung, sondern eine Hierarchie von Clustern.
+
+Es gibt zwei Haupttypen:
+
+\begin{itemize}
+    \item agglomeratives Clustering (agglomerative clustering),
+    \item divisives Clustering (divisive clustering).
+\end{itemize}
+
+Beim agglomerativen Clustering startet jeder Datenpunkt als eigener Cluster.
+Dann werden schrittweise die ähnlichsten Cluster zusammengeführt.
+
+Beim divisiven Clustering startet man mit einem großen Cluster und teilt ihn schrittweise auf.
+
+\begin{definitionbox}
+Hierarchisches Clustering erzeugt eine verschachtelte Struktur von Clustern.
+
+Diese Struktur kann als Dendrogramm dargestellt werden.
+\end{definitionbox}
+
+\section{Agglomeratives Clustering}
+
+Agglomeratives Clustering läuft so ab:
+
+\begin{enumerate}
+    \item Jeder Datenpunkt ist zunächst ein eigener Cluster.
+    \item Berechne Distanzen zwischen Clustern.
+    \item Führe die zwei ähnlichsten Cluster zusammen.
+    \item Aktualisiere die Distanzen.
+    \item Wiederhole, bis nur noch ein Cluster übrig ist.
+\end{enumerate}
+
+\begin{conceptbox}
+Agglomeratives Clustering baut eine Clusterhierarchie von unten nach oben auf.
+
+\[
+    N \text{ einzelne Cluster}
+    \quad
+    \longrightarrow
+    \quad
+    1 \text{ großer Cluster}.
+\]
+\end{conceptbox}
+
+\section{Linkage-Kriterien}
+
+Beim hierarchischen Clustering muss definiert werden, wie die Distanz zwischen zwei Clustern gemessen wird.
+Das nennt man Linkage-Kriterium.
+
+Seien \(A\) und \(B\) zwei Cluster.
+
+\subsection{Single Linkage}
+
+\[
+    d_{\mathrm{single}}(A,B)
+    =
+    \min_{\vec{x}\in A,\vec{x}'\in B}
+    d(\vec{x},\vec{x}').
+\]
+
+Single Linkage verwendet den kleinsten Abstand zwischen Punkten der beiden Cluster.
+
+\subsection{Complete Linkage}
+
+\[
+    d_{\mathrm{complete}}(A,B)
+    =
+    \max_{\vec{x}\in A,\vec{x}'\in B}
+    d(\vec{x},\vec{x}').
+\]
+
+Complete Linkage verwendet den größten Abstand.
+
+\subsection{Average Linkage}
+
+\[
+    d_{\mathrm{average}}(A,B)
+    =
+    \frac{1}{|A||B|}
+    \sum_{\vec{x}\in A}
+    \sum_{\vec{x}'\in B}
+    d(\vec{x},\vec{x}').
+\]
+
+Average Linkage verwendet den durchschnittlichen Abstand.
+
+\subsection{Ward-Linkage}
+
+Ward-Linkage führt diejenigen Cluster zusammen, bei denen die Zunahme der innerhalb-Cluster-Quadratsumme am kleinsten ist.
+
+\begin{definitionbox}
+Ein Linkage-Kriterium definiert die Distanz zwischen Clustern.
+
+Es bestimmt, welche Cluster beim hierarchischen Clustering zusammengeführt werden.
+\end{definitionbox}
+
+\begin{notebox}
+Unterschiedliche Linkage-Kriterien können sehr unterschiedliche Clusterstrukturen ergeben.
+\end{notebox}
+
+\section{Dendrogramm}
+
+Ein Dendrogramm ist eine Baumdarstellung der Clusterhierarchie.
+Die Blätter sind einzelne Datenpunkte.
+Innere Knoten entsprechen Zusammenführungen von Clustern.
+
+Die Höhe einer Zusammenführung zeigt typischerweise die Distanz, bei der die Cluster zusammengeführt wurden.
+
+\begin{conceptbox}
+Ein Dendrogramm erlaubt, die Anzahl der Cluster nachträglich zu wählen.
+
+Man schneidet den Baum auf einer bestimmten Höhe.
+\end{conceptbox}
+
+Wenn man das Dendrogramm hoch schneidet, erhält man wenige große Cluster.
+Wenn man es niedrig schneidet, erhält man viele kleine Cluster.
+
+\section{DBSCAN}
+
+DBSCAN steht für Density-Based Spatial Clustering of Applications with Noise.
+Es ist ein dichtebasiertes Clustering-Verfahren.
+
+Die Idee:
+Cluster sind Bereiche hoher Punktdichte, getrennt durch Bereiche niedriger Punktdichte.
+
+DBSCAN benötigt zwei wichtige Hyperparameter:
+
+\[
+    \varepsilon
+\]
+
+und
+
+\[
+    \mathrm{MinPts}.
+\]
+
+\begin{definitionbox}
+DBSCAN definiert Cluster als zusammenhängende Regionen hoher Dichte.
+
+Punkte in dünn besetzten Regionen können als Rauschen oder Ausreißer markiert werden.
+\end{definitionbox}
+
+\section{Kernpunkte, Randpunkte und Rauschen}
+
+Für einen Punkt \(\vec{x}_n\) betrachtet man seine \(\varepsilon\)-Nachbarschaft:
+
+\[
+    \mathcal{N}_{\varepsilon}(\vec{x}_n)
+    =
+    \{\vec{x}_m : d(\vec{x}_n,\vec{x}_m)\leq \varepsilon\}.
+\]
+
+Ein Kernpunkt (core point) ist ein Punkt, dessen \(\varepsilon\)-Nachbarschaft mindestens \(\mathrm{MinPts}\) Punkte enthält.
+
+\[
+    |\mathcal{N}_{\varepsilon}(\vec{x}_n)|
+    \geq
+    \mathrm{MinPts}.
+\]
+
+Ein Randpunkt (border point) ist kein Kernpunkt, liegt aber in der Nachbarschaft eines Kernpunkts.
+
+Ein Rauschpunkt (noise point) ist weder Kernpunkt noch Randpunkt.
+
+\begin{definitionbox}
+DBSCAN unterscheidet:
+
+\begin{itemize}
+    \item Kernpunkte (core points),
+    \item Randpunkte (border points),
+    \item Rauschpunkte (noise points).
+\end{itemize}
+\end{definitionbox}
+
+\section{Eigenschaften von DBSCAN}
+
+DBSCAN hat andere Eigenschaften als \(k\)-means.
+
+\begin{itemize}
+    \item Die Anzahl der Cluster muss nicht vorgegeben werden.
+    \item Cluster können nicht-kugelförmig sein.
+    \item Ausreißer können als Rauschen erkannt werden.
+    \item Die Wahl von \(\varepsilon\) und \(\mathrm{MinPts}\) ist wichtig.
+    \item DBSCAN hat Probleme, wenn Cluster sehr unterschiedliche Dichten haben.
+\end{itemize}
+
+\begin{conceptbox}
+DBSCAN ist besonders nützlich, wenn Cluster unregelmäßige Formen haben und Ausreißer erkannt werden sollen.
+\end{conceptbox}
+
+\section{Vergleich wichtiger Clustering-Methoden}
+
+\[
+\begin{array}{c|c|c|c}
+\text{Methode}
+&
+\text{Clusterform}
+&
+\text{Braucht } K?
+&
+\text{Ausreißer}
+\\
+\hline
+k\text{-means}
+&
+\text{kugelförmig}
+&
+\text{ja}
+&
+\text{empfindlich}
+\\
+\hline
+\text{Hierarchisch}
+&
+\text{abhängig von Linkage}
+&
+\text{nicht direkt}
+&
+\text{abhängig von Methode}
+\\
+\hline
+\text{DBSCAN}
+&
+\text{beliebiger}
+&
+\text{nein}
+&
+\text{kann Rauschen erkennen}
+\end{array}
+\]
+
+\begin{notebox}
+Es gibt nicht den einen besten Clustering-Algorithmus.
+
+Die passende Methode hängt von Datenstruktur, Ziel und gewünschter Interpretation ab.
+\end{notebox}
+
+\section{Clustering und probabilistische Modelle}
+
+\(k\)-means ordnet Punkte hart zu Clustern zu.
+Eine probabilistische Alternative sind Mischmodelle (mixture models).
+
+Ein Gaussian Mixture Model nimmt an, dass Daten aus einer Mischung von Normalverteilungen entstehen:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+Dabei ist:
+
+\begin{itemize}
+    \item \(\pi_k\) das Mischgewicht von Komponente \(k\),
+    \item \(\vec{\mu}_k\) der Mittelwert,
+    \item \(\Sigma_k\) die Kovarianzmatrix.
+\end{itemize}
+
+\begin{conceptbox}
+Gaussian Mixture Models verallgemeinern \(k\)-means:
+
+\begin{itemize}
+    \item weiche Zuordnungen statt harte Zuordnungen,
+    \item ellipsenförmige Cluster statt nur kugelförmige Cluster,
+    \item probabilistische Interpretation.
+\end{itemize}
+\end{conceptbox}
+
+Gaussian Mixture Models werden typischerweise mit dem EM-Algorithmus trainiert.
+Das wird in den nächsten Kapiteln behandelt.
+
+\section{Evaluation von Clustering}
+
+Clustering ist schwer zu evaluieren, weil keine Labels vorhanden sind.
+Man unterscheidet interne und externe Maße.
+
+\subsection{Interne Maße}
+
+Interne Maße verwenden nur die Daten und das Clustering.
+Beispiele:
+
+\begin{itemize}
+    \item \(k\)-means-Zielfunktion \(J\),
+    \item Silhouette-Koeffizient,
+    \item innerhalb-Cluster-Distanzen,
+    \item zwischen-Cluster-Distanzen.
+\end{itemize}
+
+\subsection{Externe Maße}
+
+Externe Maße verwenden bekannte Labels, falls sie für Evaluation verfügbar sind.
+Dann kann man Clustering mit echten Klassen vergleichen.
+
+Beispiele:
+
+\begin{itemize}
+    \item Adjusted Rand Index,
+    \item Normalized Mutual Information,
+    \item Purity.
+\end{itemize}
+
+\begin{notebox}
+Wenn echte Labels vorhanden sind, ist die Aufgabe nicht mehr rein unüberwacht.
+Man kann Labels aber verwenden, um ein Clustering nachträglich zu bewerten.
+\end{notebox}
+
+\section{Interpretation von Clustern}
+
+Ein Clustering-Algorithmus findet immer irgendeine Struktur.
+Das bedeutet nicht automatisch, dass diese Struktur fachlich sinnvoll ist.
+
+\begin{conceptbox}
+Cluster müssen interpretiert werden.
+
+Ein mathematisch gutes Clustering ist nicht automatisch ein fachlich sinnvolles Clustering.
+\end{conceptbox}
+
+Wichtige Fragen:
+
+\begin{itemize}
+    \item Sind die Cluster stabil gegenüber kleinen Änderungen der Daten?
+    \item Haben die Cluster eine fachliche Bedeutung?
+    \item Entstehen die Cluster nur durch Skalierung oder Vorverarbeitung?
+    \item Sind Ausreißer verantwortlich für die Clusterstruktur?
+    \item Ist die gewählte Distanz sinnvoll?
+\end{itemize}
+
+\section{Clustering-Workflow}
+
+Ein typischer Clustering-Workflow ist:
+
+\begin{enumerate}
+    \item Daten verstehen.
+    \item Fehlende Werte behandeln.
+    \item Merkmale sinnvoll auswählen.
+    \item Merkmale skalieren oder standardisieren.
+    \item Distanzmaß wählen.
+    \item Clustering-Methode wählen.
+    \item Hyperparameter wählen.
+    \item Clustering durchführen.
+    \item Cluster visualisieren.
+    \item Cluster fachlich interpretieren.
+    \item Stabilität prüfen.
+\end{enumerate}
+
+\begin{examtipbox}
+Bei Clustering ist Vorverarbeitung besonders wichtig.
+
+Da es keine Labels gibt, kann ein Algorithmus nicht wissen, welche Merkmale fachlich relevant sind.
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Nächstes Zentrum}
+
+Gegeben seien zwei Clusterzentren:
+
+\[
+    \vec{\mu}_1
+    =
+    \begin{pmatrix}
+        0 \\
+        0
+    \end{pmatrix},
+    \qquad
+    \vec{\mu}_2
+    =
+    \begin{pmatrix}
+        4 \\
+        0
+    \end{pmatrix}.
+\]
+
+Ein Datenpunkt sei:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        0
+    \end{pmatrix}.
+\]
+
+Welchem Zentrum wird \(\vec{x}\) bei \(k\)-means zugeordnet?
+
+\begin{examplebox}
+Distanz zu \(\vec{\mu}_1\):
+
+\[
+    \|\vec{x}-\vec{\mu}_1\|^2
+    =
+    \left\|
+    \begin{pmatrix}
+        1 \\
+        0
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        0 \\
+        0
+    \end{pmatrix}
+    \right\|^2
+    =
+    1^2+0^2
+    =
+    1.
+\]
+
+Distanz zu \(\vec{\mu}_2\):
+
+\[
+    \|\vec{x}-\vec{\mu}_2\|^2
+    =
+    \left\|
+    \begin{pmatrix}
+        1 \\
+        0
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        4 \\
+        0
+    \end{pmatrix}
+    \right\|^2
+    =
+    (-3)^2+0^2
+    =
+    9.
+\]
+
+Da
+
+\[
+    1<9,
+\]
+
+wird \(\vec{x}\) Cluster \(1\) zugeordnet.
+\end{examplebox}
+
+\subsection{Aufgabe 2: Zentrum aktualisieren}
+
+Ein Cluster enthält die Punkte:
+
+\[
+    \vec{x}_1
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix},
+    \qquad
+    \vec{x}_2
+    =
+    \begin{pmatrix}
+        3 \\
+        4
+    \end{pmatrix}.
+\]
+
+Berechne das neue \(k\)-means-Zentrum.
+
+\begin{examplebox}
+Das Zentrum ist der Mittelwert:
+
+\[
+    \vec{\mu}
+    =
+    \frac{1}{2}
+    \left(
+        \vec{x}_1+\vec{x}_2
+    \right).
+\]
+
+Also:
+
+\[
+    \vec{\mu}
+    =
+    \frac{1}{2}
+    \left[
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}
+    +
+    \begin{pmatrix}
+        3 \\
+        4
+    \end{pmatrix}
+    \right].
+\]
+
+Damit:
+
+\[
+    \vec{\mu}
+    =
+    \frac{1}{2}
+    \begin{pmatrix}
+        4 \\
+        6
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        2 \\
+        3
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: \(k\)-means-Zielfunktion}
+
+Gegeben seien zwei Punkte und ihr Clusterzentrum:
+
+\[
+    \vec{x}_1
+    =
+    \begin{pmatrix}
+        1 \\
+        0
+    \end{pmatrix},
+    \qquad
+    \vec{x}_2
+    =
+    \begin{pmatrix}
+        3 \\
+        0
+    \end{pmatrix},
+\]
+
+\[
+    \vec{\mu}
+    =
+    \begin{pmatrix}
+        2 \\
+        0
+    \end{pmatrix}.
+\]
+
+Berechne die innerhalb-Cluster-Quadratsumme für diesen Cluster.
+
+\begin{examplebox}
+Für den ersten Punkt:
+
+\[
+    \|\vec{x}_1-\vec{\mu}\|^2
+    =
+    \left\|
+    \begin{pmatrix}
+        1 \\
+        0
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        2 \\
+        0
+    \end{pmatrix}
+    \right\|^2
+    =
+    (-1)^2+0^2
+    =
+    1.
+\]
+
+Für den zweiten Punkt:
+
+\[
+    \|\vec{x}_2-\vec{\mu}\|^2
+    =
+    \left\|
+    \begin{pmatrix}
+        3 \\
+        0
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        2 \\
+        0
+    \end{pmatrix}
+    \right\|^2
+    =
+    1^2+0^2
+    =
+    1.
+\]
+
+Also:
+
+\[
+    J
+    =
+    1+1
+    =
+    2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Silhouette-Wert}
+
+Für einen Datenpunkt sei:
+
+\[
+    a_n=2,
+    \qquad
+    b_n=5.
+\]
+
+Berechne den Silhouette-Wert.
+
+\begin{examplebox}
+Der Silhouette-Wert ist:
+
+\[
+    s_n
+    =
+    \frac{b_n-a_n}{\max(a_n,b_n)}.
+\]
+
+Einsetzen:
+
+\[
+    s_n
+    =
+    \frac{5-2}{\max(2,5)}
+    =
+    \frac{3}{5}
+    =
+    0{,}6.
+\]
+
+Der Wert ist positiv und relativ hoch.
+Der Punkt passt also eher gut zum eigenen Cluster.
+\end{examplebox}
+
+\subsection{Aufgabe 5: Hartes oder weiches Clustering}
+
+Bei einem Verfahren gilt für einen Datenpunkt:
+
+\[
+    r_{n1}=0{,}2,
+    \qquad
+    r_{n2}=0{,}7,
+    \qquad
+    r_{n3}=0{,}1.
+\]
+
+Ist das hartes oder weiches Clustering?
+
+\begin{examplebox}
+Da die Zugehörigkeiten Werte zwischen \(0\) und \(1\) annehmen und sich zu
+
+\[
+    0{,}2+0{,}7+0{,}1=1
+\]
+
+summieren, handelt es sich um weiches Clustering.
+
+Bei hartem Clustering wäre genau ein Wert \(1\) und alle anderen \(0\).
+\end{examplebox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Clustering:
+
+\begin{enumerate}
+    \item Clustering mit Klassifikation verwechseln.
+    \item Labels erwarten, obwohl Clustering unüberwacht ist.
+    \item Feature-Skalierung ignorieren.
+    \item \(K\) bei \(k\)-means ohne Prüfung festlegen.
+    \item Das globale Optimum von \(k\)-means erwarten.
+    \item Nur eine Initialisierung verwenden.
+    \item Nicht erkennen, dass \(k\)-means kugelförmige Cluster bevorzugt.
+    \item Ausreißer ignorieren.
+    \item Interne Metriken wie Silhouette als absolute Wahrheit interpretieren.
+    \item Cluster automatisch als fachlich bedeutsam ansehen.
+    \item PCA-Visualisierung als vollständige Clusterstruktur missverstehen.
+    \item Dichtebasierte und zentroidbasierte Methoden verwechseln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Clustering ist unüberwachtes Lernen.
+    \item Ziel ist, Datenpunkte in Gruppen ähnlicher Punkte einzuteilen.
+    \item Bei \(k\)-means wird die Anzahl der Cluster \(K\) vorgegeben.
+    \item Jeder Cluster wird durch ein Zentrum \(\vec{\mu}_k\) beschrieben.
+    \item Der Zuordnungsschritt ist:
+    \[
+        z_n
+        =
+        \arg\min_k
+        \|\vec{x}_n-\vec{\mu}_k\|^2.
+    \]
+    \item Die \(k\)-means-Zielfunktion ist:
+    \[
+        J
+        =
+        \sum_{n=1}^{N}
+        \|\vec{x}_n-\vec{\mu}_{z_n}\|^2.
+    \]
+    \item Das optimale Zentrum eines Clusters ist der Mittelwert seiner Punkte:
+    \[
+        \vec{\mu}_k
+        =
+        \frac{1}{N_k}
+        \sum_{n:z_n=k}
+        \vec{x}_n.
+    \]
+    \item \(k\)-means konvergiert, aber nur zu einem lokalen Minimum.
+    \item Initialisierung ist wichtig.
+    \item \(k\)-means++ verbessert die Initialisierung.
+    \item Die Wahl von \(K\) kann mit Elbow-Methode oder Silhouette-Koeffizient unterstützt werden.
+    \item Hierarchisches Clustering erzeugt eine Clusterhierarchie.
+    \item DBSCAN findet dichtebasierte Cluster und kann Ausreißer markieren.
+    \item Clustering-Ergebnisse müssen fachlich interpretiert werden.
+    \item Gaussian Mixture Models verallgemeinern \(k\)-means probabilistisch.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist Clustering?
+    \item Was ist der Unterschied zwischen Clustering und Klassifikation?
+    \item Warum ist Feature-Skalierung bei Clustering wichtig?
+    \item Definiere die \(k\)-means-Zielfunktion.
+    \item Erkläre den Zuordnungsschritt von \(k\)-means.
+    \item Leite den Aktualisierungsschritt für die Zentren her.
+    \item Warum ist das Zentrum eines Clusters der Mittelwert seiner Punkte?
+    \item Warum konvergiert \(k\)-means?
+    \item Warum findet \(k\)-means nicht notwendigerweise das globale Optimum?
+    \item Warum hängt \(k\)-means von der Initialisierung ab?
+    \item Was ist \(k\)-means++?
+    \item Was passiert bei leeren Clustern?
+    \item Wie kann man \(K\) wählen?
+    \item Was ist die Elbow-Methode?
+    \item Was misst der Silhouette-Koeffizient?
+    \item Welche Grenzen hat \(k\)-means?
+    \item Was ist der Unterschied zwischen hartem und weichem Clustering?
+    \item Was ist hierarchisches Clustering?
+    \item Was ist ein Dendrogramm?
+    \item Was sind Single Linkage, Complete Linkage und Average Linkage?
+    \item Was ist DBSCAN?
+    \item Was ist ein Kernpunkt bei DBSCAN?
+    \item Wie unterscheiden sich \(k\)-means und DBSCAN?
+    \item Warum ist Clustering schwer zu evaluieren?
+    \item Wie hängen \(k\)-means und Gaussian Mixture Models zusammen?
+\end{enumerate}
+\end{examtipbox}

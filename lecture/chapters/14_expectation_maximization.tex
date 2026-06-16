@@ -1,0 +1,1984 @@
+\chapter{Expectation-Maximization}
+
+\section{Ziel dieses Kapitels}
+
+Im vorherigen Kapitel haben wir Gaussian Mixture Models (GMMs) betrachtet.
+Dort treten latente Variablen (latent variables) auf.
+Für jeden Datenpunkt gibt es eine unbekannte Komponentenzugehörigkeit
+
+\[
+    z_n.
+\]
+
+Wenn diese Zugehörigkeiten bekannt wären, könnten wir die Parameter des Modells relativ einfach schätzen.
+Da sie aber nicht beobachtet werden, brauchen wir ein Verfahren, das mit fehlenden oder latenten Variablen umgehen kann.
+
+Dieses Verfahren heißt Expectation-Maximization, kurz EM.
+
+\begin{conceptbox}
+Expectation-Maximization (EM) ist ein iterativer Algorithmus zur Maximum-Likelihood-Schätzung bei Modellen mit latenten Variablen.
+
+EM wechselt zwischen zwei Schritten:
+
+\[
+    \text{E-Schritt}
+    \quad
+    \longrightarrow
+    \quad
+    \text{M-Schritt}.
+\]
+
+Im E-Schritt werden Erwartungen über latente Variablen berechnet.
+Im M-Schritt werden die Modellparameter aktualisiert.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was sind latente Variablen (latent variables)?
+    \item Warum ist Maximum-Likelihood mit latenten Variablen schwierig?
+    \item Was ist der Unterschied zwischen vollständigen und unvollständigen Daten?
+    \item Was ist die vollständige Daten-Log-Likelihood (complete-data log-likelihood)?
+    \item Was ist die beobachtete Daten-Log-Likelihood (observed-data log-likelihood)?
+    \item Was passiert im E-Schritt?
+    \item Was passiert im M-Schritt?
+    \item Was ist die \(Q\)-Funktion?
+    \item Warum verringert EM die Log-Likelihood nicht?
+    \item Wie hängt EM mit Jensen-Ungleichung und unteren Schranken zusammen?
+    \item Wie wird EM auf Gaussian Mixture Models angewendet?
+    \item Wie hängt EM mit \(k\)-means zusammen?
+    \item Welche Probleme und Grenzen hat EM?
+\end{itemize}
+
+\section{Motivation}
+
+In vielen Modellen gibt es Größen, die nicht direkt beobachtet werden.
+Diese Größen nennt man latente Variablen (latent variables).
+
+Beispiele:
+
+\begin{itemize}
+    \item Bei einem Gaussian Mixture Model ist unbekannt, aus welcher Komponente ein Datenpunkt stammt.
+    \item Bei Clustering ist unbekannt, zu welchem Cluster ein Datenpunkt gehört.
+    \item Bei Hidden Markov Models sind die verborgenen Zustände nicht direkt beobachtet.
+    \item Bei fehlenden Daten sind manche Merkmale nicht beobachtet.
+    \item Bei Topic Models sind die Themenzugehörigkeiten von Wörtern latent.
+\end{itemize}
+
+\begin{definitionbox}
+Eine latente Variable (latent variable) ist eine Variable, die Teil des Modells ist, aber nicht direkt beobachtet wird.
+\end{definitionbox}
+
+Wir unterscheiden:
+
+\[
+    X
+\]
+
+für beobachtete Daten und
+
+\[
+    Z
+\]
+
+für latente Variablen.
+
+Die Parameter des Modells bezeichnen wir mit
+
+\[
+    \theta.
+\]
+
+\section{Beobachtete und vollständige Daten}
+
+Angenommen, wir beobachten nur
+
+\[
+    X.
+\]
+
+Die latenten Variablen
+
+\[
+    Z
+\]
+
+sind unbekannt.
+
+Dann nennt man \(X\) die beobachteten Daten (observed data).
+Das Paar
+
+\[
+    (X,Z)
+\]
+
+nennt man vollständige Daten (complete data).
+
+\begin{definitionbox}
+Die beobachteten Daten (observed data) sind die tatsächlich gemessenen Daten \(X\).
+
+Die vollständigen Daten (complete data) bestehen aus beobachteten und latenten Variablen:
+
+\[
+    (X,Z).
+\]
+\end{definitionbox}
+
+Bei einem Gaussian Mixture Model sind die beobachteten Daten:
+
+\[
+    X
+    =
+    \{\vec{x}_1,\dots,\vec{x}_N\}.
+\]
+
+Die latenten Variablen sind die unbekannten Komponentenzugehörigkeiten:
+
+\[
+    Z
+    =
+    \{z_1,\dots,z_N\}.
+\]
+
+\section{Beobachtete Daten-Likelihood}
+
+Unser Ziel ist Maximum-Likelihood-Schätzung (maximum likelihood estimation).
+Wir möchten also die Parameter \(\theta\) so wählen, dass die beobachteten Daten möglichst wahrscheinlich sind.
+
+Die beobachtete Daten-Likelihood ist:
+
+\[
+    p(X\mid\theta).
+\]
+
+Da die latenten Variablen \(Z\) nicht beobachtet werden, müssen wir sie aus der gemeinsamen Verteilung herausmarginalisieren.
+
+Im diskreten Fall:
+
+\[
+    p(X\mid\theta)
+    =
+    \sum_Z
+    p(X,Z\mid\theta).
+\]
+
+Im kontinuierlichen Fall:
+
+\[
+    p(X\mid\theta)
+    =
+    \int
+    p(X,Z\mid\theta)
+    \,dZ.
+\]
+
+\begin{definitionbox}
+Die beobachtete Daten-Likelihood (observed-data likelihood) ist:
+
+\[
+    p(X\mid\theta)
+    =
+    \sum_Z
+    p(X,Z\mid\theta).
+\]
+
+Dabei wird über die latenten Variablen marginalisiert.
+\end{definitionbox}
+
+Die beobachtete Daten-Log-Likelihood ist:
+
+\[
+    \ell(\theta)
+    =
+    \log p(X\mid\theta).
+\]
+
+Also im diskreten Fall:
+
+\[
+    \ell(\theta)
+    =
+    \log
+    \sum_Z
+    p(X,Z\mid\theta).
+\]
+
+\begin{conceptbox}
+Das schwierige Problem bei latenten Variablen ist der Ausdruck
+
+\[
+    \log
+    \sum_Z
+    p(X,Z\mid\theta).
+\]
+
+Der Logarithmus steht außerhalb der Summe über latente Variablen.
+Das macht direkte Maximierung oft schwierig.
+\end{conceptbox}
+
+\section{Vollständige Daten-Likelihood}
+
+Wenn wir \(Z\) kennen würden, könnten wir stattdessen die vollständige Daten-Likelihood betrachten:
+
+\[
+    p(X,Z\mid\theta).
+\]
+
+Die vollständige Daten-Log-Likelihood ist:
+
+\[
+    \log p(X,Z\mid\theta).
+\]
+
+\begin{definitionbox}
+Die vollständige Daten-Log-Likelihood (complete-data log-likelihood) ist:
+
+\[
+    \log p(X,Z\mid\theta).
+\]
+
+Sie wäre einfach zu verwenden, wenn die latenten Variablen \(Z\) beobachtet wären.
+\end{definitionbox}
+
+Bei vielen Modellen ist
+
+\[
+    \log p(X,Z\mid\theta)
+\]
+
+viel einfacher als
+
+\[
+    \log p(X\mid\theta).
+\]
+
+EM nutzt genau diese Tatsache.
+
+\section{Grundidee von EM}
+
+Da \(Z\) unbekannt ist, können wir nicht direkt mit
+
+\[
+    \log p(X,Z\mid\theta)
+\]
+
+arbeiten.
+Stattdessen berechnen wir im E-Schritt eine Verteilung über \(Z\), gegeben die aktuellen Parameter.
+
+Dann maximieren wir im M-Schritt den Erwartungswert der vollständigen Daten-Log-Likelihood.
+
+\begin{conceptbox}
+EM ersetzt die unbekannten latenten Variablen nicht durch einzelne feste Werte.
+
+Stattdessen verwendet EM ihre Posterior-Verteilung unter den aktuellen Parametern.
+\end{conceptbox}
+
+Seien die aktuellen Parameter
+
+\[
+    \theta^{\mathrm{old}}.
+\]
+
+Im E-Schritt berechnen wir:
+
+\[
+    p(Z\mid X,\theta^{\mathrm{old}}).
+\]
+
+Im M-Schritt maximieren wir:
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+    =
+    \mathbb{E}_{Z\mid X,\theta^{\mathrm{old}}}
+    [
+        \log p(X,Z\mid\theta)
+    ].
+\]
+
+\section{Die \(Q\)-Funktion}
+
+Die zentrale Größe bei EM ist die \(Q\)-Funktion.
+
+\begin{definitionbox}
+Die \(Q\)-Funktion ist der Erwartungswert der vollständigen Daten-Log-Likelihood bezüglich der Posterior-Verteilung der latenten Variablen unter den alten Parametern:
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+    =
+    \mathbb{E}_{Z\mid X,\theta^{\mathrm{old}}}
+    [
+        \log p(X,Z\mid\theta)
+    ].
+\]
+\end{definitionbox}
+
+Im diskreten Fall ist:
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+    =
+    \sum_Z
+    p(Z\mid X,\theta^{\mathrm{old}})
+    \log p(X,Z\mid\theta).
+\]
+
+Im kontinuierlichen Fall:
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+    =
+    \int
+    p(Z\mid X,\theta^{\mathrm{old}})
+    \log p(X,Z\mid\theta)
+    \,dZ.
+\]
+
+\begin{notebox}
+In \(Q(\theta,\theta^{\mathrm{old}})\) gibt es zwei Parameterrollen:
+
+\begin{itemize}
+    \item \(\theta^{\mathrm{old}}\) bestimmt die Verteilung über die latenten Variablen.
+    \item \(\theta\) ist der Parameter, bezüglich dessen maximiert wird.
+\end{itemize}
+\end{notebox}
+
+\section{Der EM-Algorithmus}
+
+EM besteht aus zwei Schritten.
+
+\begin{definitionbox}
+Expectation-Maximization-Algorithmus:
+
+\begin{enumerate}
+    \item Initialisiere die Parameter \(\theta^{\mathrm{old}}\).
+    \item E-Schritt:
+    Berechne
+    \[
+        p(Z\mid X,\theta^{\mathrm{old}})
+    \]
+    und damit
+    \[
+        Q(\theta,\theta^{\mathrm{old}}).
+    \]
+    \item M-Schritt:
+    Wähle neue Parameter
+    \[
+        \theta^{\mathrm{new}}
+        =
+        \arg\max_{\theta}
+        Q(\theta,\theta^{\mathrm{old}}).
+    \]
+    \item Setze
+    \[
+        \theta^{\mathrm{old}}
+        \leftarrow
+        \theta^{\mathrm{new}}.
+    \]
+    \item Wiederhole, bis die Log-Likelihood kaum noch steigt.
+\end{enumerate}
+\end{definitionbox}
+
+\begin{conceptbox}
+E-Schritt bedeutet:
+Berechne Erwartungen über latente Variablen.
+
+M-Schritt bedeutet:
+Maximiere die erwartete vollständige Daten-Log-Likelihood.
+\end{conceptbox}
+
+\section{Warum EM die Log-Likelihood nicht verringert}
+
+Eine zentrale Eigenschaft von EM ist:
+
+\[
+    \ell(\theta^{\mathrm{new}})
+    \geq
+    \ell(\theta^{\mathrm{old}}).
+\]
+
+Die beobachtete Daten-Log-Likelihood sinkt also nicht.
+
+Um das zu verstehen, betrachten wir eine untere Schranke (lower bound) der Log-Likelihood.
+
+\section{Untere Schranke mit einer Hilfsverteilung}
+
+Sei \(q(Z)\) eine beliebige Verteilung über die latenten Variablen.
+Dann gilt:
+
+\[
+    \log p(X\mid\theta)
+    =
+    \log
+    \sum_Z
+    p(X,Z\mid\theta).
+\]
+
+Wir multiplizieren und dividieren mit \(q(Z)\):
+
+\[
+    \log p(X\mid\theta)
+    =
+    \log
+    \sum_Z
+    q(Z)
+    \frac{
+        p(X,Z\mid\theta)
+    }{
+        q(Z)
+    }.
+\]
+
+Da \(q(Z)\) eine Verteilung ist, ist die Summe ein Erwartungswert bezüglich \(q\):
+
+\[
+    \log p(X\mid\theta)
+    =
+    \log
+    \mathbb{E}_{q}
+    \left[
+        \frac{
+            p(X,Z\mid\theta)
+        }{
+            q(Z)
+        }
+    \right].
+\]
+
+Da \(\log\) konkav ist, folgt mit Jensen-Ungleichung:
+
+\[
+    \log
+    \mathbb{E}_{q}
+    \left[
+        \frac{
+            p(X,Z\mid\theta)
+        }{
+            q(Z)
+        }
+    \right]
+    \geq
+    \mathbb{E}_{q}
+    \left[
+        \log
+        \frac{
+            p(X,Z\mid\theta)
+        }{
+            q(Z)
+        }
+    \right].
+\]
+
+Also:
+
+\[
+    \log p(X\mid\theta)
+    \geq
+    \sum_Z
+    q(Z)
+    \log
+    \frac{
+        p(X,Z\mid\theta)
+    }{
+        q(Z)
+    }.
+\]
+
+\begin{definitionbox}
+Die EM-Untergrenze oder Free Energy ist:
+
+\[
+    \mathcal{F}(q,\theta)
+    =
+    \sum_Z
+    q(Z)
+    \log
+    \frac{
+        p(X,Z\mid\theta)
+    }{
+        q(Z)
+    }.
+\]
+
+Sie erfüllt:
+
+\[
+    \mathcal{F}(q,\theta)
+    \leq
+    \log p(X\mid\theta).
+\]
+\end{definitionbox}
+
+\section{Zerlegung der unteren Schranke}
+
+Wir können die Free Energy schreiben als:
+
+\[
+    \mathcal{F}(q,\theta)
+    =
+    \sum_Z
+    q(Z)
+    \log p(X,Z\mid\theta)
+    -
+    \sum_Z
+    q(Z)
+    \log q(Z).
+\]
+
+Der erste Term ist der erwartete vollständige Daten-Log-Likelihood-Term.
+Der zweite Term ist die Entropie von \(q\):
+
+\[
+    H(q)
+    =
+    -\sum_Z
+    q(Z)\log q(Z).
+\]
+
+Damit:
+
+\[
+    \mathcal{F}(q,\theta)
+    =
+    \mathbb{E}_{q}
+    [
+        \log p(X,Z\mid\theta)
+    ]
+    +
+    H(q).
+\]
+
+\begin{conceptbox}
+Die Free Energy besteht aus:
+
+\[
+    \text{erwartete vollständige Daten-Log-Likelihood}
+    +
+    \text{Entropie der Hilfsverteilung}.
+\]
+\end{conceptbox}
+
+\section{Zusammenhang mit KL-Divergenz}
+
+Die Differenz zwischen Log-Likelihood und Free Energy ist eine KL-Divergenz (Kullback-Leibler divergence).
+
+Es gilt:
+
+\[
+    \log p(X\mid\theta)
+    =
+    \mathcal{F}(q,\theta)
+    +
+    \mathrm{KL}
+    \left(
+        q(Z)
+        \,\|\, 
+        p(Z\mid X,\theta)
+    \right).
+\]
+
+Da die KL-Divergenz immer nichtnegativ ist,
+
+\[
+    \mathrm{KL}(q\|p)\geq 0,
+\]
+
+folgt:
+
+\[
+    \mathcal{F}(q,\theta)
+    \leq
+    \log p(X\mid\theta).
+\]
+
+\begin{definitionbox}
+Die KL-Divergenz zwischen zwei Verteilungen \(q\) und \(p\) ist:
+
+\[
+    \mathrm{KL}(q\|p)
+    =
+    \sum_Z
+    q(Z)
+    \log
+    \frac{q(Z)}{p(Z)}.
+\]
+
+Sie ist immer nichtnegativ.
+\end{definitionbox}
+
+Die Schranke ist genau dann eng, wenn
+
+\[
+    q(Z)
+    =
+    p(Z\mid X,\theta).
+\]
+
+Dann ist:
+
+\[
+    \mathrm{KL}
+    \left(
+        q(Z)
+        \,\|\,
+        p(Z\mid X,\theta)
+    \right)
+    =
+    0.
+\]
+
+\section{E-Schritt als Optimierung von \(q\)}
+
+Im E-Schritt halten wir \(\theta\) fest bei
+
+\[
+    \theta^{\mathrm{old}}.
+\]
+
+Wir wählen \(q(Z)\) so, dass die Free Energy maximal wird.
+Das passiert, wenn die KL-Divergenz verschwindet.
+
+Also:
+
+\[
+    q^{\mathrm{new}}(Z)
+    =
+    p(Z\mid X,\theta^{\mathrm{old}}).
+\]
+
+\begin{definitionbox}
+Im E-Schritt wird die Hilfsverteilung auf den Posterior der latenten Variablen gesetzt:
+
+\[
+    q(Z)
+    =
+    p(Z\mid X,\theta^{\mathrm{old}}).
+\]
+\end{definitionbox}
+
+Damit wird die untere Schranke bei den alten Parametern eng:
+
+\[
+    \mathcal{F}(q,\theta^{\mathrm{old}})
+    =
+    \log p(X\mid\theta^{\mathrm{old}}).
+\]
+
+\section{M-Schritt als Optimierung von \(\theta\)}
+
+Im M-Schritt halten wir \(q(Z)\) fest und maximieren die Free Energy bezüglich \(\theta\).
+
+Da der Entropieterm
+
+\[
+    H(q)
+\]
+
+nicht von \(\theta\) abhängt, maximieren wir nur:
+
+\[
+    \mathbb{E}_{q}
+    [
+        \log p(X,Z\mid\theta)
+    ].
+\]
+
+Mit
+
+\[
+    q(Z)
+    =
+    p(Z\mid X,\theta^{\mathrm{old}})
+\]
+
+ist das genau:
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+    =
+    \mathbb{E}_{Z\mid X,\theta^{\mathrm{old}}}
+    [
+        \log p(X,Z\mid\theta)
+    ].
+\]
+
+\begin{definitionbox}
+Im M-Schritt wird
+
+\[
+    Q(\theta,\theta^{\mathrm{old}})
+\]
+
+bezüglich \(\theta\) maximiert:
+
+\[
+    \theta^{\mathrm{new}}
+    =
+    \arg\max_{\theta}
+    Q(\theta,\theta^{\mathrm{old}}).
+\]
+\end{definitionbox}
+
+\section{Monotonie von EM}
+
+Nun können wir die Monotonie von EM verstehen.
+
+Nach dem E-Schritt ist die Schranke bei \(\theta^{\mathrm{old}}\) eng:
+
+\[
+    \mathcal{F}(q,\theta^{\mathrm{old}})
+    =
+    \ell(\theta^{\mathrm{old}}).
+\]
+
+Im M-Schritt wählen wir \(\theta^{\mathrm{new}}\), sodass:
+
+\[
+    \mathcal{F}(q,\theta^{\mathrm{new}})
+    \geq
+    \mathcal{F}(q,\theta^{\mathrm{old}}).
+\]
+
+Da die Free Energy eine untere Schranke der Log-Likelihood ist:
+
+\[
+    \ell(\theta^{\mathrm{new}})
+    \geq
+    \mathcal{F}(q,\theta^{\mathrm{new}}).
+\]
+
+Damit:
+
+\[
+    \ell(\theta^{\mathrm{new}})
+    \geq
+    \mathcal{F}(q,\theta^{\mathrm{new}})
+    \geq
+    \mathcal{F}(q,\theta^{\mathrm{old}})
+    =
+    \ell(\theta^{\mathrm{old}}).
+\]
+
+Also:
+
+\[
+    \ell(\theta^{\mathrm{new}})
+    \geq
+    \ell(\theta^{\mathrm{old}}).
+\]
+
+\begin{conceptbox}
+EM verringert die beobachtete Daten-Log-Likelihood nicht.
+
+Das bedeutet aber nicht, dass EM das globale Maximum findet.
+EM kann in lokalen Maxima oder Sattelpunkten landen.
+\end{conceptbox}
+
+\section{EM für Gaussian Mixture Models}
+
+Nun wenden wir EM auf Gaussian Mixture Models an.
+
+Das Modell ist:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+Die Parameter sind:
+
+\[
+    \Theta
+    =
+    \{\pi_k,\vec{\mu}_k,\Sigma_k\}_{k=1}^{K}.
+\]
+
+Die latente Variable \(z_n\) gibt an, aus welcher Komponente Datenpunkt \(\vec{x}_n\) stammt.
+
+\section{Vollständige Daten-Likelihood für GMMs}
+
+Wir verwenden One-Hot-Variablen:
+
+\[
+    z_{nk}\in\{0,1\},
+\]
+
+mit
+
+\[
+    \sum_{k=1}^{K}
+    z_{nk}=1.
+\]
+
+Die Verteilung der latenten Variablen ist:
+
+\[
+    p(\vec{z}_n\mid\pi)
+    =
+    \prod_{k=1}^{K}
+    \pi_k^{z_{nk}}.
+\]
+
+Die bedingte Verteilung des Datenpunkts ist:
+
+\[
+    p(\vec{x}_n\mid\vec{z}_n,\Theta)
+    =
+    \prod_{k=1}^{K}
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)^{z_{nk}}.
+\]
+
+Die gemeinsame Verteilung ist:
+
+\[
+    p(\vec{x}_n,\vec{z}_n\mid\Theta)
+    =
+    \prod_{k=1}^{K}
+    \left[
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right]^{z_{nk}}.
+\]
+
+Für alle Datenpunkte:
+
+\[
+    p(X,Z\mid\Theta)
+    =
+    \prod_{n=1}^{N}
+    \prod_{k=1}^{K}
+    \left[
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right]^{z_{nk}}.
+\]
+
+\begin{definitionbox}
+Die vollständige Daten-Likelihood eines GMMs ist:
+
+\[
+    p(X,Z\mid\Theta)
+    =
+    \prod_{n=1}^{N}
+    \prod_{k=1}^{K}
+    \left[
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right]^{z_{nk}}.
+\]
+\end{definitionbox}
+
+\section{Vollständige Daten-Log-Likelihood für GMMs}
+
+Wir nehmen den Logarithmus:
+
+\[
+    \log p(X,Z\mid\Theta)
+    =
+    \log
+    \prod_{n=1}^{N}
+    \prod_{k=1}^{K}
+    \left[
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right]^{z_{nk}}.
+\]
+
+Der Logarithmus macht aus Produkten Summen:
+
+\[
+    \log p(X,Z\mid\Theta)
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    z_{nk}
+    \log
+    \left[
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right].
+\]
+
+Mit
+
+\[
+    \log(ab)=\log a+\log b
+\]
+
+ergibt sich:
+
+\[
+    \log p(X,Z\mid\Theta)
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    z_{nk}
+    \left[
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right].
+\]
+
+\begin{definitionbox}
+Die vollständige Daten-Log-Likelihood eines GMMs ist:
+
+\[
+    \log p(X,Z\mid\Theta)
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    z_{nk}
+    \left[
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right].
+\]
+\end{definitionbox}
+
+\section{E-Schritt für GMMs}
+
+Im E-Schritt berechnen wir den Erwartungswert von \(z_{nk}\) unter dem Posterior:
+
+\[
+    \mathbb{E}[z_{nk}]
+    =
+    p(z_{nk}=1\mid\vec{x}_n,\Theta^{\mathrm{old}}).
+\]
+
+Diese Größe ist die Responsibility:
+
+\[
+    \gamma_{nk}
+    =
+    p(z_n=k\mid\vec{x}_n,\Theta^{\mathrm{old}}).
+\]
+
+Mit Bayes' Regel:
+
+\[
+    \gamma_{nk}
+    =
+    \frac{
+        \pi_k^{\mathrm{old}}
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k^{\mathrm{old}},\Sigma_k^{\mathrm{old}})
+    }{
+        \sum_{j=1}^{K}
+        \pi_j^{\mathrm{old}}
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j^{\mathrm{old}},\Sigma_j^{\mathrm{old}})
+    }.
+\]
+
+\begin{definitionbox}
+Der E-Schritt für ein GMM berechnet:
+
+\[
+    \gamma_{nk}
+    =
+    \frac{
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    }{
+        \sum_{j=1}^{K}
+        \pi_j
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+    }.
+\]
+
+Dabei werden die aktuellen Parameter verwendet.
+\end{definitionbox}
+
+Für jeden Datenpunkt gilt:
+
+\[
+    \sum_{k=1}^{K}
+    \gamma_{nk}=1.
+\]
+
+\section{\(Q\)-Funktion für GMMs}
+
+Die \(Q\)-Funktion ist der Erwartungswert der vollständigen Daten-Log-Likelihood.
+
+Da
+
+\[
+    \mathbb{E}[z_{nk}]
+    =
+    \gamma_{nk},
+\]
+
+erhalten wir:
+
+\[
+    Q(\Theta,\Theta^{\mathrm{old}})
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \left[
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right].
+\]
+
+\begin{definitionbox}
+Die \(Q\)-Funktion für ein GMM ist:
+
+\[
+    Q(\Theta,\Theta^{\mathrm{old}})
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \left[
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right].
+\]
+\end{definitionbox}
+
+Im M-Schritt maximieren wir diese Funktion bezüglich
+
+\[
+    \pi_k,
+    \qquad
+    \vec{\mu}_k,
+    \qquad
+    \Sigma_k.
+\]
+
+\section{M-Schritt: effektive Clustergröße}
+
+Zuerst definieren wir die effektive Clustergröße:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+
+\begin{definitionbox}
+Die effektive Anzahl der Punkte in Komponente \(k\) ist:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+\end{definitionbox}
+
+Bei harten Zuordnungen wäre \(N_k\) einfach die Anzahl der Punkte im Cluster.
+Bei weichen Zuordnungen zählt jeder Punkt anteilig.
+
+\section{M-Schritt: Update für Mittelwerte}
+
+Wir maximieren \(Q\) bezüglich \(\vec{\mu}_k\).
+Nur der Gauß-Term hängt von \(\vec{\mu}_k\) ab.
+
+Für eine multivariate Gauß-Verteilung gilt:
+
+\[
+    \log
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    =
+    -\frac{D}{2}\log(2\pi)
+    -
+    \frac{1}{2}\log|\Sigma_k|
+    -
+    \frac{1}{2}
+    (\vec{x}_n-\vec{\mu}_k)^{\top}
+    \Sigma_k^{-1}
+    (\vec{x}_n-\vec{\mu}_k).
+\]
+
+Die Terme, die von \(\vec{\mu}_k\) abhängen, sind:
+
+\[
+    -\frac{1}{2}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k)^{\top}
+    \Sigma_k^{-1}
+    (\vec{x}_n-\vec{\mu}_k).
+\]
+
+Maximieren entspricht Minimieren von:
+
+\[
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k)^{\top}
+    \Sigma_k^{-1}
+    (\vec{x}_n-\vec{\mu}_k).
+\]
+
+Die Lösung ist der gewichtete Mittelwert:
+
+\[
+    \vec{\mu}_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    \vec{x}_n.
+\]
+
+\begin{definitionbox}
+Das EM-Update für den Mittelwert einer GMM-Komponente ist:
+
+\[
+    \vec{\mu}_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    \vec{x}_n.
+\]
+\end{definitionbox}
+
+\section{M-Schritt: Update für Kovarianzen}
+
+Das Update für die Kovarianzmatrix ist die gewichtete empirische Kovarianz:
+
+\[
+    \Sigma_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})^{\top}.
+\]
+
+\begin{definitionbox}
+Das EM-Update für die Kovarianzmatrix einer GMM-Komponente ist:
+
+\[
+    \Sigma_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})^{\top}.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Kovarianz jeder Komponente wird aus allen Datenpunkten berechnet, aber jeder Datenpunkt wird mit seiner Responsibility \(\gamma_{nk}\) gewichtet.
+\end{conceptbox}
+
+\section{M-Schritt: Update für Mischgewichte}
+
+Die Mischgewichte müssen die Nebenbedingungen erfüllen:
+
+\[
+    \pi_k\geq 0,
+    \qquad
+    \sum_{k=1}^{K}
+    \pi_k=1.
+\]
+
+Der relevante Teil der \(Q\)-Funktion ist:
+
+\[
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \log \pi_k.
+\]
+
+Wir verwenden einen Lagrange-Multiplikator \(\lambda\) für die Nebenbedingung:
+
+\[
+    \sum_{k=1}^{K}\pi_k=1.
+\]
+
+Die Lagrange-Funktion ist:
+
+\[
+    \mathcal{L}
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \log \pi_k
+    +
+    \lambda
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        -
+        1
+    \right).
+\]
+
+Ableiten nach \(\pi_k\):
+
+\[
+    \frac{\partial\mathcal{L}}{\partial\pi_k}
+    =
+    \frac{
+        \sum_{n=1}^{N}
+        \gamma_{nk}
+    }{
+        \pi_k
+    }
+    +
+    \lambda.
+\]
+
+Setze gleich \(0\):
+
+\[
+    \frac{N_k}{\pi_k}
+    +
+    \lambda
+    =
+    0.
+\]
+
+Damit:
+
+\[
+    \pi_k
+    =
+    -\frac{N_k}{\lambda}.
+\]
+
+Nun summieren wir über \(k\):
+
+\[
+    \sum_{k=1}^{K}
+    \pi_k
+    =
+    -\frac{1}{\lambda}
+    \sum_{k=1}^{K}
+    N_k.
+\]
+
+Da
+
+\[
+    \sum_{k=1}^{K}\pi_k=1
+\]
+
+und
+
+\[
+    \sum_{k=1}^{K}N_k
+    =
+    N,
+\]
+
+folgt:
+
+\[
+    1
+    =
+    -\frac{N}{\lambda}.
+\]
+
+Also:
+
+\[
+    \lambda=-N.
+\]
+
+Damit:
+
+\[
+    \pi_k^{\mathrm{new}}
+    =
+    \frac{N_k}{N}.
+\]
+
+\begin{definitionbox}
+Das EM-Update für das Mischgewicht ist:
+
+\[
+    \pi_k^{\mathrm{new}}
+    =
+    \frac{N_k}{N}.
+\]
+\end{definitionbox}
+
+\section{Zusammenfassung der GMM-EM-Updates}
+
+\begin{conceptbox}
+Für ein Gaussian Mixture Model lauten die EM-Schritte:
+
+E-Schritt:
+
+\[
+    \gamma_{nk}
+    =
+    \frac{
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    }{
+        \sum_{j=1}^{K}
+        \pi_j
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+    }.
+\]
+
+M-Schritt:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk},
+\]
+
+\[
+    \vec{\mu}_k
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    \vec{x}_n,
+\]
+
+\[
+    \Sigma_k
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k)
+    (\vec{x}_n-\vec{\mu}_k)^{\top},
+\]
+
+\[
+    \pi_k
+    =
+    \frac{N_k}{N}.
+\]
+\end{conceptbox}
+
+\section{EM und \(k\)-means}
+
+EM für GMMs ist eng verwandt mit \(k\)-means.
+
+Bei \(k\)-means gibt es harte Zuordnungen:
+
+\[
+    r_{nk}
+    \in
+    \{0,1\}.
+\]
+
+Bei GMM-EM gibt es weiche Responsibilities:
+
+\[
+    \gamma_{nk}
+    \in
+    [0,1].
+\]
+
+Wenn ein GMM gleiche isotrope Kovarianzen hat,
+
+\[
+    \Sigma_k=\sigma^2 I,
+\]
+
+und
+
+\[
+    \sigma^2
+    \to
+    0,
+\]
+
+werden die Responsibilities fast hart.
+Dann verhält sich EM ähnlich wie \(k\)-means.
+
+\begin{conceptbox}
+\(k\)-means kann als Grenzfall von EM für GMMs verstanden werden:
+
+\[
+    \text{weiche Zuordnung}
+    \quad
+    \longrightarrow
+    \quad
+    \text{harte Zuordnung}.
+\]
+\end{conceptbox}
+
+\section{Generalized EM}
+
+Beim klassischen EM wird im M-Schritt \(Q\) vollständig maximiert:
+
+\[
+    \theta^{\mathrm{new}}
+    =
+    \arg\max_{\theta}
+    Q(\theta,\theta^{\mathrm{old}}).
+\]
+
+Manchmal ist das vollständige Maximum schwer zu finden.
+Dann reicht es, \(Q\) nur zu verbessern:
+
+\[
+    Q(\theta^{\mathrm{new}},\theta^{\mathrm{old}})
+    \geq
+    Q(\theta^{\mathrm{old}},\theta^{\mathrm{old}}).
+\]
+
+Das nennt man Generalized EM.
+
+\begin{definitionbox}
+Generalized EM (GEM) verlangt im M-Schritt nicht das exakte Maximum von \(Q\), sondern nur eine Verbesserung von \(Q\).
+\end{definitionbox}
+
+\begin{notebox}
+Auch Generalized EM kann die Log-Likelihood monoton verbessern, solange der M-Schritt die untere Schranke erhöht.
+\end{notebox}
+
+\section{Hard EM}
+
+Eine weitere Variante ist Hard EM.
+Dabei verwendet man nicht die vollständige Posterior-Verteilung der latenten Variablen.
+Stattdessen wählt man die wahrscheinlichste latente Zuordnung.
+
+\[
+    z_n^{*}
+    =
+    \arg\max_k
+    p(z_n=k\mid\vec{x}_n,\theta).
+\]
+
+Dann wird so getan, als wären diese Zuordnungen bekannt.
+
+\begin{definitionbox}
+Hard EM ersetzt weiche Posterior-Zuordnungen durch harte Zuordnungen:
+
+\[
+    z_n^{*}
+    =
+    \arg\max_k
+    p(z_n=k\mid\vec{x}_n,\theta).
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Hard EM ist einfacher, verliert aber Unsicherheitsinformation.
+
+\(k\)-means kann als eine Form von Hard EM für ein stark eingeschränktes GMM verstanden werden.
+\end{conceptbox}
+
+\section{EM bei fehlenden Daten}
+
+EM kann auch für fehlende Daten verwendet werden.
+Angenommen, ein Datenpunkt besteht aus beobachteten und fehlenden Teilen:
+
+\[
+    \vec{x}_n
+    =
+    (\vec{x}_{n,\mathrm{obs}},\vec{x}_{n,\mathrm{miss}}).
+\]
+
+Dann können die fehlenden Werte als latente Variablen behandelt werden.
+
+Im E-Schritt berechnet man Erwartungen über die fehlenden Werte gegeben die beobachteten Werte und aktuelle Parameter:
+
+\[
+    p(\vec{x}_{n,\mathrm{miss}}\mid\vec{x}_{n,\mathrm{obs}},\theta^{\mathrm{old}}).
+\]
+
+Im M-Schritt aktualisiert man die Parameter basierend auf diesen Erwartungen.
+
+\begin{conceptbox}
+EM ist nicht nur für Clustering nützlich.
+
+EM ist ein allgemeines Prinzip für Maximum-Likelihood-Schätzung mit nicht beobachteten oder fehlenden Größen.
+\end{conceptbox}
+
+\section{Initialisierung}
+
+EM benötigt Startwerte für die Parameter.
+Da EM nur zu lokalen Maxima konvergiert, ist Initialisierung wichtig.
+
+Typische Strategien:
+
+\begin{itemize}
+    \item zufällige Initialisierung,
+    \item \(k\)-means zur Initialisierung von GMMs,
+    \item mehrere Starts und Auswahl der besten Log-Likelihood,
+    \item fachlich motivierte Startwerte.
+\end{itemize}
+
+\begin{examtipbox}
+EM findet im Allgemeinen kein globales Maximum.
+
+Deshalb sollte man bei nichtkonvexen Modellen mehrere Initialisierungen ausprobieren.
+\end{examtipbox}
+
+\section{Konvergenzkriterien}
+
+EM wird iteriert, bis ein Stoppkriterium erfüllt ist.
+
+Typische Kriterien:
+
+\begin{itemize}
+    \item Änderung der Log-Likelihood ist klein:
+    \[
+        |\ell^{(\tau+1)}-\ell^{(\tau)}|<\varepsilon.
+    \]
+
+    \item Relative Änderung der Log-Likelihood ist klein:
+    \[
+        \frac{
+            |\ell^{(\tau+1)}-\ell^{(\tau)}|
+        }{
+            |\ell^{(\tau)}|
+        }
+        <
+        \varepsilon.
+    \]
+
+    \item Änderung der Parameter ist klein:
+    \[
+        \|\theta^{(\tau+1)}-\theta^{(\tau)}\|<\varepsilon.
+    \]
+
+    \item Maximale Anzahl an Iterationen erreicht.
+\end{itemize}
+
+\begin{notebox}
+In der Praxis verwendet man oft eine Kombination aus Log-Likelihood-Toleranz und maximaler Iterationszahl.
+\end{notebox}
+
+\section{Numerische Stabilität}
+
+Bei EM für GMMs können sehr kleine Wahrscheinlichkeiten auftreten.
+Deshalb arbeitet man oft im Log-Raum.
+
+Für die Log-Likelihood:
+
+\[
+    \ell(\Theta)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right)
+\]
+
+verwendet man die Log-Sum-Exp-Technik.
+
+\[
+    \log\sum_k\exp(a_k)
+    =
+    m
+    +
+    \log
+    \sum_k
+    \exp(a_k-m),
+\]
+
+wobei
+
+\[
+    m=\max_k a_k.
+\]
+
+\begin{definitionbox}
+Log-Sum-Exp stabilisiert Berechnungen der Form
+
+\[
+    \log\sum_k\exp(a_k).
+\]
+
+Durch Subtraktion des Maximums werden numerische Überläufe vermieden.
+\end{definitionbox}
+
+\section{Singularitäten bei GMMs}
+
+Bei GMMs kann EM in degenerierte Lösungen laufen.
+Eine Komponente kann sich auf einen einzelnen Datenpunkt konzentrieren und ihre Kovarianz gegen \(0\) schrumpfen lassen.
+
+Dann kann die Likelihood gegen unendlich gehen.
+
+\[
+    \Sigma_k\to 0
+    \quad
+    \Rightarrow
+    \quad
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)\to\infty
+\]
+
+für
+
+\[
+    \vec{\mu}_k=\vec{x}_n.
+\]
+
+\begin{examtipbox}
+Die GMM-Likelihood ist nicht immer wohldefiniert maximierbar, weil singuläre Lösungen auftreten können.
+\end{examtipbox}
+
+Gegenmaßnahmen:
+
+\begin{itemize}
+    \item Kovarianzregularisierung:
+    \[
+        \Sigma_k
+        \leftarrow
+        \Sigma_k+\varepsilon I.
+    \]
+
+    \item minimale Varianz erzwingen,
+    \item zu kleine Komponenten entfernen,
+    \item Anzahl der Komponenten \(K\) reduzieren,
+    \item diagonale oder geteilte Kovarianzmatrizen verwenden.
+\end{itemize}
+
+\section{Vorteile von EM}
+
+\begin{itemize}
+    \item EM nutzt latente Variablen systematisch.
+    \item Viele M-Schritte haben geschlossene Formeln.
+    \item Die Log-Likelihood wird monoton verbessert.
+    \item EM ist intuitiv: fehlende Information schätzen, dann Parameter aktualisieren.
+    \item EM ist auf viele Modelle anwendbar.
+\end{itemize}
+
+\begin{conceptbox}
+EM ist besonders nützlich, wenn die vollständige Daten-Likelihood einfach wäre, aber ein Teil der Daten latent oder fehlend ist.
+\end{conceptbox}
+
+\section{Nachteile von EM}
+
+\begin{itemize}
+    \item EM findet nur lokale Optima.
+    \item EM kann langsam konvergieren.
+    \item Initialisierung ist wichtig.
+    \item Der E-Schritt kann in komplexen Modellen schwierig sein.
+    \item Der M-Schritt kann in komplexen Modellen schwierig sein.
+    \item Bei GMMs können singuläre Lösungen auftreten.
+\end{itemize}
+
+\begin{notebox}
+EM ist kein einzelner spezieller Algorithmus nur für GMMs.
+EM ist ein allgemeines Optimierungsprinzip für Modelle mit latenten Variablen.
+\end{notebox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Latente Variable erkennen}
+
+In einem Clustering-Modell beobachtet man Datenpunkte \(\vec{x}_n\), aber nicht, zu welchem Cluster sie gehören.
+Was ist die latente Variable?
+
+\begin{examplebox}
+Die latente Variable ist die Clusterzugehörigkeit:
+
+\[
+    z_n.
+\]
+
+Sie gibt an, aus welchem Cluster oder welcher Komponente der Datenpunkt stammt.
+\end{examplebox}
+
+\subsection{Aufgabe 2: Responsibility berechnen}
+
+Ein GMM hat zwei Komponenten.
+Für einen Datenpunkt gelten:
+
+\[
+    \pi_1\mathcal{N}_1(\vec{x})=0{,}2,
+\]
+
+und
+
+\[
+    \pi_2\mathcal{N}_2(\vec{x})=0{,}8.
+\]
+
+Berechne \(\gamma_{1}\) und \(\gamma_{2}\).
+
+\begin{examplebox}
+Die Summe ist:
+
+\[
+    0{,}2+0{,}8=1.
+\]
+
+Also:
+
+\[
+    \gamma_1
+    =
+    \frac{0{,}2}{1}
+    =
+    0{,}2,
+\]
+
+und
+
+\[
+    \gamma_2
+    =
+    \frac{0{,}8}{1}
+    =
+    0{,}8.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Effektive Clustergröße}
+
+Für eine Komponente seien die Responsibilities:
+
+\[
+    0{,}1,
+    \quad
+    0{,}4,
+    \quad
+    0{,}8,
+    \quad
+    0{,}7.
+\]
+
+Berechne \(N_k\).
+
+\begin{examplebox}
+Die effektive Clustergröße ist:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+
+Also:
+
+\[
+    N_k
+    =
+    0{,}1+0{,}4+0{,}8+0{,}7
+    =
+    2{,}0.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Mischgewicht}
+
+Ein Datensatz hat
+
+\[
+    N=20
+\]
+
+Datenpunkte.
+Für Komponente \(k\) gilt:
+
+\[
+    N_k=5.
+\]
+
+Berechne das neue Mischgewicht.
+
+\begin{examplebox}
+Im M-Schritt gilt:
+
+\[
+    \pi_k
+    =
+    \frac{N_k}{N}.
+\]
+
+Einsetzen:
+
+\[
+    \pi_k
+    =
+    \frac{5}{20}
+    =
+    0{,}25.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Monotonie}
+
+Warum sinkt die Log-Likelihood bei EM nicht?
+
+\begin{examplebox}
+EM konstruiert eine untere Schranke an die Log-Likelihood.
+
+Im E-Schritt wird diese Schranke bei den aktuellen Parametern eng gemacht.
+Im M-Schritt wird die Schranke maximiert oder zumindest erhöht.
+
+Dadurch gilt:
+
+\[
+    \ell(\theta^{\mathrm{new}})
+    \geq
+    \ell(\theta^{\mathrm{old}}).
+\]
+\end{examplebox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Expectation-Maximization:
+
+\begin{enumerate}
+    \item EM nur als GMM-Algorithmus ansehen.
+    \item Latente Variablen mit Parametern verwechseln.
+    \item Beobachtete Daten-Likelihood und vollständige Daten-Likelihood verwechseln.
+    \item Den Logarithmus falsch durch die Summe ziehen.
+    \item Im E-Schritt harte Zuordnungen verwenden, obwohl Soft EM gefragt ist.
+    \item Die \(Q\)-Funktion mit der beobachteten Log-Likelihood verwechseln.
+    \item Im M-Schritt die Responsibilities nicht als Gewichte verwenden.
+    \item \(N_k=\sum_n\gamma_{nk}\) vergessen.
+    \item Denken, EM finde garantiert das globale Maximum.
+    \item Ignorieren, dass Initialisierung wichtig ist.
+    \item Singuläre Kovarianzen bei GMMs nicht beachten.
+    \item Die Monotonie von EM mit globaler Optimalität verwechseln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item EM ist ein Algorithmus für Maximum-Likelihood-Schätzung mit latenten Variablen.
+    \item Beobachtete Daten sind \(X\).
+    \item Latente Variablen sind \(Z\).
+    \item Die beobachtete Daten-Likelihood ist:
+    \[
+        p(X\mid\theta)
+        =
+        \sum_Z
+        p(X,Z\mid\theta).
+    \]
+    \item Die beobachtete Log-Likelihood enthält oft:
+    \[
+        \log
+        \sum_Z
+        p(X,Z\mid\theta).
+    \]
+    \item Die vollständige Daten-Log-Likelihood ist:
+    \[
+        \log p(X,Z\mid\theta).
+    \]
+    \item Die \(Q\)-Funktion ist:
+    \[
+        Q(\theta,\theta^{\mathrm{old}})
+        =
+        \mathbb{E}_{Z\mid X,\theta^{\mathrm{old}}}
+        [
+            \log p(X,Z\mid\theta)
+        ].
+    \]
+    \item Im E-Schritt berechnet man:
+    \[
+        p(Z\mid X,\theta^{\mathrm{old}}).
+    \]
+    \item Im M-Schritt berechnet man:
+    \[
+        \theta^{\mathrm{new}}
+        =
+        \arg\max_{\theta}
+        Q(\theta,\theta^{\mathrm{old}}).
+    \]
+    \item EM kann über eine untere Schranke an die Log-Likelihood hergeleitet werden.
+    \item Diese Schranke hängt mit Jensen-Ungleichung und KL-Divergenz zusammen.
+    \item EM verringert die Log-Likelihood nicht:
+    \[
+        \ell(\theta^{\mathrm{new}})
+        \geq
+        \ell(\theta^{\mathrm{old}}).
+    \]
+    \item Für GMMs berechnet der E-Schritt Responsibilities:
+    \[
+        \gamma_{nk}
+        =
+        \frac{
+            \pi_k
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+        }{
+            \sum_{j=1}^{K}
+            \pi_j
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+        }.
+    \]
+    \item Für GMMs aktualisiert der M-Schritt:
+    \[
+        \vec{\mu}_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}\vec{x}_n,
+    \]
+    \[
+        \Sigma_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}
+        (\vec{x}_n-\vec{\mu}_k)
+        (\vec{x}_n-\vec{\mu}_k)^{\top},
+    \]
+    \[
+        \pi_k
+        =
+        \frac{N_k}{N}.
+    \]
+    \item EM findet im Allgemeinen nur lokale Optima.
+    \item Initialisierung, numerische Stabilität und Regularisierung sind praktisch wichtig.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist eine latente Variable?
+    \item Was ist der Unterschied zwischen beobachteten und vollständigen Daten?
+    \item Was ist die beobachtete Daten-Likelihood?
+    \item Was ist die vollständige Daten-Log-Likelihood?
+    \item Warum ist Maximum-Likelihood mit latenten Variablen oft schwierig?
+    \item Was ist die \(Q\)-Funktion?
+    \item Was passiert im E-Schritt?
+    \item Was passiert im M-Schritt?
+    \item Leite die EM-Untergrenze mit Jensen-Ungleichung her.
+    \item Wie hängt die EM-Untergrenze mit der KL-Divergenz zusammen?
+    \item Warum wird die Schranke im E-Schritt eng?
+    \item Warum verringert EM die Log-Likelihood nicht?
+    \item Warum garantiert EM kein globales Maximum?
+    \item Schreibe die vollständige Daten-Likelihood eines GMMs auf.
+    \item Leite die vollständige Daten-Log-Likelihood eines GMMs her.
+    \item Was sind Responsibilities?
+    \item Leite die Responsibilities für ein GMM mit Bayes' Regel her.
+    \item Schreibe die \(Q\)-Funktion für ein GMM auf.
+    \item Leite das Update für \(\vec{\mu}_k\) her.
+    \item Leite das Update für \(\Sigma_k\) her.
+    \item Leite das Update für \(\pi_k\) mit Lagrange-Multiplikator her.
+    \item Wie hängt EM für GMMs mit \(k\)-means zusammen?
+    \item Was ist Generalized EM?
+    \item Was ist Hard EM?
+    \item Wie kann EM bei fehlenden Daten verwendet werden?
+    \item Welche numerischen Probleme können bei EM auftreten?
+    \item Warum können GMMs singuläre Lösungen haben?
+\end{enumerate}
+\end{examtipbox}

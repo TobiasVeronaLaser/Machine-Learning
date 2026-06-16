@@ -1,0 +1,2090 @@
+\chapter{Lineare Regression}
+
+\section{Ziel dieses Kapitels}
+
+In diesem Kapitel betrachten wir lineare Regression (linear regression).
+Lineare Regression ist eines der wichtigsten Grundmodelle im maschinellen Lernen.
+Sie ist mathematisch überschaubar, aber viele zentrale Ideen späterer Modelle tauchen hier bereits auf:
+
+\begin{itemize}
+    \item Modellfunktion (model function),
+    \item Parameter oder Gewichte (parameters, weights),
+    \item Designmatrix (design matrix),
+    \item Fehlerfunktion (error function),
+    \item kleinste Quadrate (least squares),
+    \item Maximum-Likelihood-Interpretation (maximum likelihood interpretation),
+    \item Regularisierung (regularization),
+    \item Bias-Term,
+    \item Basisfunktionen (basis functions),
+    \item Generalisierung (generalization).
+\end{itemize}
+
+\begin{conceptbox}
+Lineare Regression (linear regression) ist ein überwachtes Lernverfahren (supervised learning) für kontinuierliche Zielwerte.
+
+Das Modell sagt einen reellen Zielwert \(t\) aus einer Eingabe \(\vec{x}\) vorher.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist lineare Regression (linear regression)?
+    \item Was bedeutet linear in den Parametern?
+    \item Was ist ein Bias-Term?
+    \item Was ist eine Designmatrix (design matrix)?
+    \item Wie schreibt man lineare Regression in Matrixform?
+    \item Was ist die Sum-of-Squares-Fehlerfunktion?
+    \item Wie leitet man die Normalengleichung (normal equation) her?
+    \item Wann ist die Lösung eindeutig?
+    \item Wie hängt lineare Regression mit Maximum-Likelihood zusammen?
+    \item Warum führt Gaußsches Rauschen zu quadratischem Fehler?
+    \item Was ist Ridge Regression?
+    \item Wie hängt Ridge Regression mit MAP zusammen?
+    \item Was sind Basisfunktionen?
+    \item Warum kann ein Modell nichtlinear in der Eingabe, aber linear in den Parametern sein?
+\end{itemize}
+
+\section{Regression als überwachtes Lernen}
+
+Bei der Regression (regression) wollen wir einen kontinuierlichen Zielwert vorhersagen.
+Ein Trainingsdatensatz besteht aus Eingaben und Zielwerten:
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),(\vec{x}_2,t_2),\dots,(\vec{x}_N,t_N)\}.
+\]
+
+Dabei ist
+
+\[
+    \vec{x}_n \in \mathbb{R}^D
+\]
+
+der Eingabevektor des \(n\)-ten Datenpunkts und
+
+\[
+    t_n \in \mathbb{R}
+\]
+
+der zugehörige Zielwert.
+
+Das Ziel ist, ein Modell \(y(\vec{x})\) zu lernen, sodass
+
+\[
+    y(\vec{x}_n) \approx t_n
+\]
+
+für die Trainingsdaten gilt und das Modell auch für neue Daten gut generalisiert.
+
+\begin{definitionbox}
+Regression (regression) ist ein überwachtes Lernproblem, bei dem der Zielwert kontinuierlich ist:
+
+\[
+    t \in \mathbb{R}.
+\]
+\end{definitionbox}
+
+\begin{examplebox}
+Beispiele für Regression:
+
+\begin{itemize}
+    \item Wohnungsdaten \(\vec{x}\) \(\rightarrow\) Mietpreis \(t\),
+    \item Wetterdaten \(\vec{x}\) \(\rightarrow\) Temperatur \(t\),
+    \item medizinische Messwerte \(\vec{x}\) \(\rightarrow\) Laborwert \(t\),
+    \item Sensordaten \(\vec{x}\) \(\rightarrow\) erwartete Lebensdauer eines Bauteils \(t\).
+\end{itemize}
+\end{examplebox}
+
+\section{Das einfachste lineare Modell}
+
+Wir beginnen mit einer eindimensionalen Eingabe
+
+\[
+    x \in \mathbb{R}.
+\]
+
+Ein einfaches lineares Modell ist eine Gerade:
+
+\[
+    y(x,w_0,w_1)
+    =
+    w_0 + w_1x.
+\]
+
+Dabei sind \(w_0\) und \(w_1\) Parameter.
+
+\begin{definitionbox}
+Das Modell
+
+\[
+    y(x,w_0,w_1)
+    =
+    w_0 + w_1x
+\]
+
+heißt lineares Regressionsmodell für eine eindimensionale Eingabe.
+
+Der Parameter \(w_0\) ist der Bias oder Achsenabschnitt (bias, intercept).
+Der Parameter \(w_1\) ist die Steigung (slope).
+\end{definitionbox}
+
+\begin{conceptbox}
+Der Bias-Term \(w_0\) erlaubt dem Modell, die Gerade nach oben oder unten zu verschieben.
+
+Ohne Bias-Term hätte das Modell die Form
+
+\[
+    y(x,w_1)
+    =
+    w_1x
+\]
+
+und müsste immer durch den Ursprung gehen.
+\end{conceptbox}
+
+\section{Lineare Regression mit mehreren Eingabedimensionen}
+
+In maschinellem Lernen ist die Eingabe meistens ein Vektor:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        x_2 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+    \in \mathbb{R}^D.
+\]
+
+Ein lineares Modell mit Bias-Term ist:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    w_0
+    +
+    w_1x_1
+    +
+    w_2x_2
+    +
+    \dots
+    +
+    w_Dx_D.
+\]
+
+Hier sind
+
+\[
+    w_0,w_1,\dots,w_D
+\]
+
+die Parameter des Modells.
+
+\begin{definitionbox}
+Die lineare Regression für \(\vec{x}\in\mathbb{R}^D\) hat die Form
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    w_0
+    +
+    \sum_{j=1}^{D}
+    w_jx_j.
+\]
+\end{definitionbox}
+
+Der Parameter \(w_0\) ist wieder der Bias-Term.
+Die Parameter \(w_1,\dots,w_D\) bestimmen, wie stark die einzelnen Merkmale (features) auf die Vorhersage wirken.
+
+\begin{examplebox}
+Angenommen,
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        \text{Wohnfläche} \\
+        \text{Anzahl Zimmer} \\
+        \text{Entfernung zum Zentrum}
+    \end{pmatrix}.
+\]
+
+Dann könnte ein lineares Modell sein:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    w_0
+    +
+    w_1 \cdot \text{Wohnfläche}
+    +
+    w_2 \cdot \text{Anzahl Zimmer}
+    +
+    w_3 \cdot \text{Entfernung zum Zentrum}.
+\]
+
+Wenn \(w_1>0\), dann erhöht größere Wohnfläche die vorhergesagte Miete.
+Wenn \(w_3<0\), dann senkt größere Entfernung zum Zentrum die vorhergesagte Miete.
+\end{examplebox}
+
+\section{Vektorform mit Bias}
+
+Es ist praktisch, den Bias-Term in den Eingabevektor einzubauen.
+Dazu erweitern wir den Eingabevektor um eine konstante Komponente:
+
+\[
+    \tilde{\vec{x}}
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        x_2 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+    \in \mathbb{R}^{D+1}.
+\]
+
+Der Gewichtsvektor ist:
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        w_0 \\
+        w_1 \\
+        w_2 \\
+        \vdots \\
+        w_D
+    \end{pmatrix}
+    \in \mathbb{R}^{D+1}.
+\]
+
+Dann kann das Modell kompakt geschrieben werden als:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\tilde{\vec{x}}.
+\]
+
+\begin{notebox}
+Oft schreibt man wieder einfach \(\vec{x}\) statt \(\tilde{\vec{x}}\), obwohl die \(1\) für den Bias bereits eingefügt wurde.
+
+Dann gilt:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Dabei muss aus dem Kontext klar sein, ob \(\vec{x}\) den Bias-Eintrag enthält.
+\end{notebox}
+
+\section{Was bedeutet linear?}
+
+Der Begriff linear in linearer Regression kann verwirrend sein.
+Wichtig ist:
+
+\begin{center}
+\textbf{Lineare Regression ist linear in den Parametern, nicht notwendigerweise linear in der ursprünglichen Eingabe.}
+\end{center}
+
+Das einfache Modell
+
+\[
+    y(x,\vec{w})
+    =
+    w_0+w_1x
+\]
+
+ist linear in \(x\) und linear in den Parametern.
+
+Aber auch das Modell
+
+\[
+    y(x,\vec{w})
+    =
+    w_0
+    +
+    w_1x
+    +
+    w_2x^2
+\]
+
+ist linear in den Parametern \(w_0,w_1,w_2\), obwohl es nichtlinear in \(x\) ist.
+
+\begin{definitionbox}
+Ein Modell ist linear in den Parametern, wenn es als Linearkombination von festen Funktionen geschrieben werden kann:
+
+\[
+    y(x,\vec{w})
+    =
+    \sum_{j=0}^{M-1}
+    w_j \phi_j(x).
+\]
+
+Die Funktionen \(\phi_j(x)\) heißen Basisfunktionen (basis functions).
+\end{definitionbox}
+
+\begin{examplebox}
+Für polynomiale Basisfunktionen gilt:
+
+\[
+    \phi_0(x)=1,
+    \qquad
+    \phi_1(x)=x,
+    \qquad
+    \phi_2(x)=x^2,
+    \qquad
+    \phi_3(x)=x^3.
+\]
+
+Dann ist
+
+\[
+    y(x,\vec{w})
+    =
+    w_0
+    +
+    w_1x
+    +
+    w_2x^2
+    +
+    w_3x^3.
+\]
+
+Dieses Modell ist linear in \(\vec{w}\), aber nichtlinear in \(x\).
+\end{examplebox}
+
+\section{Basisfunktionen}
+
+Basisfunktionen (basis functions) transformieren Eingaben in neue Merkmale.
+Statt direkt mit \(x\) zu arbeiten, arbeitet das Modell mit
+
+\[
+    \phi_0(x),\phi_1(x),\dots,\phi_{M-1}(x).
+\]
+
+Das Modell lautet:
+
+\[
+    y(x,\vec{w})
+    =
+    \sum_{j=0}^{M-1}
+    w_j\phi_j(x).
+\]
+
+In Vektorform:
+
+\[
+    \vec{\phi}(x)
+    =
+    \begin{pmatrix}
+        \phi_0(x) \\
+        \phi_1(x) \\
+        \vdots \\
+        \phi_{M-1}(x)
+    \end{pmatrix}.
+\]
+
+Dann:
+
+\[
+    y(x,\vec{w})
+    =
+    \vec{w}^{\top}\vec{\phi}(x).
+\]
+
+\begin{definitionbox}
+Eine Basisfunktion (basis function) ist eine feste Funktion \(\phi_j(x)\), die aus der Eingabe ein neues Merkmal berechnet.
+
+Das Modell bleibt linear in den Gewichten:
+
+\[
+    y(x,\vec{w})
+    =
+    \vec{w}^{\top}\vec{\phi}(x).
+\]
+\end{definitionbox}
+
+\subsection{Typische Basisfunktionen}
+
+Typische Basisfunktionen sind:
+
+\begin{itemize}
+    \item Polynomiale Basisfunktionen:
+    \[
+        \phi_j(x)=x^j.
+    \]
+
+    \item Gaußsche Basisfunktionen:
+    \[
+        \phi_j(x)
+        =
+        \exp\left(
+            -\frac{(x-\mu_j)^2}{2s^2}
+        \right).
+    \]
+
+    \item Sigmoid-Basisfunktionen:
+    \[
+        \phi_j(x)
+        =
+        \frac{1}{1+\exp(-a_j(x-b_j))}.
+    \]
+\end{itemize}
+
+\begin{conceptbox}
+Basisfunktionen erlauben nichtlineare Kurven, obwohl das Modell linear in den Parametern bleibt.
+
+Dadurch können wir viele Methoden der linearen Algebra weiterverwenden.
+\end{conceptbox}
+
+\section{Trainingsdaten in Matrixform}
+
+Wir betrachten nun \(N\) Trainingsdatenpunkte
+
+\[
+    (x_1,t_1),\dots,(x_N,t_N)
+\]
+
+und \(M\) Basisfunktionen.
+
+Für jeden Datenpunkt \(x_n\) bilden wir den Feature-Vektor
+
+\[
+    \vec{\phi}(x_n)
+    =
+    \begin{pmatrix}
+        \phi_0(x_n) \\
+        \phi_1(x_n) \\
+        \vdots \\
+        \phi_{M-1}(x_n)
+    \end{pmatrix}.
+\]
+
+Die Designmatrix (design matrix) \(\Phi\) enthält diese Feature-Vektoren als Zeilen:
+
+\[
+    \Phi
+    =
+    \begin{pmatrix}
+        \phi_0(x_1) & \phi_1(x_1) & \dots & \phi_{M-1}(x_1) \\
+        \phi_0(x_2) & \phi_1(x_2) & \dots & \phi_{M-1}(x_2) \\
+        \vdots & \vdots & \ddots & \vdots \\
+        \phi_0(x_N) & \phi_1(x_N) & \dots & \phi_{M-1}(x_N)
+    \end{pmatrix}.
+\]
+
+Damit gilt:
+
+\[
+    \Phi \in \mathbb{R}^{N \times M}.
+\]
+
+Der Zielwertvektor ist:
+
+\[
+    \vec{t}
+    =
+    \begin{pmatrix}
+        t_1 \\
+        t_2 \\
+        \vdots \\
+        t_N
+    \end{pmatrix}
+    \in \mathbb{R}^{N}.
+\]
+
+Der Gewichtsvektor ist:
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        w_0 \\
+        w_1 \\
+        \vdots \\
+        w_{M-1}
+    \end{pmatrix}
+    \in \mathbb{R}^{M}.
+\]
+
+Die Vorhersagen für alle Datenpunkte sind:
+
+\[
+    \vec{y}
+    =
+    \Phi\vec{w}.
+\]
+
+\begin{definitionbox}
+Die Designmatrix (design matrix) \(\Phi\) ist die Matrix aller transformierten Eingaben:
+
+\[
+    \Phi_{nj}
+    =
+    \phi_j(x_n).
+\]
+
+Jede Zeile entspricht einem Datenpunkt.
+Jede Spalte entspricht einer Basisfunktion.
+\end{definitionbox}
+
+\begin{notebox}
+Die Dimensionen sind wichtig:
+
+\[
+    \Phi \in \mathbb{R}^{N \times M},
+    \qquad
+    \vec{w} \in \mathbb{R}^{M},
+    \qquad
+    \vec{t} \in \mathbb{R}^{N}.
+\]
+
+Dann gilt:
+
+\[
+    \Phi\vec{w} \in \mathbb{R}^{N}.
+\]
+\end{notebox}
+
+\section{Fehlerfunktion der linearen Regression}
+
+Wir möchten, dass die Vorhersagen
+
+\[
+    y(x_n,\vec{w})
+\]
+
+möglichst nahe bei den Zielwerten \(t_n\) liegen.
+Ein natürlicher Fehler ist die Differenz
+
+\[
+    y(x_n,\vec{w}) - t_n.
+\]
+
+Da positive und negative Fehler sich nicht gegenseitig aufheben sollen, quadrieren wir sie.
+Die Sum-of-Squares-Fehlerfunktion ist:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        y(x_n,\vec{w}) - t_n
+    \right)^2.
+\]
+
+In Matrixform:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2.
+\]
+
+Das bedeutet:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    (\Phi\vec{w}-\vec{t})^{\top}
+    (\Phi\vec{w}-\vec{t}).
+\]
+
+\begin{definitionbox}
+Die quadratische Fehlerfunktion (sum-of-squares error function) der linearen Regression ist
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        \vec{w}^{\top}\vec{\phi}(x_n)-t_n
+    \right)^2.
+\]
+
+In Matrixform:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Der Faktor \(\frac{1}{2}\) ändert die Lage des Minimums nicht.
+Er ist nur praktisch, weil beim Ableiten des Quadrats ein Faktor \(2\) entsteht, der sich mit \(\frac{1}{2}\) kürzt.
+\end{notebox}
+
+\section{Least Squares}
+
+Das Trainingsproblem der linearen Regression lautet:
+
+\[
+    \vec{w}^{\,*}
+    =
+    \arg\min_{\vec{w}}
+    E_D(\vec{w}).
+\]
+
+Also:
+
+\[
+    \vec{w}^{\,*}
+    =
+    \arg\min_{\vec{w}}
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2.
+\]
+
+\begin{definitionbox}
+Least Squares oder kleinste Quadrate bezeichnet das Minimieren der Summe quadratischer Fehler:
+
+\[
+    \min_{\vec{w}}
+    \sum_{n=1}^{N}
+    \left(
+        y(x_n,\vec{w})-t_n
+    \right)^2.
+\]
+\end{definitionbox}
+
+\section{Gradient der Fehlerfunktion}
+
+Um das Minimum zu finden, leiten wir \(E_D(\vec{w})\) nach \(\vec{w}\) ab.
+
+Wir starten mit:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    (\Phi\vec{w}-\vec{t})^{\top}
+    (\Phi\vec{w}-\vec{t}).
+\]
+
+Ausmultiplizieren:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \left(
+        \vec{w}^{\top}\Phi^{\top}\Phi\vec{w}
+        -
+        \vec{w}^{\top}\Phi^{\top}\vec{t}
+        -
+        \vec{t}^{\top}\Phi\vec{w}
+        +
+        \vec{t}^{\top}\vec{t}
+    \right).
+\]
+
+Da
+
+\[
+    \vec{w}^{\top}\Phi^{\top}\vec{t}
+\]
+
+ein Skalar ist, gilt:
+
+\[
+    \vec{w}^{\top}\Phi^{\top}\vec{t}
+    =
+    \vec{t}^{\top}\Phi\vec{w}.
+\]
+
+Also:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \left(
+        \vec{w}^{\top}\Phi^{\top}\Phi\vec{w}
+        -
+        2\vec{w}^{\top}\Phi^{\top}\vec{t}
+        +
+        \vec{t}^{\top}\vec{t}
+    \right).
+\]
+
+Wir verwenden die Ableitungsregeln:
+
+\[
+    \nabla_{\vec{w}}
+    \left(
+        \frac{1}{2}
+        \vec{w}^{\top}A\vec{w}
+    \right)
+    =
+    A\vec{w}
+\]
+
+für symmetrisches \(A\), und
+
+\[
+    \nabla_{\vec{w}}
+    \left(
+        \vec{w}^{\top}\vec{b}
+    \right)
+    =
+    \vec{b}.
+\]
+
+Hier ist
+
+\[
+    A = \Phi^{\top}\Phi
+\]
+
+symmetrisch.
+Damit:
+
+\[
+    \nabla_{\vec{w}}E_D(\vec{w})
+    =
+    \Phi^{\top}\Phi\vec{w}
+    -
+    \Phi^{\top}\vec{t}.
+\]
+
+\begin{definitionbox}
+Der Gradient der quadratischen Fehlerfunktion ist
+
+\[
+    \nabla_{\vec{w}}E_D(\vec{w})
+    =
+    \Phi^{\top}
+    (
+        \Phi\vec{w}-\vec{t}
+    ).
+\]
+
+Äquivalent:
+
+\[
+    \nabla_{\vec{w}}E_D(\vec{w})
+    =
+    \Phi^{\top}\Phi\vec{w}
+    -
+    \Phi^{\top}\vec{t}.
+\]
+\end{definitionbox}
+
+\section{Normalengleichung}
+
+Am Minimum muss der Gradient verschwinden:
+
+\[
+    \nabla_{\vec{w}}E_D(\vec{w})
+    =
+    \vec{0}.
+\]
+
+Also:
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    -
+    \Phi^{\top}\vec{t}
+    =
+    \vec{0}.
+\]
+
+Damit:
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    =
+    \Phi^{\top}\vec{t}.
+\]
+
+Diese Gleichung heißt Normalengleichung (normal equation).
+
+\begin{definitionbox}
+Die Normalengleichung der linearen Regression lautet:
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    =
+    \Phi^{\top}\vec{t}.
+\]
+\end{definitionbox}
+
+Wenn \(\Phi^{\top}\Phi\) invertierbar ist, folgt:
+
+\[
+    \vec{w}_{\mathrm{LS}}
+    =
+    (\Phi^{\top}\Phi)^{-1}
+    \Phi^{\top}\vec{t}.
+\]
+
+\begin{conceptbox}
+Die Least-Squares-Lösung ist:
+
+\[
+    \vec{w}_{\mathrm{LS}}
+    =
+    (\Phi^{\top}\Phi)^{-1}
+    \Phi^{\top}\vec{t}.
+\]
+
+Diese Formel gilt, wenn \(\Phi^{\top}\Phi\) invertierbar ist.
+\end{conceptbox}
+
+\section{Geometrische Interpretation}
+
+Die Vorhersage
+
+\[
+    \vec{y}
+    =
+    \Phi\vec{w}
+\]
+
+liegt im Spaltenraum der Matrix \(\Phi\).
+Der Zielvektor \(\vec{t}\) liegt im Allgemeinen nicht exakt in diesem Spaltenraum.
+
+Least Squares sucht den Vektor \(\vec{y}\) im Spaltenraum von \(\Phi\), der \(\vec{t}\) am nächsten liegt.
+
+Der Residuenvektor ist:
+
+\[
+    \vec{r}
+    =
+    \vec{t}
+    -
+    \Phi\vec{w}.
+\]
+
+Am Optimum ist der Residuenvektor orthogonal zum Spaltenraum von \(\Phi\):
+
+\[
+    \Phi^{\top}\vec{r}
+    =
+    \vec{0}.
+\]
+
+Einsetzen von \(\vec{r}=\vec{t}-\Phi\vec{w}\):
+
+\[
+    \Phi^{\top}
+    (
+        \vec{t}-\Phi\vec{w}
+    )
+    =
+    \vec{0}.
+\]
+
+Das ist äquivalent zu:
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    =
+    \Phi^{\top}\vec{t}.
+\]
+
+\begin{notebox}
+Die Normalengleichung bedeutet geometrisch:
+Der Fehlervektor steht senkrecht auf allen Richtungen, die das Modell durch Änderung der Gewichte erreichen kann.
+\end{notebox}
+
+\section{Pseudoinverse}
+
+Wenn \(\Phi^{\top}\Phi\) nicht invertierbar ist, kann man die Moore-Penrose-Pseudoinverse (Moore-Penrose pseudoinverse) verwenden.
+
+Man schreibt:
+
+\[
+    \vec{w}_{\mathrm{LS}}
+    =
+    \Phi^{\dagger}\vec{t}.
+\]
+
+Falls \(\Phi^{\top}\Phi\) invertierbar ist, gilt:
+
+\[
+    \Phi^{\dagger}
+    =
+    (\Phi^{\top}\Phi)^{-1}\Phi^{\top}.
+\]
+
+\begin{definitionbox}
+Die Pseudoinverse \(\Phi^{\dagger}\) verallgemeinert die Inverse auf nicht-quadratische oder singuläre Matrizen.
+
+Die Least-Squares-Lösung kann geschrieben werden als
+
+\[
+    \vec{w}_{\mathrm{LS}}
+    =
+    \Phi^{\dagger}\vec{t}.
+\]
+\end{definitionbox}
+
+\section{Wann ist die Lösung eindeutig?}
+
+Die Lösung
+
+\[
+    \vec{w}_{\mathrm{LS}}
+    =
+    (\Phi^{\top}\Phi)^{-1}
+    \Phi^{\top}\vec{t}
+\]
+
+ist eindeutig, wenn \(\Phi^{\top}\Phi\) invertierbar ist.
+Das ist genau dann der Fall, wenn die Spalten von \(\Phi\) linear unabhängig sind.
+
+\begin{conceptbox}
+Für eine eindeutige Least-Squares-Lösung braucht man:
+
+\[
+    \mathrm{rank}(\Phi) = M.
+\]
+
+Das bedeutet:
+Die \(M\) Spalten der Designmatrix müssen linear unabhängig sein.
+\end{conceptbox}
+
+Wenn \(M>N\), also mehr Parameter als Datenpunkte vorhanden sind, kann \(\Phi\) keinen vollen Spaltenrang haben.
+Dann ist die Lösung nicht eindeutig.
+Das ist ein typischer Fall von Unterbestimmtheit (underdetermined system).
+
+\section{Training Error und Test Error}
+
+Der Trainingsfehler (training error) ist der Fehler auf den Daten, die zum Lernen verwendet wurden:
+
+\[
+    E_{\mathrm{train}}
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        y(\vec{x}_n,\vec{w})-t_n
+    \right)^2.
+\]
+
+Der Testfehler (test error) wird auf neuen Daten gemessen:
+
+\[
+    E_{\mathrm{test}}
+    =
+    \frac{1}{2}
+    \sum_{m=1}^{N_{\mathrm{test}}}
+    \left(
+        y(\vec{x}^{\,\mathrm{test}}_m,\vec{w})
+        -
+        t^{\mathrm{test}}_m
+    \right)^2.
+\]
+
+\begin{conceptbox}
+Ein kleiner Trainingsfehler bedeutet nicht automatisch gute Generalisierung.
+
+Ein Modell kann die Trainingsdaten sehr gut treffen und trotzdem auf neuen Daten schlecht sein.
+Das nennt man Überanpassung (overfitting).
+\end{conceptbox}
+
+\section{Polynomiale Regression und Overfitting}
+
+Ein klassisches Beispiel für Overfitting ist polynomiale Regression.
+
+Wir verwenden Basisfunktionen:
+
+\[
+    \phi_j(x)=x^j
+\]
+
+für
+
+\[
+    j=0,1,\dots,M-1.
+\]
+
+Das Modell ist:
+
+\[
+    y(x,\vec{w})
+    =
+    \sum_{j=0}^{M-1}
+    w_jx^j.
+\]
+
+Wenn \(M\) klein ist, ist das Modell sehr eingeschränkt.
+Es kann unteranpassen (underfitting).
+
+Wenn \(M\) sehr groß ist, kann das Modell sehr flexibel werden.
+Es kann dann die Trainingspunkte sehr genau treffen, aber zwischen den Punkten stark oszillieren.
+
+\begin{conceptbox}
+Kleines \(M\):
+
+\[
+    \text{einfaches Modell}
+    \quad
+    \Rightarrow
+    \quad
+    \text{mögliche Unteranpassung}.
+\]
+
+Großes \(M\):
+
+\[
+    \text{flexibles Modell}
+    \quad
+    \Rightarrow
+    \quad
+    \text{mögliche Überanpassung}.
+\]
+\end{conceptbox}
+
+\section{Probabilistische Interpretation}
+
+Lineare Regression kann probabilistisch interpretiert werden.
+Wir nehmen an, dass die Zielwerte aus einer Modellvorhersage plus Rauschen entstehen:
+
+\[
+    t_n
+    =
+    y(\vec{x}_n,\vec{w})
+    +
+    \epsilon_n.
+\]
+
+Das Rauschen sei normalverteilt:
+
+\[
+    \epsilon_n
+    \sim
+    \mathcal{N}(0,\beta^{-1}).
+\]
+
+Dabei ist \(\beta\) die Präzision (precision), also der Kehrwert der Varianz:
+
+\[
+    \beta
+    =
+    \frac{1}{\sigma^2}.
+\]
+
+Dann gilt:
+
+\[
+    p(t_n \mid \vec{x}_n,\vec{w},\beta)
+    =
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        y(\vec{x}_n,\vec{w}),
+        \beta^{-1}
+    \right).
+\]
+
+\begin{definitionbox}
+Das probabilistische Modell der linearen Regression ist:
+
+\[
+    p(t \mid \vec{x},\vec{w},\beta)
+    =
+    \mathcal{N}
+    \left(
+        t
+        \mid
+        \vec{w}^{\top}\vec{\phi}(\vec{x}),
+        \beta^{-1}
+    \right).
+\]
+\end{definitionbox}
+
+\section{Likelihood der linearen Regression}
+
+Für i.i.d. Daten gilt:
+
+\[
+    p(\vec{t} \mid X,\vec{w},\beta)
+    =
+    \prod_{n=1}^{N}
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        \vec{w}^{\top}\vec{\phi}(\vec{x}_n),
+        \beta^{-1}
+    \right).
+\]
+
+Die Normalverteilungsdichte ist:
+
+\[
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        y_n,
+        \beta^{-1}
+    \right)
+    =
+    \left(
+        \frac{\beta}{2\pi}
+    \right)^{1/2}
+    \exp\left(
+        -\frac{\beta}{2}
+        (t_n-y_n)^2
+    \right),
+\]
+
+wobei
+
+\[
+    y_n
+    =
+    \vec{w}^{\top}\vec{\phi}(\vec{x}_n).
+\]
+
+Damit:
+
+\[
+    p(\vec{t} \mid X,\vec{w},\beta)
+    =
+    \prod_{n=1}^{N}
+    \left(
+        \frac{\beta}{2\pi}
+    \right)^{1/2}
+    \exp\left(
+        -\frac{\beta}{2}
+        (t_n-y_n)^2
+    \right).
+\]
+
+\section{Log-Likelihood der linearen Regression}
+
+Die Log-Likelihood ist:
+
+\[
+    \log p(\vec{t} \mid X,\vec{w},\beta)
+    =
+    \sum_{n=1}^{N}
+    \left[
+        \frac{1}{2}\log\beta
+        -
+        \frac{1}{2}\log(2\pi)
+        -
+        \frac{\beta}{2}
+        (t_n-y_n)^2
+    \right].
+\]
+
+Zusammenfassen:
+
+\[
+    \log p(\vec{t} \mid X,\vec{w},\beta)
+    =
+    \frac{N}{2}\log\beta
+    -
+    \frac{N}{2}\log(2\pi)
+    -
+    \frac{\beta}{2}
+    \sum_{n=1}^{N}
+    (t_n-y_n)^2.
+\]
+
+Für festes \(\beta\) hängen die ersten beiden Terme nicht von \(\vec{w}\) ab.
+Also maximiert man die Log-Likelihood nach \(\vec{w}\), indem man minimiert:
+
+\[
+    \sum_{n=1}^{N}
+    (t_n-y_n)^2.
+\]
+
+\begin{conceptbox}
+Maximum-Likelihood für lineare Regression mit Gaußschem Rauschen ist äquivalent zu Least Squares.
+
+\[
+    \text{Gauß-Likelihood}
+    \quad
+    \Longleftrightarrow
+    \quad
+    \text{quadratischer Fehler}.
+\]
+\end{conceptbox}
+
+\section{Schätzung der Rauschvarianz}
+
+Neben \(\vec{w}\) kann auch \(\beta\) geschätzt werden.
+Die Maximum-Likelihood-Lösung für die Varianz ist:
+
+\[
+    \hat{\sigma}^2_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \left(
+        t_n-y(\vec{x}_n,\vec{w}_{\mathrm{ML}})
+    \right)^2.
+\]
+
+Da
+
+\[
+    \beta = \frac{1}{\sigma^2},
+\]
+
+gilt:
+
+\[
+    \hat{\beta}_{\mathrm{ML}}
+    =
+    \frac{1}{\hat{\sigma}^2_{\mathrm{ML}}}.
+\]
+
+Also:
+
+\[
+    \hat{\beta}_{\mathrm{ML}}^{-1}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \left(
+        t_n-y(\vec{x}_n,\vec{w}_{\mathrm{ML}})
+    \right)^2.
+\]
+
+\begin{notebox}
+Wie bei der Normalverteilung ist der ML-Schätzer der Varianz bei endlichem \(N\) verzerrt.
+Für reine Modellschätzung wird trotzdem oft die ML-Form verwendet.
+\end{notebox}
+
+\section{Regularisierung}
+
+Bei flexiblen Modellen kann Least Squares zu Overfitting führen.
+Eine typische Lösung ist Regularisierung (regularization).
+
+Dabei ergänzt man die Fehlerfunktion um einen Term, der große Gewichte bestraft.
+
+\[
+    E(\vec{w})
+    =
+    E_D(\vec{w})
+    +
+    \lambda E_W(\vec{w}).
+\]
+
+Hier ist:
+
+\[
+    E_D(\vec{w})
+\]
+
+der Datenfehler (data error), und
+
+\[
+    E_W(\vec{w})
+\]
+
+der Regularisierungsterm (regularization term).
+
+\begin{conceptbox}
+Regularisierung verhindert, dass die Gewichte zu groß werden.
+
+Große Gewichte können dazu führen, dass das Modell stark schwankt und die Trainingsdaten überanpasst.
+\end{conceptbox}
+
+\section{Ridge Regression}
+
+Eine häufige Regularisierung ist \(L_2\)-Regularisierung:
+
+\[
+    E_W(\vec{w})
+    =
+    \frac{1}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Dann ist die gesamte Fehlerfunktion:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Das nennt man Ridge Regression.
+
+\begin{definitionbox}
+Ridge Regression minimiert:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Der Parameter \(\lambda \geq 0\) steuert die Stärke der Regularisierung.
+\end{definitionbox}
+
+\section{Ridge-Lösung}
+
+Wir leiten die Lösung her.
+Die Fehlerfunktion ist:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    (\Phi\vec{w}-\vec{t})^{\top}
+    (\Phi\vec{w}-\vec{t})
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Der Gradient ist:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    \Phi^{\top}\Phi\vec{w}
+    -
+    \Phi^{\top}\vec{t}
+    +
+    \lambda\vec{w}.
+\]
+
+Setze den Gradienten gleich \(0\):
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    -
+    \Phi^{\top}\vec{t}
+    +
+    \lambda\vec{w}
+    =
+    \vec{0}.
+\]
+
+Zusammenfassen:
+
+\[
+    (\Phi^{\top}\Phi+\lambda I)\vec{w}
+    =
+    \Phi^{\top}\vec{t}.
+\]
+
+Wenn \(\Phi^{\top}\Phi+\lambda I\) invertierbar ist, folgt:
+
+\[
+    \vec{w}_{\mathrm{ridge}}
+    =
+    (\Phi^{\top}\Phi+\lambda I)^{-1}
+    \Phi^{\top}\vec{t}.
+\]
+
+\begin{conceptbox}
+Die Ridge-Lösung ist:
+
+\[
+    \vec{w}_{\mathrm{ridge}}
+    =
+    (\Phi^{\top}\Phi+\lambda I)^{-1}
+    \Phi^{\top}\vec{t}.
+\]
+
+Für \(\lambda>0\) ist die Matrix oft besser konditioniert als \(\Phi^{\top}\Phi\).
+\end{conceptbox}
+
+\begin{notebox}
+In manchen Konventionen wird der Bias-Term \(w_0\) nicht regularisiert.
+Dann ersetzt man \(\lambda I\) durch eine Diagonalmatrix, deren erster Eintrag \(0\) ist.
+\end{notebox}
+
+\section{MAP-Interpretation von Ridge Regression}
+
+Ridge Regression kann probabilistisch als MAP-Schätzung interpretiert werden.
+
+Wir verwenden die Likelihood:
+
+\[
+    p(\vec{t}\mid X,\vec{w},\beta)
+    =
+    \prod_{n=1}^{N}
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        \vec{w}^{\top}\vec{\phi}(\vec{x}_n),
+        \beta^{-1}
+    \right).
+\]
+
+Außerdem verwenden wir einen Gauß-Prior auf die Gewichte:
+
+\[
+    p(\vec{w}\mid\alpha)
+    =
+    \mathcal{N}
+    \left(
+        \vec{w}
+        \mid
+        \vec{0},
+        \alpha^{-1}I
+    \right).
+\]
+
+Der negative Log-Posterior ist bis auf Konstanten:
+
+\[
+    \frac{\beta}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2
+    +
+    \frac{\alpha}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Multipliziert man mit \(\frac{1}{\beta}\), erhält man ein äquivalentes Optimierungsproblem:
+
+\[
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2
+    +
+    \frac{\alpha}{2\beta}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Also entspricht Ridge Regression einem Gauß-Prior mit
+
+\[
+    \lambda
+    =
+    \frac{\alpha}{\beta}.
+\]
+
+\begin{conceptbox}
+Ridge Regression ist MAP-Schätzung bei:
+
+\[
+    \text{Gauß-Likelihood}
+    +
+    \text{Gauß-Prior auf } \vec{w}.
+\]
+
+Der Regularisierungsparameter ist:
+
+\[
+    \lambda
+    =
+    \frac{\alpha}{\beta}.
+\]
+\end{conceptbox}
+
+\section{Gradientenabstieg für lineare Regression}
+
+Obwohl lineare Regression eine geschlossene Lösung hat, kann man sie auch iterativ mit Gradientenabstieg (gradient descent) trainieren.
+
+Die Fehlerfunktion ist:
+
+\[
+    E_D(\vec{w})
+    =
+    \frac{1}{2}
+    \left\|
+        \Phi\vec{w}-\vec{t}
+    \right\|^2.
+\]
+
+Der Gradient ist:
+
+\[
+    \nabla_{\vec{w}}E_D(\vec{w})
+    =
+    \Phi^{\top}
+    (
+        \Phi\vec{w}-\vec{t}
+    ).
+\]
+
+Gradientenabstieg aktualisiert:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    \nabla_{\vec{w}}E_D(\vec{w}^{(\tau)}),
+\]
+
+also:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    \Phi^{\top}
+    (
+        \Phi\vec{w}^{(\tau)}-\vec{t}
+    ).
+\]
+
+Dabei ist \(\eta>0\) die Lernrate (learning rate).
+
+\begin{notebox}
+Für große Datensätze ist eine iterative Optimierung oft praktischer als das direkte Invertieren von \(\Phi^{\top}\Phi\).
+
+Das ist besonders wichtig bei sehr vielen Datenpunkten oder sehr vielen Parametern.
+\end{notebox}
+
+\section{Stochastischer Gradientenabstieg}
+
+Beim stochastischen Gradientenabstieg (stochastic gradient descent, SGD) verwendet man nicht alle Daten auf einmal.
+Stattdessen aktualisiert man die Gewichte mit einem einzelnen Datenpunkt oder einem Mini-Batch.
+
+Für einen einzelnen Datenpunkt ist der Fehler:
+
+\[
+    E_n(\vec{w})
+    =
+    \frac{1}{2}
+    \left(
+        y(\vec{x}_n,\vec{w})-t_n
+    \right)^2.
+\]
+
+Der Gradient ist:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    \left(
+        y(\vec{x}_n,\vec{w})-t_n
+    \right)
+    \vec{\phi}(\vec{x}_n).
+\]
+
+Das Update ist:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    \left(
+        y(\vec{x}_n,\vec{w}^{(\tau)})-t_n
+    \right)
+    \vec{\phi}(\vec{x}_n).
+\]
+
+\begin{conceptbox}
+SGD ist wichtig, weil es auf sehr große Datensätze skaliert.
+Viele moderne ML-Modelle, insbesondere neuronale Netze, werden mit Varianten von SGD trainiert.
+\end{conceptbox}
+
+\section{Mehrdimensionale Zielwerte}
+
+Bisher war der Zielwert eindimensional:
+
+\[
+    t_n \in \mathbb{R}.
+\]
+
+Man kann lineare Regression auch für mehrere Zielwerte verwenden:
+
+\[
+    \vec{t}_n \in \mathbb{R}^K.
+\]
+
+Dann verwendet man eine Gewichtsmatrix \(W\):
+
+\[
+    \vec{y}(\vec{x})
+    =
+    W^{\top}\vec{\phi}(\vec{x}).
+\]
+
+Die Zielmatrix ist:
+
+\[
+    T
+    =
+    \begin{pmatrix}
+        \vec{t}_1^{\top} \\
+        \vec{t}_2^{\top} \\
+        \vdots \\
+        \vec{t}_N^{\top}
+    \end{pmatrix}
+    \in \mathbb{R}^{N \times K}.
+\]
+
+Die Vorhersagematrix ist:
+
+\[
+    Y
+    =
+    \Phi W.
+\]
+
+Die Least-Squares-Lösung ist:
+
+\[
+    W_{\mathrm{LS}}
+    =
+    (\Phi^{\top}\Phi)^{-1}
+    \Phi^{\top}T.
+\]
+
+\begin{notebox}
+Mehrdimensionale lineare Regression kann als mehrere lineare Regressionsprobleme gleichzeitig verstanden werden.
+Jede Ausgabedimension hat ihre eigenen Gewichte.
+\end{notebox}
+
+\section{Praktische Aspekte}
+
+\subsection{Skalierung der Eingaben}
+
+Lineare Regression ist empfindlich gegenüber Skalierung.
+Wenn ein Merkmal sehr große Werte hat und ein anderes sehr kleine, können numerische Probleme entstehen.
+
+Eine typische Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei sind \(\mu_j\) und \(\sigma_j\) Mittelwert und Standardabweichung des \(j\)-ten Merkmals im Trainingsdatensatz.
+
+\begin{examtipbox}
+Wichtig:
+Die Skalierungsparameter \(\mu_j\) und \(\sigma_j\) werden nur auf den Trainingsdaten berechnet.
+Danach werden dieselben Werte auf Validierungs- und Testdaten angewendet.
+\end{examtipbox}
+
+\subsection{Multikollinearität}
+
+Wenn Spalten der Designmatrix stark linear abhängig sind, ist \(\Phi^{\top}\Phi\) schlecht konditioniert.
+Dann können kleine Änderungen in den Daten große Änderungen in den Gewichten verursachen.
+
+Ridge Regression hilft hier, weil
+
+\[
+    \Phi^{\top}\Phi+\lambda I
+\]
+
+stabiler invertierbar ist.
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei linearer Regression:
+
+\begin{enumerate}
+    \item Den Bias-Term \(w_0\) vergessen.
+    \item Verwechseln, ob \(\vec{x}\) den Bias-Eintrag \(1\) enthält.
+    \item Denken, dass lineare Regression immer linear in der ursprünglichen Eingabe sein muss.
+    \item Designmatrix \(\Phi\) falsch dimensionieren.
+    \item \(\Phi\vec{w}\) und \(\vec{w}^{\top}\Phi\) verwechseln.
+    \item Die Normalengleichung falsch herum schreiben.
+    \item Vergessen, dass \(\Phi^{\top}\Phi\) invertierbar sein muss.
+    \item Overfitting bei zu vielen Basisfunktionen ignorieren.
+    \item Den Zusammenhang zwischen Gaußschem Rauschen und quadratischem Fehler nicht erkennen.
+    \item Ridge Regression nur als Trick sehen, nicht als MAP mit Gauß-Prior.
+    \item Trainingsfehler mit Testfehler verwechseln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Einfache Vorhersage}
+
+Gegeben sei das Modell
+
+\[
+    y(x,w_0,w_1)
+    =
+    w_0+w_1x.
+\]
+
+Mit
+
+\[
+    w_0=2,
+    \qquad
+    w_1=3,
+    \qquad
+    x=4
+\]
+
+berechne \(y\).
+
+\begin{examplebox}
+Einsetzen:
+
+\[
+    y
+    =
+    2+3\cdot 4
+    =
+    2+12
+    =
+    14.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Designmatrix}
+
+Gegeben seien die Datenpunkte
+
+\[
+    x_1=1,
+    \qquad
+    x_2=2,
+    \qquad
+    x_3=3.
+\]
+
+Wir verwenden Basisfunktionen
+
+\[
+    \phi_0(x)=1,
+    \qquad
+    \phi_1(x)=x.
+\]
+
+Schreibe die Designmatrix \(\Phi\).
+
+\begin{examplebox}
+Die Designmatrix hat eine Zeile pro Datenpunkt:
+
+\[
+    \Phi
+    =
+    \begin{pmatrix}
+        1 & 1 \\
+        1 & 2 \\
+        1 & 3
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Quadratischer Fehler}
+
+Gegeben seien Zielwerte
+
+\[
+    \vec{t}
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}
+\]
+
+und Vorhersagen
+
+\[
+    \vec{y}
+    =
+    \begin{pmatrix}
+        2 \\
+        4
+    \end{pmatrix}.
+\]
+
+Berechne
+
+\[
+    E_D
+    =
+    \frac{1}{2}
+    \|\vec{y}-\vec{t}\|^2.
+\]
+
+\begin{examplebox}
+Zuerst:
+
+\[
+    \vec{y}-\vec{t}
+    =
+    \begin{pmatrix}
+        2 \\
+        4
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}.
+\]
+
+Dann:
+
+\[
+    \|\vec{y}-\vec{t}\|^2
+    =
+    1^2+2^2
+    =
+    5.
+\]
+
+Also:
+
+\[
+    E_D
+    =
+    \frac{1}{2}
+    5
+    =
+    2{,}5.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Ridge-Lösung}
+
+Gegeben sei
+
+\[
+    \Phi^{\top}\Phi
+    =
+    \begin{pmatrix}
+        2 & 0 \\
+        0 & 3
+    \end{pmatrix},
+    \qquad
+    \Phi^{\top}\vec{t}
+    =
+    \begin{pmatrix}
+        4 \\
+        9
+    \end{pmatrix},
+\]
+
+und
+
+\[
+    \lambda = 1.
+\]
+
+Berechne \(\vec{w}_{\mathrm{ridge}}\).
+
+\begin{examplebox}
+Ridge Regression verwendet:
+
+\[
+    \vec{w}_{\mathrm{ridge}}
+    =
+    (\Phi^{\top}\Phi+\lambda I)^{-1}
+    \Phi^{\top}\vec{t}.
+\]
+
+Zuerst:
+
+\[
+    \Phi^{\top}\Phi+\lambda I
+    =
+    \begin{pmatrix}
+        2 & 0 \\
+        0 & 3
+    \end{pmatrix}
+    +
+    \begin{pmatrix}
+        1 & 0 \\
+        0 & 1
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        3 & 0 \\
+        0 & 4
+    \end{pmatrix}.
+\]
+
+Die Inverse ist:
+
+\[
+    (\Phi^{\top}\Phi+\lambda I)^{-1}
+    =
+    \begin{pmatrix}
+        \frac{1}{3} & 0 \\
+        0 & \frac{1}{4}
+    \end{pmatrix}.
+\]
+
+Also:
+
+\[
+    \vec{w}_{\mathrm{ridge}}
+    =
+    \begin{pmatrix}
+        \frac{1}{3} & 0 \\
+        0 & \frac{1}{4}
+    \end{pmatrix}
+    \begin{pmatrix}
+        4 \\
+        9
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        \frac{4}{3} \\
+        \frac{9}{4}
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Lineare Regression (linear regression) ist ein überwachtes Lernverfahren für kontinuierliche Zielwerte.
+    \item Das einfache lineare Modell ist:
+    \[
+        y(x,w_0,w_1)
+        =
+        w_0+w_1x.
+    \]
+    \item Mit mehreren Merkmalen:
+    \[
+        y(\vec{x},\vec{w})
+        =
+        w_0+\sum_{j=1}^{D}w_jx_j.
+    \]
+    \item Mit Bias in Vektorform:
+    \[
+        y(\vec{x},\vec{w})
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+    \item Lineare Regression ist linear in den Parametern, nicht notwendigerweise linear in der Eingabe.
+    \item Mit Basisfunktionen:
+    \[
+        y(x,\vec{w})
+        =
+        \sum_{j=0}^{M-1}
+        w_j\phi_j(x).
+    \]
+    \item Die Designmatrix ist:
+    \[
+        \Phi_{nj}
+        =
+        \phi_j(x_n).
+    \]
+    \item Die Vorhersagen für alle Datenpunkte sind:
+    \[
+        \vec{y}
+        =
+        \Phi\vec{w}.
+    \]
+    \item Die quadratische Fehlerfunktion ist:
+    \[
+        E_D(\vec{w})
+        =
+        \frac{1}{2}
+        \|\Phi\vec{w}-\vec{t}\|^2.
+    \]
+    \item Die Normalengleichung lautet:
+    \[
+        \Phi^{\top}\Phi\vec{w}
+        =
+        \Phi^{\top}\vec{t}.
+    \]
+    \item Die Least-Squares-Lösung ist:
+    \[
+        \vec{w}_{\mathrm{LS}}
+        =
+        (\Phi^{\top}\Phi)^{-1}
+        \Phi^{\top}\vec{t}.
+    \]
+    \item Mit Gaußschem Rauschen ist Least Squares äquivalent zu Maximum-Likelihood.
+    \item Ridge Regression minimiert:
+    \[
+        E(\vec{w})
+        =
+        \frac{1}{2}
+        \|\Phi\vec{w}-\vec{t}\|^2
+        +
+        \frac{\lambda}{2}
+        \vec{w}^{\top}\vec{w}.
+    \]
+    \item Die Ridge-Lösung ist:
+    \[
+        \vec{w}_{\mathrm{ridge}}
+        =
+        (\Phi^{\top}\Phi+\lambda I)^{-1}
+        \Phi^{\top}\vec{t}.
+    \]
+    \item Ridge Regression entspricht MAP mit Gauß-Likelihood und Gauß-Prior auf die Gewichte.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist lineare Regression?
+    \item Was ist der Unterschied zwischen Klassifikation und Regression?
+    \item Was ist ein Bias-Term?
+    \item Warum erweitert man den Eingabevektor um eine \(1\)?
+    \item Was bedeutet linear in den Parametern?
+    \item Gib ein Beispiel für ein Modell, das nichtlinear in \(x\), aber linear in \(\vec{w}\) ist.
+    \item Was ist eine Basisfunktion?
+    \item Was ist die Designmatrix?
+    \item Welche Dimensionen haben \(\Phi\), \(\vec{w}\) und \(\vec{t}\)?
+    \item Schreibe die quadratische Fehlerfunktion in Summenform und Matrixform.
+    \item Leite den Gradienten von \(E_D(\vec{w})\) her.
+    \item Leite die Normalengleichung her.
+    \item Wann ist die Least-Squares-Lösung eindeutig?
+    \item Was ist die Pseudoinverse?
+    \item Erkläre die geometrische Interpretation der Normalengleichung.
+    \item Warum kann polynomiale Regression überanpassen?
+    \item Wie hängt lineare Regression mit Maximum-Likelihood zusammen?
+    \item Warum führt Gaußsches Rauschen zu quadratischem Fehler?
+    \item Was ist Ridge Regression?
+    \item Leite die Ridge-Lösung her.
+    \item Wie hängt Ridge Regression mit MAP zusammen?
+    \item Was ist der Unterschied zwischen Trainingsfehler und Testfehler?
+\end{enumerate}
+\end{examtipbox}

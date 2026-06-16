@@ -1,0 +1,1890 @@
+\chapter{Gaussian Mixture Models}
+
+\section{Ziel dieses Kapitels}
+
+Im vorherigen Kapitel haben wir Clustering betrachtet.
+Besonders wichtig war \(k\)-means.
+\(k\)-means ordnet jeden Datenpunkt genau einem Cluster zu.
+Diese Zuordnung ist hart:
+
+\[
+    r_{nk}\in\{0,1\}.
+\]
+
+Ein Datenpunkt gehört also vollständig zu genau einem Cluster.
+
+Gaussian Mixture Models, kurz GMMs, verallgemeinern diese Idee.
+Sie modellieren Daten als Mischung mehrerer Gauß-Verteilungen.
+Ein Datenpunkt kann dabei mit unterschiedlichen Wahrscheinlichkeiten zu mehreren Komponenten gehören.
+
+\begin{conceptbox}
+Ein Gaussian Mixture Model (GMM) ist ein probabilistisches Modell, das eine Datenverteilung als gewichtete Summe mehrerer Gauß-Verteilungen beschreibt:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+Dabei beschreibt jede Komponente \(k\) einen Cluster.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist ein Gaussian Mixture Model?
+    \item Was ist der Unterschied zwischen \(k\)-means und GMMs?
+    \item Was sind Mischgewichte (mixing coefficients)?
+    \item Was sind latente Variablen (latent variables)?
+    \item Wie schreibt man die Likelihood eines GMMs?
+    \item Warum ist die direkte Maximum-Likelihood-Schätzung schwierig?
+    \item Was sind Verantwortlichkeiten (responsibilities)?
+    \item Wie berechnet man \(p(z=k\mid\vec{x})\)?
+    \item Wie funktioniert der Expectation-Maximization-Algorithmus?
+    \item Was passiert im E-Schritt?
+    \item Was passiert im M-Schritt?
+    \item Wie werden \(\vec{\mu}_k\), \(\Sigma_k\) und \(\pi_k\) aktualisiert?
+    \item Wie hängt \(k\)-means mit GMMs zusammen?
+    \item Welche Probleme können beim Fitten von GMMs auftreten?
+\end{itemize}
+
+\section{Motivation}
+
+Viele reale Datensätze bestehen nicht aus einer einzigen einfachen Verteilung.
+Stattdessen können verschiedene Gruppen oder Unterpopulationen vorhanden sein.
+
+Beispiele:
+
+\begin{itemize}
+    \item Körpergrößen verschiedener Altersgruppen,
+    \item medizinische Messwerte verschiedener Patientengruppen,
+    \item Bildfeatures verschiedener Objektarten,
+    \item Sensordaten verschiedener Betriebszustände,
+    \item Kundenverhalten verschiedener Kundensegmente.
+\end{itemize}
+
+Eine einzelne Gauß-Verteilung kann solche Daten oft nicht gut beschreiben.
+Sie hat nur einen Mittelwert und eine Kovarianzmatrix.
+
+\[
+    p(\vec{x})
+    =
+    \mathcal{N}(\vec{x}\mid\vec{\mu},\Sigma).
+\]
+
+Wenn die Daten mehrere Gruppen enthalten, ist eine Mischung mehrerer Gauß-Verteilungen sinnvoller:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+\begin{conceptbox}
+Ein GMM kann multimodale Daten modellieren.
+
+Multimodal bedeutet:
+Die Verteilung kann mehrere Häufungsbereiche oder Gipfel haben.
+\end{conceptbox}
+
+\section{Eine einzelne multivariate Gauß-Verteilung}
+
+Bevor wir Mischungen betrachten, erinnern wir an die multivariate Gauß-Verteilung.
+
+Für
+
+\[
+    \vec{x}\in\mathbb{R}^D
+\]
+
+ist die Dichte:
+
+\[
+    \mathcal{N}(\vec{x}\mid\vec{\mu},\Sigma)
+    =
+    \frac{1}{(2\pi)^{D/2}|\Sigma|^{1/2}}
+    \exp
+    \left(
+        -\frac{1}{2}
+        (\vec{x}-\vec{\mu})^{\top}
+        \Sigma^{-1}
+        (\vec{x}-\vec{\mu})
+    \right).
+\]
+
+Dabei ist:
+
+\begin{itemize}
+    \item \(\vec{\mu}\in\mathbb{R}^D\) der Mittelwert,
+    \item \(\Sigma\in\mathbb{R}^{D\times D}\) die Kovarianzmatrix,
+    \item \(|\Sigma|\) die Determinante der Kovarianzmatrix.
+\end{itemize}
+
+\begin{definitionbox}
+Die multivariate Gauß-Verteilung ist durch Mittelwert und Kovarianzmatrix bestimmt:
+
+\[
+    \vec{\mu}
+    =
+    \mathbb{E}[\vec{X}],
+\]
+
+\[
+    \Sigma
+    =
+    \mathbb{E}
+    \left[
+        (\vec{X}-\vec{\mu})(\vec{X}-\vec{\mu})^{\top}
+    \right].
+\]
+\end{definitionbox}
+
+\section{MLE für eine einzelne Gauß-Verteilung}
+
+Gegeben seien Datenpunkte
+
+\[
+    \vec{x}_1,\dots,\vec{x}_N
+    \in
+    \mathbb{R}^D.
+\]
+
+Wir nehmen an:
+
+\[
+    \vec{x}_n
+    \overset{\mathrm{i.i.d.}}{\sim}
+    \mathcal{N}(\vec{x}\mid\vec{\mu},\Sigma).
+\]
+
+Die Log-Likelihood ist:
+
+\[
+    \log p(X\mid\vec{\mu},\Sigma)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu},\Sigma).
+\]
+
+Maximum-Likelihood liefert:
+
+\[
+    \hat{\vec{\mu}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \vec{x}_n,
+\]
+
+und
+
+\[
+    \hat{\Sigma}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (\vec{x}_n-\hat{\vec{\mu}})
+    (\vec{x}_n-\hat{\vec{\mu}})^{\top}.
+\]
+
+\begin{definitionbox}
+Für eine einzelne Gauß-Verteilung sind die Maximum-Likelihood-Schätzer:
+
+\[
+    \hat{\vec{\mu}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \vec{x}_n,
+\]
+
+\[
+    \hat{\Sigma}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (\vec{x}_n-\hat{\vec{\mu}})
+    (\vec{x}_n-\hat{\vec{\mu}})^{\top}.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Wie bei der eindimensionalen Normalverteilung verwendet der ML-Schätzer der Kovarianz den Faktor \(\frac{1}{N}\), nicht \(\frac{1}{N-1}\).
+\end{notebox}
+
+\section{Gaussian Mixture Model}
+
+Ein Gaussian Mixture Model besteht aus \(K\) Gauß-Komponenten.
+Jede Komponente hat eigene Parameter:
+
+\[
+    \vec{\mu}_k,
+    \qquad
+    \Sigma_k,
+    \qquad
+    \pi_k.
+\]
+
+Die Dichte ist:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+\begin{definitionbox}
+Ein Gaussian Mixture Model mit \(K\) Komponenten ist:
+
+\[
+    p(\vec{x}\mid\Theta)
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k),
+\]
+
+wobei
+
+\[
+    \Theta
+    =
+    \{\pi_k,\vec{\mu}_k,\Sigma_k\}_{k=1}^{K}
+\]
+
+alle Modellparameter bezeichnet.
+\end{definitionbox}
+
+Die Mischgewichte müssen gültige Wahrscheinlichkeiten sein:
+
+\[
+    \pi_k\geq 0
+\]
+
+und
+
+\[
+    \sum_{k=1}^{K}
+    \pi_k=1.
+\]
+
+\begin{conceptbox}
+Das Mischgewicht \(\pi_k\) beschreibt, wie häufig Komponente \(k\) vor der Beobachtung eines Datenpunkts ausgewählt wird.
+
+Großes \(\pi_k\) bedeutet:
+Komponente \(k\) erklärt einen großen Anteil der Daten.
+\end{conceptbox}
+
+\section{Generative Interpretation}
+
+Ein GMM kann als generatives Modell verstanden werden.
+Ein Datenpunkt entsteht in zwei Schritten:
+
+\begin{enumerate}
+    \item Wähle eine Komponente \(z\) aus einer kategorialen Verteilung:
+    \[
+        p(z=k)=\pi_k.
+    \]
+
+    \item Ziehe den Datenpunkt aus der entsprechenden Gauß-Verteilung:
+    \[
+        p(\vec{x}\mid z=k)
+        =
+        \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+    \]
+\end{enumerate}
+
+\begin{definitionbox}
+Die latente Variable \(z\) gibt an, aus welcher Komponente ein Datenpunkt erzeugt wurde.
+
+Sie ist latent, weil wir \(z\) in den beobachteten Daten normalerweise nicht sehen.
+\end{definitionbox}
+
+Die gemeinsame Verteilung von \(\vec{x}\) und \(z\) ist:
+
+\[
+    p(\vec{x},z=k)
+    =
+    p(z=k)p(\vec{x}\mid z=k).
+\]
+
+Also:
+
+\[
+    p(\vec{x},z=k)
+    =
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+Wenn wir \(z\) nicht beobachten, müssen wir über alle möglichen Komponenten summieren:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    p(\vec{x},z=k).
+\]
+
+Damit:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+\begin{conceptbox}
+Die Mischung entsteht durch Marginalisierung der latenten Clusterzugehörigkeit:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{z}
+    p(\vec{x},z).
+\]
+\end{conceptbox}
+
+\section{One-Hot-Darstellung der latenten Variablen}
+
+Man kann die latente Variable auch als One-Hot-Vektor schreiben:
+
+\[
+    \vec{z}_n
+    =
+    (z_{n1},\dots,z_{nK})^{\top}.
+\]
+
+Dabei gilt:
+
+\[
+    z_{nk}\in\{0,1\},
+\]
+
+und
+
+\[
+    \sum_{k=1}^{K}
+    z_{nk}=1.
+\]
+
+Wenn
+
+\[
+    z_{nk}=1,
+\]
+
+dann wurde Datenpunkt \(n\) von Komponente \(k\) erzeugt.
+
+Die Prior-Verteilung über \(\vec{z}_n\) ist:
+
+\[
+    p(\vec{z}_n)
+    =
+    \prod_{k=1}^{K}
+    \pi_k^{z_{nk}}.
+\]
+
+Die bedingte Verteilung des Datenpunkts ist:
+
+\[
+    p(\vec{x}_n\mid\vec{z}_n)
+    =
+    \prod_{k=1}^{K}
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)^{z_{nk}}.
+\]
+
+\begin{notebox}
+Die One-Hot-Schreibweise ist praktisch für Herleitungen des EM-Algorithmus.
+
+Da genau ein \(z_{nk}\) gleich \(1\) ist, wird genau eine Komponente ausgewählt.
+\end{notebox}
+
+\section{Likelihood eines GMMs}
+
+Für i.i.d. Daten
+
+\[
+    X
+    =
+    \{\vec{x}_1,\dots,\vec{x}_N\}
+\]
+
+ist die Likelihood:
+
+\[
+    p(X\mid\Theta)
+    =
+    \prod_{n=1}^{N}
+    p(\vec{x}_n\mid\Theta).
+\]
+
+Da
+
+\[
+    p(\vec{x}_n\mid\Theta)
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k),
+\]
+
+ist:
+
+\[
+    p(X\mid\Theta)
+    =
+    \prod_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+\begin{definitionbox}
+Die GMM-Likelihood ist:
+
+\[
+    p(X\mid\Theta)
+    =
+    \prod_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k).
+\]
+\end{definitionbox}
+
+Die Log-Likelihood ist:
+
+\[
+    \log p(X\mid\Theta)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right).
+\]
+
+\begin{definitionbox}
+Die GMM-Log-Likelihood ist:
+
+\[
+    \ell(\Theta)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right).
+\]
+\end{definitionbox}
+
+\section{Warum direkte MLE schwierig ist}
+
+Bei einer einzelnen Gauß-Verteilung konnten wir die Log-Likelihood direkt ableiten und geschlossene Lösungen erhalten.
+
+Beim GMM steht aber ein Logarithmus über einer Summe:
+
+\[
+    \log
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right).
+\]
+
+Dieser Ausdruck koppelt die Komponenten.
+Dadurch entstehen keine einfachen geschlossenen Lösungen durch direktes Ableiten.
+
+\begin{conceptbox}
+Das Problem bei GMMs ist:
+
+\[
+    \log
+    \left(
+        \sum_k
+        \text{Komponente}_k
+    \right).
+\]
+
+Die Summe innerhalb des Logarithmus macht direkte Maximum-Likelihood-Schätzung schwierig.
+\end{conceptbox}
+
+Wenn wir die latenten Zuordnungen \(z_n\) kennen würden, wäre das Problem viel einfacher.
+Dann könnten wir für jede Komponente separat Mittelwert, Kovarianz und Mischgewicht schätzen.
+
+Da \(z_n\) aber unbekannt ist, verwenden wir Expectation-Maximization.
+
+\section{Posterior über Komponenten}
+
+Für einen Datenpunkt \(\vec{x}_n\) wollen wir wissen:
+Wie wahrscheinlich ist es, dass Komponente \(k\) diesen Punkt erzeugt hat?
+
+Das ist:
+
+\[
+    p(z_n=k\mid\vec{x}_n).
+\]
+
+Mit Bayes' Regel:
+
+\[
+    p(z_n=k\mid\vec{x}_n)
+    =
+    \frac{
+        p(z_n=k)p(\vec{x}_n\mid z_n=k)
+    }{
+        p(\vec{x}_n)
+    }.
+\]
+
+Einsetzen:
+
+\[
+    p(z_n=k\mid\vec{x}_n)
+    =
+    \frac{
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    }{
+        \sum_{j=1}^{K}
+        \pi_j
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+    }.
+\]
+
+Diese Größe heißt Verantwortung oder Responsibility.
+
+\begin{definitionbox}
+Die Responsibility \(\gamma_{nk}\) ist die Posterior-Wahrscheinlichkeit, dass Komponente \(k\) für Datenpunkt \(n\) verantwortlich ist:
+
+\[
+    \gamma_{nk}
+    =
+    p(z_n=k\mid\vec{x}_n,\Theta)
+    =
+    \frac{
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    }{
+        \sum_{j=1}^{K}
+        \pi_j
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+    }.
+\]
+\end{definitionbox}
+
+Für jeden Datenpunkt gilt:
+
+\[
+    \sum_{k=1}^{K}
+    \gamma_{nk}=1.
+\]
+
+Außerdem:
+
+\[
+    0\leq\gamma_{nk}\leq 1.
+\]
+
+\begin{conceptbox}
+Responsibilities sind weiche Clusterzuordnungen.
+
+Statt
+
+\[
+    r_{nk}\in\{0,1\}
+\]
+
+wie bei \(k\)-means haben wir
+
+\[
+    \gamma_{nk}\in[0,1].
+\]
+\end{conceptbox}
+
+\section{Effektive Clustergröße}
+
+Die effektive Anzahl der Datenpunkte, die Komponente \(k\) zugeordnet sind, ist:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+
+\begin{definitionbox}
+Die effektive Clustergröße einer GMM-Komponente ist:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+\end{definitionbox}
+
+Wenn alle Zuordnungen hart wären, wäre \(N_k\) einfach die Anzahl der Punkte im Cluster.
+Bei weichen Zuordnungen zählt jeder Punkt anteilig.
+
+\begin{examplebox}
+Wenn ein Punkt Responsibility
+
+\[
+    \gamma_{n1}=0{,}7
+\]
+
+für Komponente \(1\) und
+
+\[
+    \gamma_{n2}=0{,}3
+\]
+
+für Komponente \(2\) hat, dann zählt er zu \(70\%\) zu Komponente \(1\) und zu \(30\%\) zu Komponente \(2\).
+\end{examplebox}
+
+\section{Expectation-Maximization: Grundidee}
+
+Expectation-Maximization, kurz EM, ist ein Algorithmus für Modelle mit latenten Variablen.
+
+Die Grundidee:
+
+\begin{enumerate}
+    \item E-Schritt:
+    Schätze die unbekannten latenten Zuordnungen mit den aktuellen Parametern.
+
+    \item M-Schritt:
+    Aktualisiere die Parameter so, als wären diese geschätzten Zuordnungen bekannt.
+\end{enumerate}
+
+\begin{conceptbox}
+EM wechselt zwischen:
+
+\[
+    \text{Erwarte latente Struktur}
+    \quad
+    \longrightarrow
+    \quad
+    \text{Maximiere Parameter}.
+\]
+
+Für GMMs bedeutet das:
+
+\[
+    \text{E-Schritt: Responsibilities berechnen}.
+\]
+
+\[
+    \text{M-Schritt: Gauß-Parameter mit Responsibilities neu schätzen}.
+\]
+\end{conceptbox}
+
+\section{E-Schritt für GMMs}
+
+Im E-Schritt werden die Responsibilities mit den aktuellen Parametern berechnet.
+Seien die aktuellen Parameter:
+
+\[
+    \Theta^{\mathrm{old}}
+    =
+    \{\pi_k^{\mathrm{old}},\vec{\mu}_k^{\mathrm{old}},\Sigma_k^{\mathrm{old}}\}_{k=1}^{K}.
+\]
+
+Dann ist:
+
+\[
+    \gamma_{nk}
+    =
+    \frac{
+        \pi_k^{\mathrm{old}}
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k^{\mathrm{old}},\Sigma_k^{\mathrm{old}})
+    }{
+        \sum_{j=1}^{K}
+        \pi_j^{\mathrm{old}}
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j^{\mathrm{old}},\Sigma_j^{\mathrm{old}})
+    }.
+\]
+
+\begin{definitionbox}
+Der E-Schritt eines GMMs berechnet für alle Datenpunkte und Komponenten:
+
+\[
+    \gamma_{nk}
+    =
+    p(z_n=k\mid\vec{x}_n,\Theta^{\mathrm{old}}).
+\]
+\end{definitionbox}
+
+\section{M-Schritt für GMMs}
+
+Im M-Schritt werden die Parameter mit den Responsibilities aktualisiert.
+
+Zuerst:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+
+Der neue Mittelwert ist der gewichtete Mittelwert:
+
+\[
+    \vec{\mu}_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    \vec{x}_n.
+\]
+
+Die neue Kovarianzmatrix ist:
+
+\[
+    \Sigma_k^{\mathrm{new}}
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})
+    (\vec{x}_n-\vec{\mu}_k^{\mathrm{new}})^{\top}.
+\]
+
+Das neue Mischgewicht ist:
+
+\[
+    \pi_k^{\mathrm{new}}
+    =
+    \frac{N_k}{N}.
+\]
+
+\begin{definitionbox}
+Der M-Schritt eines GMMs aktualisiert:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk},
+\]
+
+\[
+    \vec{\mu}_k
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    \vec{x}_n,
+\]
+
+\[
+    \Sigma_k
+    =
+    \frac{1}{N_k}
+    \sum_{n=1}^{N}
+    \gamma_{nk}
+    (\vec{x}_n-\vec{\mu}_k)
+    (\vec{x}_n-\vec{\mu}_k)^{\top},
+\]
+
+\[
+    \pi_k
+    =
+    \frac{N_k}{N}.
+\]
+\end{definitionbox}
+
+\section{Interpretation der M-Schritt-Formeln}
+
+Die Formeln sind die gleichen wie bei einer Gauß-Verteilung, aber mit Gewichten.
+
+Der Mittelwert
+
+\[
+    \vec{\mu}_k
+\]
+
+ist der gewichtete Durchschnitt aller Datenpunkte.
+Ein Punkt mit großer Responsibility \(\gamma_{nk}\) für Komponente \(k\) beeinflusst \(\vec{\mu}_k\) stark.
+Ein Punkt mit kleiner Responsibility beeinflusst \(\vec{\mu}_k\) wenig.
+
+Die Kovarianz
+
+\[
+    \Sigma_k
+\]
+
+ist die gewichtete Kovarianz um den neuen Mittelwert.
+
+Das Mischgewicht
+
+\[
+    \pi_k
+\]
+
+ist der Anteil der effektiven Punkte, die Komponente \(k\) erklärt.
+
+\begin{conceptbox}
+Der M-Schritt ist wie das Fitten einer Gauß-Verteilung pro Cluster, aber jeder Datenpunkt zählt nur anteilig gemäß seiner Responsibility.
+\end{conceptbox}
+
+\section{EM-Algorithmus für GMMs}
+
+Der vollständige Algorithmus lautet:
+
+\begin{definitionbox}
+EM für Gaussian Mixture Models:
+
+\begin{enumerate}
+    \item Wähle \(K\).
+    \item Initialisiere \(\pi_k\), \(\vec{\mu}_k\) und \(\Sigma_k\).
+    \item E-Schritt:
+    \[
+        \gamma_{nk}
+        =
+        \frac{
+            \pi_k
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+        }{
+            \sum_{j=1}^{K}
+            \pi_j
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+        }.
+    \]
+    \item M-Schritt:
+    \[
+        N_k
+        =
+        \sum_{n=1}^{N}
+        \gamma_{nk},
+    \]
+    \[
+        \vec{\mu}_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}\vec{x}_n,
+    \]
+    \[
+        \Sigma_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}
+        (\vec{x}_n-\vec{\mu}_k)
+        (\vec{x}_n-\vec{\mu}_k)^{\top},
+    \]
+    \[
+        \pi_k
+        =
+        \frac{N_k}{N}.
+    \]
+    \item Berechne die Log-Likelihood:
+    \[
+        \ell(\Theta)
+        =
+        \sum_{n=1}^{N}
+        \log
+        \left(
+            \sum_{k=1}^{K}
+            \pi_k
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+        \right).
+    \]
+    \item Wiederhole E- und M-Schritt, bis die Log-Likelihood kaum noch steigt.
+\end{enumerate}
+\end{definitionbox}
+
+\section{Konvergenz von EM}
+
+EM hat eine wichtige Eigenschaft:
+Die Log-Likelihood sinkt nicht nach einer Iteration.
+
+\[
+    \ell(\Theta^{\mathrm{new}})
+    \geq
+    \ell(\Theta^{\mathrm{old}}).
+\]
+
+\begin{conceptbox}
+EM verbessert oder erhält in jeder Iteration die Log-Likelihood.
+
+Das bedeutet:
+Der Algorithmus bewegt sich schrittweise zu einem lokalen Maximum der Likelihood.
+\end{conceptbox}
+
+Wie bei \(k\)-means bedeutet das aber nicht, dass das globale Maximum gefunden wird.
+EM kann in lokalen Maxima landen.
+
+\begin{notebox}
+Konvergenz von EM bedeutet meistens:
+Die Änderung der Log-Likelihood wird kleiner als eine gewählte Toleranz.
+
+Zum Beispiel:
+
+\[
+    |\ell^{(\tau+1)}-\ell^{(\tau)}|<\varepsilon.
+\]
+\end{notebox}
+
+\section{Free Energy und EM-Idee}
+
+Eine tiefere Sicht auf EM verwendet eine untere Schranke der Log-Likelihood.
+Diese Schranke wird oft Free Energy genannt.
+
+Für GMMs kann man schreiben:
+
+\[
+    \mathcal{F}
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \left(
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right)
+    -
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \log \gamma_{nk}.
+\]
+
+\begin{definitionbox}
+Die Free Energy für ein GMM ist:
+
+\[
+    \mathcal{F}
+    =
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \left(
+        \log \pi_k
+        +
+        \log
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right)
+    -
+    \sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    \gamma_{nk}
+    \log \gamma_{nk}.
+\]
+\end{definitionbox}
+
+Die E- und M-Schritte können so interpretiert werden:
+
+\begin{itemize}
+    \item E-Schritt:
+    Wähle \(\gamma_{nk}\), sodass die Schranke eng wird.
+    \item M-Schritt:
+    Maximiere die Schranke bezüglich der Modellparameter.
+\end{itemize}
+
+\begin{notebox}
+Für praktische Rechnungen reichen meistens die E- und M-Formeln.
+Die Free-Energy-Sicht erklärt aber, warum EM die Log-Likelihood nicht verringert.
+\end{notebox}
+
+\section{Initialisierung}
+
+GMMs sind empfindlich gegenüber Initialisierung.
+Man muss initialisieren:
+
+\[
+    \vec{\mu}_k,
+    \qquad
+    \Sigma_k,
+    \qquad
+    \pi_k.
+\]
+
+Typische Strategien:
+
+\begin{itemize}
+    \item Mittelwerte zufällig aus Datenpunkten wählen,
+    \item \(k\)-means verwenden und die Zentren übernehmen,
+    \item Kovarianzmatrizen initial als empirische Kovarianz setzen,
+    \item Mischgewichte gleich verteilen:
+    \[
+        \pi_k=\frac{1}{K}.
+    \]
+\end{itemize}
+
+\begin{conceptbox}
+Eine häufige Praxis ist:
+Erst \(k\)-means ausführen, dann die Zentren und Zuordnungen zur Initialisierung des GMMs verwenden.
+\end{conceptbox}
+
+\section{Vergleich mit \(k\)-means}
+
+\(k\)-means und GMMs sind eng verwandt.
+
+\[
+\begin{array}{c|c|c}
+\text{Eigenschaft}
+&
+k\text{-means}
+&
+\text{GMM}
+\\
+\hline
+\text{Zuordnung}
+&
+\text{hart}
+&
+\text{weich}
+\\
+\hline
+\text{Clusterform}
+&
+\text{kugelförmig}
+&
+\text{elliptisch möglich}
+\\
+\hline
+\text{Parameter}
+&
+\vec{\mu}_k
+&
+\pi_k,\vec{\mu}_k,\Sigma_k
+\\
+\hline
+\text{Optimierung}
+&
+\text{alternierend}
+&
+\text{EM}
+\\
+\hline
+\text{Probabilistisch}
+&
+\text{nicht direkt}
+&
+\text{ja}
+\end{array}
+\]
+
+\begin{conceptbox}
+GMMs verallgemeinern \(k\)-means:
+
+\begin{itemize}
+    \item Cluster haben Kovarianzmatrizen.
+    \item Punkte können mehreren Clustern anteilig zugeordnet sein.
+    \item Das Modell liefert Wahrscheinlichkeitsdichten.
+\end{itemize}
+\end{conceptbox}
+
+\section{\(k\)-means als Grenzfall eines GMMs}
+
+Man kann \(k\)-means als Grenzfall eines GMMs verstehen.
+Angenommen, alle Komponenten haben gleiche isotrope Kovarianz:
+
+\[
+    \Sigma_k=\sigma^2 I.
+\]
+
+Wenn
+
+\[
+    \sigma^2\to 0,
+\]
+
+dann wird die Gauß-Dichte um jedes Zentrum sehr schmal.
+Jeder Punkt wird fast vollständig der nächsten Komponente zugeordnet.
+
+Dann werden die Responsibilities fast hart:
+
+\[
+    \gamma_{nk}
+    \approx
+    \begin{cases}
+        1, & k=\arg\min_j\|\vec{x}_n-\vec{\mu}_j\|^2, \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+\begin{conceptbox}
+\(k\)-means entspricht ungefähr einem GMM mit gleichen kugelförmigen Kovarianzen und harten Zuordnungen.
+\end{conceptbox}
+
+\section{Kovarianztypen}
+
+In GMMs kann man verschiedene Formen für \(\Sigma_k\) verwenden.
+
+\subsection{Volle Kovarianz}
+
+Jede Komponente hat eine vollständige Kovarianzmatrix:
+
+\[
+    \Sigma_k\in\mathbb{R}^{D\times D}.
+\]
+
+Das erlaubt beliebig orientierte elliptische Cluster.
+
+\subsection{Diagonale Kovarianz}
+
+Jede Kovarianzmatrix ist diagonal:
+
+\[
+    \Sigma_k
+    =
+    \mathrm{diag}
+    (\sigma_{k1}^2,\dots,\sigma_{kD}^2).
+\]
+
+Dann sind die Merkmale innerhalb einer Komponente unkorreliert.
+
+\subsection{Sphärische Kovarianz}
+
+Jede Komponente hat:
+
+\[
+    \Sigma_k
+    =
+    \sigma_k^2 I.
+\]
+
+Dann sind Cluster kugelförmig, aber jede Komponente kann eigene Varianz haben.
+
+\subsection{Geteilte Kovarianz}
+
+Alle Komponenten teilen dieselbe Kovarianzmatrix:
+
+\[
+    \Sigma_k=\Sigma
+    \quad
+    \text{für alle}
+    \quad
+    k.
+\]
+
+\begin{notebox}
+Volle Kovarianzen sind flexibel, benötigen aber viele Parameter.
+Diagonale oder sphärische Kovarianzen sind restriktiver, aber stabiler bei wenig Daten.
+\end{notebox}
+
+\section{Anzahl der Parameter}
+
+Die Anzahl der Parameter eines GMMs wächst mit \(K\) und \(D\).
+
+Für jede Komponente:
+
+\begin{itemize}
+    \item Mittelwert:
+    \[
+        D
+    \]
+    Parameter.
+    \item Volle Kovarianzmatrix:
+    \[
+        \frac{D(D+1)}{2}
+    \]
+    Parameter, weil sie symmetrisch ist.
+    \item Mischgewicht:
+    Ein Gewicht pro Komponente, aber wegen
+    \[
+        \sum_{k=1}^{K}\pi_k=1
+    \]
+    gibt es insgesamt nur \(K-1\) freie Mischgewichtsparameter.
+\end{itemize}
+
+\begin{conceptbox}
+Ein GMM mit voller Kovarianz kann in hoher Dimension sehr viele Parameter haben.
+
+Daher braucht man genügend Daten oder Einschränkungen der Kovarianzstruktur.
+\end{conceptbox}
+
+\section{Wahl der Komponentenzahl \(K\)}
+
+Die Anzahl der Komponenten \(K\) ist ein Hyperparameter.
+Zu kleines \(K\) führt zu einem zu groben Modell.
+Zu großes \(K\) kann Overfitting erzeugen.
+
+Mögliche Methoden zur Wahl von \(K\):
+
+\begin{itemize}
+    \item Validierungs-Log-Likelihood,
+    \item AIC,
+    \item BIC,
+    \item fachliche Interpretierbarkeit,
+    \item Vergleich mehrerer Initialisierungen.
+\end{itemize}
+
+\begin{definitionbox}
+Die Bayesian Information Criterion, kurz BIC, ist:
+
+\[
+    \mathrm{BIC}
+    =
+    -2\ell(\hat{\Theta})
+    +
+    p\log N,
+\]
+
+wobei \(p\) die Anzahl freier Parameter und \(N\) die Anzahl der Datenpunkte ist.
+\end{definitionbox}
+
+Ein kleinerer BIC-Wert ist besser.
+Der erste Term belohnt gute Likelihood.
+Der zweite Term bestraft viele Parameter.
+
+\begin{notebox}
+BIC ist ein Modellselektionskriterium.
+Es ersetzt nicht automatisch fachliche Prüfung, kann aber bei der Wahl von \(K\) helfen.
+\end{notebox}
+
+\section{Clustering mit GMMs}
+
+Nach dem Fitten eines GMMs kann man Datenpunkte clustern.
+
+Die weiche Zuordnung ist:
+
+\[
+    \gamma_{nk}
+    =
+    p(z_n=k\mid\vec{x}_n).
+\]
+
+Eine harte Zuordnung erhält man durch:
+
+\[
+    \hat{z}_n
+    =
+    \arg\max_k
+    \gamma_{nk}.
+\]
+
+\begin{definitionbox}
+Die harte GMM-Clusterzuordnung ist:
+
+\[
+    \hat{z}_n
+    =
+    \arg\max_k
+    \gamma_{nk}.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+GMMs liefern mehr Information als \(k\)-means:
+
+\begin{itemize}
+    \item Die wahrscheinlichste Komponente.
+    \item Die Unsicherheit der Zuordnung.
+    \item Eine Dichte \(p(\vec{x})\) für neue Datenpunkte.
+\end{itemize}
+\end{conceptbox}
+
+\section{Anomalieerkennung mit GMMs}
+
+Da ein GMM eine Dichte \(p(\vec{x})\) modelliert, kann es auch für Anomalieerkennung verwendet werden.
+
+Punkte mit sehr kleiner Dichte sind ungewöhnlich:
+
+\[
+    p(\vec{x}) \text{ klein}
+    \quad
+    \Rightarrow
+    \quad
+    \vec{x} \text{ ist potenziell anomal}.
+\]
+
+Oder mit negativer Log-Likelihood:
+
+\[
+    -\log p(\vec{x})
+\]
+
+als Anomaliescore.
+
+\begin{definitionbox}
+Ein GMM-Anomaliescore kann definiert werden als:
+
+\[
+    s(\vec{x})
+    =
+    -\log p(\vec{x}).
+\]
+
+Große Werte bedeuten geringe Modellwahrscheinlichkeit.
+\end{definitionbox}
+
+\section{Singularitäten und degenerierte Lösungen}
+
+Ein wichtiges Problem bei GMMs:
+Die Likelihood kann unbeschränkt werden.
+
+Wenn eine Komponente genau auf einen einzelnen Datenpunkt gesetzt wird und ihre Kovarianz gegen \(0\) geht, wird die Gauß-Dichte an diesem Punkt sehr groß.
+
+Formal:
+
+\[
+    \Sigma_k \to 0
+\]
+
+kann zu
+
+\[
+    \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)\to\infty
+\]
+
+führen, wenn
+
+\[
+    \vec{\mu}_k=\vec{x}_n.
+\]
+
+\begin{examtipbox}
+Die GMM-Likelihood kann singuläre Lösungen haben.
+
+Das ist ein wichtiger Unterschied zu vielen einfacheren Modellen.
+\end{examtipbox}
+
+Praktische Gegenmaßnahmen:
+
+\begin{itemize}
+    \item Kovarianzmatrizen regularisieren:
+    \[
+        \Sigma_k
+        \leftarrow
+        \Sigma_k+\varepsilon I.
+    \]
+    \item Mindestvarianzen erzwingen.
+    \item Mehrere Initialisierungen verwenden.
+    \item \(K\) nicht zu groß wählen.
+    \item Diagonale oder geteilte Kovarianzen verwenden.
+\end{itemize}
+
+\section{Numerische Stabilität}
+
+Die GMM-Dichte kann sehr kleine Werte annehmen.
+Bei vielen Datenpunkten können Produkte numerisch unterlaufen.
+
+Deshalb arbeitet man mit Log-Likelihoods:
+
+\[
+    \ell(\Theta)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left(
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+    \right).
+\]
+
+Auch der Ausdruck
+
+\[
+    \log
+    \left(
+        \sum_k
+        \exp(a_k)
+    \right)
+\]
+
+sollte numerisch stabil berechnet werden.
+Dafür verwendet man die Log-Sum-Exp-Technik.
+
+\begin{definitionbox}
+Die Log-Sum-Exp-Identität ist:
+
+\[
+    \log\sum_k\exp(a_k)
+    =
+    m
+    +
+    \log
+    \sum_k
+    \exp(a_k-m),
+\]
+
+wobei
+
+\[
+    m=\max_k a_k.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Durch Subtraktion von \(m\) vermeidet man, dass \(\exp(a_k)\) numerisch überläuft.
+\end{notebox}
+
+\section{GMMs in hoher Dimension}
+
+In hoher Dimension können GMMs schwierig zu fitten sein.
+
+Gründe:
+
+\begin{itemize}
+    \item Volle Kovarianzmatrizen haben viele Parameter.
+    \item Kovarianzmatrizen können singulär werden.
+    \item Dichteschätzung wird durch den Fluch der Dimensionalität schwieriger.
+    \item Viele Datenpunkte sind nötig, um Kovarianzen stabil zu schätzen.
+\end{itemize}
+
+\begin{conceptbox}
+In hoher Dimension verwendet man oft:
+
+\begin{itemize}
+    \item PCA vor GMM,
+    \item diagonale Kovarianzmatrizen,
+    \item Regularisierung der Kovarianzen,
+    \item weniger Komponenten,
+    \item fachlich motivierte Features.
+\end{itemize}
+\end{conceptbox}
+
+\section{GMMs und PCA}
+
+PCA und GMMs können kombiniert werden.
+PCA reduziert zuerst die Dimension:
+
+\[
+    \vec{x}
+    \in\mathbb{R}^D
+    \quad
+    \longrightarrow
+    \quad
+    \vec{z}
+    \in\mathbb{R}^M.
+\]
+
+Dann wird ein GMM im PCA-Raum gefittet:
+
+\[
+    p(\vec{z})
+    =
+    \sum_{k=1}^{K}
+    \pi_k
+    \mathcal{N}(\vec{z}\mid\vec{\mu}_k,\Sigma_k).
+\]
+
+\begin{notebox}
+Wenn PCA als Vorverarbeitung in einem Workflow verwendet wird, muss sie nur auf Trainingsdaten gefittet werden, um Data Leakage zu vermeiden.
+\end{notebox}
+
+\section{Vor- und Nachteile von GMMs}
+
+\subsection{Vorteile}
+
+\begin{itemize}
+    \item probabilistische Interpretation,
+    \item weiche Clusterzuordnungen,
+    \item elliptische Cluster möglich,
+    \item Dichte \(p(\vec{x})\) verfügbar,
+    \item Anomalieerkennung möglich,
+    \item gute Verbindung zu EM und latenten Variablen.
+\end{itemize}
+
+\subsection{Nachteile}
+
+\begin{itemize}
+    \item Anzahl der Komponenten \(K\) muss gewählt werden,
+    \item lokale Optima,
+    \item empfindlich gegenüber Initialisierung,
+    \item mögliche singuläre Kovarianzen,
+    \item viele Parameter bei voller Kovarianz,
+    \item Gauß-Annahme nicht immer passend.
+\end{itemize}
+
+\begin{conceptbox}
+GMMs sind flexibler als \(k\)-means, aber auch empfindlicher und parameterreicher.
+\end{conceptbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Mischgewichte prüfen}
+
+Gegeben seien:
+
+\[
+    \pi_1=0{,}2,
+    \qquad
+    \pi_2=0{,}5,
+    \qquad
+    \pi_3=0{,}3.
+\]
+
+Sind das gültige Mischgewichte?
+
+\begin{examplebox}
+Mischgewichte müssen nichtnegativ sein und sich zu \(1\) summieren.
+
+Alle Werte sind nichtnegativ.
+Außerdem:
+
+\[
+    0{,}2+0{,}5+0{,}3=1.
+\]
+
+Also sind die Mischgewichte gültig.
+\end{examplebox}
+
+\subsection{Aufgabe 2: GMM-Dichte}
+
+Ein eindimensionales GMM habe zwei Komponenten:
+
+\[
+    \pi_1=0{,}4,
+    \qquad
+    \pi_2=0{,}6.
+\]
+
+Die Dichten an einem Punkt \(x\) seien:
+
+\[
+    \mathcal{N}(x\mid\mu_1,\sigma_1^2)=0{,}1,
+\]
+
+\[
+    \mathcal{N}(x\mid\mu_2,\sigma_2^2)=0{,}3.
+\]
+
+Berechne \(p(x)\).
+
+\begin{examplebox}
+Die GMM-Dichte ist:
+
+\[
+    p(x)
+    =
+    \sum_{k=1}^{2}
+    \pi_k
+    \mathcal{N}(x\mid\mu_k,\sigma_k^2).
+\]
+
+Einsetzen:
+
+\[
+    p(x)
+    =
+    0{,}4\cdot 0{,}1
+    +
+    0{,}6\cdot 0{,}3.
+\]
+
+Also:
+
+\[
+    p(x)
+    =
+    0{,}04+0{,}18
+    =
+    0{,}22.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Responsibility berechnen}
+
+Mit den Werten aus Aufgabe \(2\) berechne die Responsibility von Komponente \(2\).
+
+\begin{examplebox}
+Die Responsibility ist:
+
+\[
+    \gamma_2
+    =
+    \frac{
+        \pi_2
+        \mathcal{N}(x\mid\mu_2,\sigma_2^2)
+    }{
+        \sum_{j=1}^{2}
+        \pi_j
+        \mathcal{N}(x\mid\mu_j,\sigma_j^2)
+    }.
+\]
+
+Der Nenner wurde in Aufgabe \(2\) berechnet:
+
+\[
+    p(x)=0{,}22.
+\]
+
+Der Zähler ist:
+
+\[
+    0{,}6\cdot 0{,}3=0{,}18.
+\]
+
+Also:
+
+\[
+    \gamma_2
+    =
+    \frac{0{,}18}{0{,}22}
+    =
+    \frac{18}{22}
+    =
+    \frac{9}{11}
+    \approx
+    0{,}818.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Effektive Clustergröße}
+
+Für eine Komponente seien die Responsibilities über vier Datenpunkte:
+
+\[
+    \gamma_{1k}=0{,}8,
+    \quad
+    \gamma_{2k}=0{,}6,
+    \quad
+    \gamma_{3k}=0{,}1,
+    \quad
+    \gamma_{4k}=0{,}5.
+\]
+
+Berechne \(N_k\).
+
+\begin{examplebox}
+Die effektive Clustergröße ist:
+
+\[
+    N_k
+    =
+    \sum_{n=1}^{N}
+    \gamma_{nk}.
+\]
+
+Also:
+
+\[
+    N_k
+    =
+    0{,}8+0{,}6+0{,}1+0{,}5
+    =
+    2{,}0.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Mischgewicht aktualisieren}
+
+Für ein GMM mit
+
+\[
+    N=10
+\]
+
+Datenpunkten sei
+
+\[
+    N_k=2.
+\]
+
+Berechne das neue Mischgewicht \(\pi_k\).
+
+\begin{examplebox}
+Im M-Schritt gilt:
+
+\[
+    \pi_k
+    =
+    \frac{N_k}{N}.
+\]
+
+Einsetzen:
+
+\[
+    \pi_k
+    =
+    \frac{2}{10}
+    =
+    0{,}2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 6: GMM oder \(k\)-means?}
+
+Ein Verfahren gibt für einen Datenpunkt folgende Zuordnungen aus:
+
+\[
+    \gamma_{n1}=0{,}2,
+    \qquad
+    \gamma_{n2}=0{,}7,
+    \qquad
+    \gamma_{n3}=0{,}1.
+\]
+
+Handelt es sich eher um \(k\)-means oder um ein GMM?
+
+\begin{examplebox}
+Die Werte sind weich und summieren sich zu \(1\):
+
+\[
+    0{,}2+0{,}7+0{,}1=1.
+\]
+
+Das spricht für ein GMM oder ein anderes Soft-Clustering-Verfahren.
+
+Bei \(k\)-means wäre die Zuordnung hart, also zum Beispiel:
+
+\[
+    (0,1,0).
+\]
+\end{examplebox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Gaussian Mixture Models:
+
+\begin{enumerate}
+    \item GMMs mit \(k\)-means gleichsetzen.
+    \item Harte und weiche Zuordnungen verwechseln.
+    \item Mischgewichte \(\pi_k\) nicht auf Summe \(1\) normieren.
+    \item Responsibilities nicht über \(k\) normieren.
+    \item Die GMM-Likelihood ohne die Summe über Komponenten schreiben.
+    \item Die Log-Likelihood fälschlich als Summe der Log-Komponenten schreiben.
+    \item Im M-Schritt \(N_k=\sum_n\gamma_{nk}\) vergessen.
+    \item Kovarianzmatrizen ohne Gewichtung durch \(\gamma_{nk}\) berechnen.
+    \item Singuläre Kovarianzen ignorieren.
+    \item EM für garantiert global optimal halten.
+    \item Zu viele Komponenten ohne Regularisierung verwenden.
+    \item In hoher Dimension volle Kovarianzen ohne genügend Daten verwenden.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Ein Gaussian Mixture Model modelliert Daten als Mischung von Gauß-Verteilungen:
+    \[
+        p(\vec{x})
+        =
+        \sum_{k=1}^{K}
+        \pi_k
+        \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+    \]
+    \item Die Mischgewichte erfüllen:
+    \[
+        \pi_k\geq 0,
+        \qquad
+        \sum_{k=1}^{K}\pi_k=1.
+    \]
+    \item Die latente Variable \(z\) gibt an, aus welcher Komponente ein Datenpunkt stammt.
+    \item Die gemeinsame Verteilung ist:
+    \[
+        p(\vec{x},z=k)
+        =
+        \pi_k
+        \mathcal{N}(\vec{x}\mid\vec{\mu}_k,\Sigma_k).
+    \]
+    \item Die GMM-Log-Likelihood ist:
+    \[
+        \ell(\Theta)
+        =
+        \sum_{n=1}^{N}
+        \log
+        \left(
+            \sum_{k=1}^{K}
+            \pi_k
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+        \right).
+    \]
+    \item Die Responsibility ist:
+    \[
+        \gamma_{nk}
+        =
+        \frac{
+            \pi_k
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_k,\Sigma_k)
+        }{
+            \sum_{j=1}^{K}
+            \pi_j
+            \mathcal{N}(\vec{x}_n\mid\vec{\mu}_j,\Sigma_j)
+        }.
+    \]
+    \item Die effektive Clustergröße ist:
+    \[
+        N_k
+        =
+        \sum_{n=1}^{N}
+        \gamma_{nk}.
+    \]
+    \item Im M-Schritt gilt:
+    \[
+        \vec{\mu}_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}\vec{x}_n,
+    \]
+    \[
+        \Sigma_k
+        =
+        \frac{1}{N_k}
+        \sum_{n=1}^{N}
+        \gamma_{nk}
+        (\vec{x}_n-\vec{\mu}_k)
+        (\vec{x}_n-\vec{\mu}_k)^{\top},
+    \]
+    \[
+        \pi_k
+        =
+        \frac{N_k}{N}.
+    \]
+    \item EM wechselt zwischen E-Schritt und M-Schritt.
+    \item EM erhöht die Log-Likelihood monoton, findet aber nicht garantiert das globale Maximum.
+    \item GMMs liefern weiche Zuordnungen und können elliptische Cluster modellieren.
+    \item \(k\)-means kann als Grenzfall eines GMMs mit harten Zuordnungen verstanden werden.
+    \item GMMs können Probleme mit lokalen Optima, Initialisierung und singulären Kovarianzen haben.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist ein Gaussian Mixture Model?
+    \item Welche Parameter hat ein GMM?
+    \item Welche Bedingungen müssen die Mischgewichte erfüllen?
+    \item Erkläre die generative Interpretation eines GMMs.
+    \item Was ist eine latente Variable?
+    \item Schreibe \(p(\vec{x},z=k)\) für ein GMM auf.
+    \item Leite \(p(\vec{x})\) durch Marginalisierung von \(z\) her.
+    \item Schreibe die GMM-Likelihood und Log-Likelihood auf.
+    \item Warum ist direkte Maximum-Likelihood-Schätzung bei GMMs schwierig?
+    \item Was ist eine Responsibility?
+    \item Leite die Responsibility mit Bayes' Regel her.
+    \item Was ist \(N_k\)?
+    \item Was passiert im E-Schritt?
+    \item Was passiert im M-Schritt?
+    \item Leite die Update-Formel für \(\vec{\mu}_k\) her.
+    \item Leite die Update-Formel für \(\Sigma_k\) her.
+    \item Leite die Update-Formel für \(\pi_k\) her.
+    \item Warum steigt die Log-Likelihood bei EM monoton?
+    \item Warum findet EM nicht garantiert das globale Optimum?
+    \item Wie kann man GMMs initialisieren?
+    \item Was ist der Unterschied zwischen GMM und \(k\)-means?
+    \item In welchem Sinn ist \(k\)-means ein Grenzfall eines GMMs?
+    \item Welche Kovarianztypen kann man bei GMMs verwenden?
+    \item Warum können GMMs singuläre Lösungen haben?
+    \item Wie kann man \(K\) für ein GMM wählen?
+    \item Wie kann ein GMM für Anomalieerkennung verwendet werden?
+\end{enumerate}
+\end{examtipbox}

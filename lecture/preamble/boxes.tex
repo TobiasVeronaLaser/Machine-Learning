@@ -1,0 +1,98 @@
+% General box style
+\tcbset{
+    enhanced,
+    breakable,
+    colback=white,
+    colframe=black!60,
+    fonttitle=\bfseries,
+    before skip=10pt,
+    after skip=10pt
+}
+
+\newtcolorbox{calculationbox}[1][]{
+    title=Rechnung,
+    colback=white,
+    colframe=black!60,
+    breakable,
+    #1
+}
+
+\newtcolorbox{solutionbox}[1][]{
+    title=Lösung,
+    colback=white,
+    colframe=black!60,
+    breakable,
+    #1
+}
+
+\newtcolorbox{answerbox}[1][]{
+    title=Antwort,
+    colback=white,
+    colframe=black!60,
+    breakable,
+    #1
+}
+
+\newtcolorbox{notebox}[1][]{
+    title=Hinweis,
+    colback=white,
+    colframe=black!60,
+    breakable,
+    #1
+}
+
+\newtcolorbox{sidecalcbox}[1][]{
+    title=Nebenrechnung,
+    colback=white,
+    colframe=black!60,
+    breakable,
+    #1
+}
+
+\newtcolorbox{definitionbox}[1][]{
+    title=Definition,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}
+
+\newtcolorbox{conceptbox}[1][]{
+    title=Idee,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}
+
+\newtcolorbox{formulabox}[1][]{
+    title=Wichtige Formel,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}
+
+\newtcolorbox{derivationbox}[1][]{
+    title=Herleitung,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}
+
+\newtcolorbox{examplebox}[1][]{
+    title=Beispiel,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}
+
+\newtcolorbox{examtipbox}[1][]{
+    title=Prüfungshinweis,
+    colback=white,
+    colframe=black!70,
+    breakable,
+    #1
+}

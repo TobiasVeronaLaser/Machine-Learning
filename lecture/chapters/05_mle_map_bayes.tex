@@ -1,0 +1,2100 @@
+\chapter{Maximum-Likelihood, MAP und Bayessche Schätzung}
+
+\section{Ziel dieses Kapitels}
+
+Im vorherigen Kapitel haben wir Schätzer (estimators) allgemein betrachtet.
+Wir haben gesehen, dass ein Schätzer eine Funktion der Daten ist und dass man Schätzer nach Bias, Varianz, mittlerem quadratischem Fehler und Konsistenz beurteilen kann.
+
+In diesem Kapitel betrachten wir drei zentrale Prinzipien zur Parameterschätzung:
+
+\begin{itemize}
+    \item Maximum-Likelihood-Schätzung (maximum likelihood estimation),
+    \item Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation),
+    \item Bayessche Schätzung (Bayesian estimation).
+\end{itemize}
+
+\begin{conceptbox}
+Maximum-Likelihood-Schätzung (maximum likelihood estimation) verwendet nur die Daten.
+
+Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation) verwendet Daten und einen Prior.
+
+Bayessche Schätzung (Bayesian estimation) berechnet nicht nur einen besten Parameterwert, sondern eine ganze Posterior-Verteilung über Parameter.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist eine Likelihood?
+    \item Warum ist die Likelihood keine Wahrscheinlichkeitsverteilung über Parameter?
+    \item Wie funktioniert Maximum-Likelihood-Schätzung?
+    \item Warum verwendet man die Log-Likelihood?
+    \item Wie hängt Maximum-Likelihood mit Verlustfunktionen zusammen?
+    \item Warum führt Gaußsches Rauschen zu quadratischem Fehler?
+    \item Was ist ein Prior?
+    \item Was ist ein Posterior?
+    \item Wie wird MAP aus Bayes' Regel hergeleitet?
+    \item Warum kann MAP als regularisierte Maximum-Likelihood-Schätzung verstanden werden?
+    \item Was unterscheidet MLE, MAP und Bayesian Estimation?
+    \item Was ist eine prädiktive Verteilung (predictive distribution)?
+\end{itemize}
+
+\section{Grundsituation der Parameterschätzung}
+
+Wir betrachten ein Modell mit Parameter \(\theta\).
+Der Parameter \(\theta\) kann eine einzelne Zahl, ein Vektor oder auch eine Menge mehrerer Parameter sein.
+
+Beispiele:
+
+\[
+    \theta = \mu
+\]
+
+für den Mittelwert einer Normalverteilung,
+
+\[
+    \theta = (\mu,\sigma^2)
+\]
+
+für Mittelwert und Varianz einer Normalverteilung,
+
+oder
+
+\[
+    \theta = \vec{w}
+\]
+
+für die Gewichte eines linearen Modells.
+
+Wir beobachten Daten
+
+\[
+    \mathcal{D}
+    =
+    \{x_1,x_2,\dots,x_N\}.
+\]
+
+Oft nehmen wir an, dass die Daten unabhängig und identisch verteilt sind (independent and identically distributed), kurz i.i.d.:
+
+\[
+    x_1,\dots,x_N
+    \overset{\mathrm{i.i.d.}}{\sim}
+    p(x \mid \theta).
+\]
+
+Das bedeutet:
+
+\[
+    p(\mathcal{D} \mid \theta)
+    =
+    p(x_1,\dots,x_N \mid \theta)
+    =
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+\begin{definitionbox}
+Die Größe
+
+\[
+    p(\mathcal{D} \mid \theta)
+\]
+
+beschreibt, wie wahrscheinlich oder wie dicht die beobachteten Daten \(\mathcal{D}\) unter dem Parameter \(\theta\) sind.
+\end{definitionbox}
+
+\section{Likelihood}
+
+Die Likelihood ist dieselbe mathematische Größe wie \(p(\mathcal{D} \mid \theta)\), aber mit anderer Interpretation.
+
+\begin{definitionbox}
+Für feste beobachtete Daten \(\mathcal{D}\) ist die Likelihood (likelihood) eine Funktion des Parameters \(\theta\):
+
+\[
+    L(\theta)
+    =
+    p(\mathcal{D} \mid \theta).
+\]
+
+Sie misst, wie plausibel verschiedene Parameterwerte \(\theta\) die beobachteten Daten machen.
+\end{definitionbox}
+
+Wichtig ist die Perspektive:
+
+\[
+    p(\mathcal{D} \mid \theta)
+\]
+
+als Wahrscheinlichkeitsmodell:
+\(\theta\) ist fest, \(\mathcal{D}\) ist zufällig.
+
+\[
+    L(\theta)
+\]
+
+als Likelihood:
+\(\mathcal{D}\) ist fest beobachtet, \(\theta\) wird variiert.
+
+\begin{notebox}
+Die Likelihood \(L(\theta)\) ist im Allgemeinen keine Wahrscheinlichkeitsverteilung über \(\theta\).
+
+Das heißt:
+Es gilt im Allgemeinen nicht
+
+\[
+    \int L(\theta)\,d\theta = 1.
+\]
+
+Oder im diskreten Fall:
+
+\[
+    \sum_{\theta} L(\theta) = 1.
+\]
+
+Die Likelihood ist nur bis auf ihre relative Größe für verschiedene Parameterwerte wichtig.
+\end{notebox}
+
+\section{Maximum-Likelihood-Schätzung}
+
+Die Maximum-Likelihood-Schätzung (maximum likelihood estimation, MLE) wählt den Parameterwert, der die beobachteten Daten unter dem Modell maximal plausibel macht.
+
+\begin{definitionbox}
+Der Maximum-Likelihood-Schätzer ist definiert als
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D} \mid \theta).
+\]
+
+Mit der Likelihood-Schreibweise:
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    L(\theta).
+\]
+\end{definitionbox}
+
+Für i.i.d. Daten gilt:
+
+\[
+    p(\mathcal{D} \mid \theta)
+    =
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+Daher:
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+\begin{conceptbox}
+Maximum-Likelihood bedeutet:
+
+\[
+    \text{Wähle } \theta \text{ so, dass die beobachteten Daten möglichst wahrscheinlich sind.}
+\]
+\end{conceptbox}
+
+\section{Log-Likelihood}
+
+Produkte vieler kleiner Wahrscheinlichkeiten oder Dichten sind numerisch und algebraisch unpraktisch.
+Deshalb maximiert man meistens den Logarithmus der Likelihood.
+
+\begin{definitionbox}
+Die Log-Likelihood (log-likelihood) ist
+
+\[
+    \ell(\theta)
+    =
+    \log L(\theta)
+    =
+    \log p(\mathcal{D} \mid \theta).
+\]
+\end{definitionbox}
+
+Da der Logarithmus streng monoton wachsend ist, gilt:
+
+\[
+    \arg\max_{\theta}
+    L(\theta)
+    =
+    \arg\max_{\theta}
+    \log L(\theta).
+\]
+
+Für i.i.d. Daten:
+
+\[
+    \ell(\theta)
+    =
+    \log
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+Mit der Logarithmusregel
+
+\[
+    \log \prod_{n=1}^{N} a_n
+    =
+    \sum_{n=1}^{N} \log a_n
+\]
+
+folgt:
+
+\[
+    \ell(\theta)
+    =
+    \sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+
+\begin{conceptbox}
+Die Log-Likelihood wandelt ein Produkt in eine Summe um:
+
+\[
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta)
+    \quad
+    \longrightarrow
+    \quad
+    \sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+
+Summen sind leichter abzuleiten, numerisch stabiler und passen direkt zu Verlustfunktionen.
+\end{conceptbox}
+
+\section{Negative Log-Likelihood}
+
+In maschinellem Lernen formuliert man viele Probleme als Minimierung einer Verlustfunktion (loss function).
+Da Maximum-Likelihood ein Maximierungsproblem ist, verwendet man oft die negative Log-Likelihood.
+
+\begin{definitionbox}
+Die negative Log-Likelihood (negative log-likelihood, NLL) ist
+
+\[
+    \mathcal{L}(\theta)
+    =
+    -\ell(\theta)
+    =
+    -\log p(\mathcal{D} \mid \theta).
+\]
+\end{definitionbox}
+
+Maximum-Likelihood ist äquivalent zur Minimierung der negativen Log-Likelihood:
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    \log p(\mathcal{D} \mid \theta)
+\]
+
+ist äquivalent zu
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\min_{\theta}
+    \left[
+        -\log p(\mathcal{D} \mid \theta)
+    \right].
+\]
+
+Für i.i.d. Daten:
+
+\[
+    -\log p(\mathcal{D} \mid \theta)
+    =
+    -\sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+
+Also:
+
+\[
+    \mathcal{L}(\theta)
+    =
+    \sum_{n=1}^{N}
+    -\log p(x_n \mid \theta).
+\]
+
+\begin{conceptbox}
+Viele Verlustfunktionen im maschinellen Lernen sind negative Log-Likelihoods.
+
+Das bedeutet:
+Man kann viele Trainingsziele probabilistisch interpretieren.
+\end{conceptbox}
+
+\section{Standardrezept für MLE-Herleitungen}
+
+Viele MLE-Aufgaben folgen demselben Muster.
+
+\begin{examtipbox}
+Standardvorgehen für Maximum-Likelihood-Schätzung:
+
+\begin{enumerate}
+    \item Modell \(p(x \mid \theta)\) aufschreiben.
+    \item Likelihood für alle Daten bilden:
+    \[
+        L(\theta)
+        =
+        \prod_{n=1}^{N}
+        p(x_n \mid \theta).
+    \]
+    \item Log-Likelihood bilden:
+    \[
+        \ell(\theta)
+        =
+        \sum_{n=1}^{N}
+        \log p(x_n \mid \theta).
+    \]
+    \item Nach \(\theta\) ableiten.
+    \item Ableitung gleich \(0\) setzen.
+    \item Nach \(\theta\) auflösen.
+    \item Prüfen, ob ein Maximum vorliegt und ob die Lösung zulässig ist.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Beispiel: Bernoulli-Verteilung}
+
+Die Bernoulli-Verteilung (Bernoulli distribution) modelliert eine binäre Zufallsvariable:
+
+\[
+    X \in \{0,1\}.
+\]
+
+Der Parameter ist
+
+\[
+    \pi \in [0,1].
+\]
+
+Die Verteilung lautet:
+
+\[
+    p(x \mid \pi)
+    =
+    \pi^x(1-\pi)^{1-x}.
+\]
+
+Dabei gilt:
+
+\[
+    p(X=1 \mid \pi) = \pi,
+\]
+
+und
+
+\[
+    p(X=0 \mid \pi) = 1-\pi.
+\]
+
+Wir beobachten Daten
+
+\[
+    x_1,\dots,x_N
+    \in
+    \{0,1\}.
+\]
+
+\subsection{Likelihood}
+
+Für i.i.d. Daten ist die Likelihood:
+
+\[
+    L(\pi)
+    =
+    \prod_{n=1}^{N}
+    \pi^{x_n}
+    (1-\pi)^{1-x_n}.
+\]
+
+\subsection{Log-Likelihood}
+
+Die Log-Likelihood ist:
+
+\[
+    \ell(\pi)
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left[
+        \pi^{x_n}
+        (1-\pi)^{1-x_n}
+    \right].
+\]
+
+Mit Logarithmusregeln:
+
+\[
+    \ell(\pi)
+    =
+    \sum_{n=1}^{N}
+    \left[
+        x_n \log \pi
+        +
+        (1-x_n)\log(1-\pi)
+    \right].
+\]
+
+\subsection{Ableitung}
+
+Ableiten nach \(\pi\):
+
+\[
+    \frac{\partial \ell}{\partial \pi}
+    =
+    \sum_{n=1}^{N}
+    \left[
+        \frac{x_n}{\pi}
+        -
+        \frac{1-x_n}{1-\pi}
+    \right].
+\]
+
+Setze
+
+\[
+    S
+    =
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+Dann gilt:
+
+\[
+    \sum_{n=1}^{N}
+    (1-x_n)
+    =
+    N-S.
+\]
+
+Damit:
+
+\[
+    \frac{\partial \ell}{\partial \pi}
+    =
+    \frac{S}{\pi}
+    -
+    \frac{N-S}{1-\pi}.
+\]
+
+Setze die Ableitung gleich \(0\):
+
+\[
+    \frac{S}{\pi}
+    -
+    \frac{N-S}{1-\pi}
+    =
+    0.
+\]
+
+Also:
+
+\[
+    \frac{S}{\pi}
+    =
+    \frac{N-S}{1-\pi}.
+\]
+
+Kreuzmultiplizieren:
+
+\[
+    S(1-\pi)
+    =
+    \pi(N-S).
+\]
+
+Ausmultiplizieren:
+
+\[
+    S - S\pi
+    =
+    \pi N - \pi S.
+\]
+
+Damit:
+
+\[
+    S = \pi N.
+\]
+
+Also:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{S}{N}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+\begin{conceptbox}
+Der Maximum-Likelihood-Schätzer für den Bernoulli-Parameter ist der relative Anteil der Einsen:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+\end{conceptbox}
+
+\section{Bernoulli-MLE als Klassifikationsverlust}
+
+Die negative Log-Likelihood der Bernoulli-Verteilung ist:
+
+\[
+    -\ell(\pi)
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        x_n \log \pi
+        +
+        (1-x_n)\log(1-\pi)
+    \right].
+\]
+
+Für ein Modell, das für jeden Datenpunkt eine Wahrscheinlichkeit
+
+\[
+    y_n = p(t_n=1 \mid \vec{x}_n)
+\]
+
+ausgibt, erhält man den Verlust
+
+\[
+    \mathcal{L}
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n \log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{definitionbox}
+Der Ausdruck
+
+\[
+    -\left[
+        t \log y
+        +
+        (1-t)\log(1-y)
+    \right]
+\]
+
+heißt binäre Kreuzentropie (binary cross-entropy).
+
+Sie ist die negative Log-Likelihood eines Bernoulli-Modells.
+\end{definitionbox}
+
+\begin{notebox}
+Die binäre Kreuzentropie ist also nicht nur eine willkürliche Verlustfunktion.
+Sie entsteht direkt aus Maximum-Likelihood für Bernoulli-verteilte Zielwerte.
+\end{notebox}
+
+\section{Beispiel: Normalverteilung mit bekanntem \(\sigma^2\)}
+
+Nun betrachten wir kontinuierliche Daten.
+Seien
+
+\[
+    X_1,\dots,X_N
+    \overset{\mathrm{i.i.d.}}{\sim}
+    \mathcal{N}(\mu,\sigma^2),
+\]
+
+wobei \(\sigma^2\) bekannt ist und \(\mu\) geschätzt werden soll.
+
+Die Dichte ist:
+
+\[
+    p(x_n \mid \mu,\sigma^2)
+    =
+    \frac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\left(
+        -\frac{(x_n-\mu)^2}{2\sigma^2}
+    \right).
+\]
+
+\subsection{Likelihood}
+
+Die Likelihood ist:
+
+\[
+    L(\mu)
+    =
+    \prod_{n=1}^{N}
+    \frac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\left(
+        -\frac{(x_n-\mu)^2}{2\sigma^2}
+    \right).
+\]
+
+\subsection{Log-Likelihood}
+
+Die Log-Likelihood ist:
+
+\[
+    \ell(\mu)
+    =
+    \sum_{n=1}^{N}
+    \left[
+        -\frac{1}{2}\log(2\pi\sigma^2)
+        -
+        \frac{(x_n-\mu)^2}{2\sigma^2}
+    \right].
+\]
+
+Also:
+
+\[
+    \ell(\mu)
+    =
+    -\frac{N}{2}\log(2\pi\sigma^2)
+    -
+    \frac{1}{2\sigma^2}
+    \sum_{n=1}^{N}
+    (x_n-\mu)^2.
+\]
+
+Der erste Term hängt nicht von \(\mu\) ab.
+Daher maximieren wir \(\ell(\mu)\), indem wir minimieren:
+
+\[
+    \sum_{n=1}^{N}
+    (x_n-\mu)^2.
+\]
+
+\begin{conceptbox}
+Für Gaußsches Rauschen führt Maximum-Likelihood auf quadratische Fehler.
+
+Das ist der Grund, warum Least Squares und Normalverteilung eng zusammenhängen.
+\end{conceptbox}
+
+\subsection{Ableitung}
+
+Wir minimieren:
+
+\[
+    E(\mu)
+    =
+    \sum_{n=1}^{N}
+    (x_n-\mu)^2.
+\]
+
+Ableiten:
+
+\[
+    \frac{\partial E}{\partial \mu}
+    =
+    \sum_{n=1}^{N}
+    2(x_n-\mu)(-1).
+\]
+
+Also:
+
+\[
+    \frac{\partial E}{\partial \mu}
+    =
+    -2
+    \sum_{n=1}^{N}
+    (x_n-\mu).
+\]
+
+Setze gleich \(0\):
+
+\[
+    -2
+    \sum_{n=1}^{N}
+    (x_n-\mu)
+    =
+    0.
+\]
+
+Damit:
+
+\[
+    \sum_{n=1}^{N}
+    (x_n-\mu)
+    =
+    0.
+\]
+
+Also:
+
+\[
+    \sum_{n=1}^{N}
+    x_n
+    -
+    \sum_{n=1}^{N}
+    \mu
+    =
+    0.
+\]
+
+Da \(\mu\) konstant ist:
+
+\[
+    \sum_{n=1}^{N}
+    \mu
+    =
+    N\mu.
+\]
+
+Somit:
+
+\[
+    \sum_{n=1}^{N}
+    x_n
+    -
+    N\mu
+    =
+    0.
+\]
+
+Daraus folgt:
+
+\[
+    \hat{\mu}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+\begin{definitionbox}
+Für normalverteilte Daten mit bekannter Varianz ist der Maximum-Likelihood-Schätzer des Mittelwerts das Stichprobenmittel:
+
+\[
+    \hat{\mu}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+\end{definitionbox}
+
+\section{Normalverteilung mit unbekanntem \(\mu\) und \(\sigma^2\)}
+
+Jetzt seien beide Parameter unbekannt:
+
+\[
+    \theta = (\mu,\sigma^2).
+\]
+
+Die Daten seien
+
+\[
+    X_1,\dots,X_N
+    \overset{\mathrm{i.i.d.}}{\sim}
+    \mathcal{N}(\mu,\sigma^2).
+\]
+
+Die Log-Likelihood ist:
+
+\[
+    \ell(\mu,\sigma^2)
+    =
+    -\frac{N}{2}\log(2\pi\sigma^2)
+    -
+    \frac{1}{2\sigma^2}
+    \sum_{n=1}^{N}
+    (x_n-\mu)^2.
+\]
+
+Maximum-Likelihood liefert:
+
+\[
+    \hat{\mu}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n,
+\]
+
+und
+
+\[
+    \hat{\sigma}_{\mathrm{ML}}^2
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (x_n-\hat{\mu}_{\mathrm{ML}})^2.
+\]
+
+\begin{notebox}
+Der MLE für die Varianz der Normalverteilung verwendet den Nenner \(N\), nicht \(N-1\).
+
+Er ist daher bei endlichem \(N\) verzerrt:
+
+\[
+    \mathbb{E}[\hat{\sigma}_{\mathrm{ML}}^2]
+    =
+    \frac{N-1}{N}
+    \sigma^2.
+\]
+\end{notebox}
+
+\section{Regression als Maximum-Likelihood}
+
+Maximum-Likelihood erklärt auch die lineare Regression (linear regression).
+
+Wir betrachten Daten
+
+\[
+    (\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N).
+\]
+
+Ein lineares Modell ist:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Wir nehmen an, dass die Zielwerte mit Gaußschem Rauschen entstehen:
+
+\[
+    t_n
+    =
+    \vec{w}^{\top}\vec{x}_n
+    +
+    \epsilon_n,
+\]
+
+wobei
+
+\[
+    \epsilon_n
+    \sim
+    \mathcal{N}(0,\sigma^2).
+\]
+
+Dann gilt:
+
+\[
+    p(t_n \mid \vec{x}_n,\vec{w},\sigma^2)
+    =
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        \vec{w}^{\top}\vec{x}_n,
+        \sigma^2
+    \right).
+\]
+
+Für i.i.d. Daten ist:
+
+\[
+    p(\vec{t} \mid X,\vec{w},\sigma^2)
+    =
+    \prod_{n=1}^{N}
+    \mathcal{N}
+    \left(
+        t_n
+        \mid
+        \vec{w}^{\top}\vec{x}_n,
+        \sigma^2
+    \right).
+\]
+
+Die negative Log-Likelihood ist bis auf Konstanten:
+
+\[
+    \mathcal{L}(\vec{w})
+    =
+    \frac{1}{2\sigma^2}
+    \sum_{n=1}^{N}
+    \left(
+        t_n
+        -
+        \vec{w}^{\top}\vec{x}_n
+    \right)^2.
+\]
+
+Da \(\frac{1}{2\sigma^2}\) positiv und konstant ist, ist das äquivalent zu:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        t_n
+        -
+        \vec{w}^{\top}\vec{x}_n
+    \right)^2.
+\]
+
+\begin{conceptbox}
+Lineare Regression mit quadratischem Fehler ist Maximum-Likelihood unter der Annahme von Gaußschem Rauschen.
+
+\[
+    \text{Gaußsches Rauschen}
+    \quad
+    \Longrightarrow
+    \quad
+    \text{quadratischer Fehler}.
+\]
+\end{conceptbox}
+
+\section{Prior}
+
+Maximum-Likelihood verwendet nur die Daten.
+In vielen Situationen haben wir aber Vorwissen über Parameter.
+Dieses Vorwissen wird durch einen Prior beschrieben.
+
+\begin{definitionbox}
+Ein Prior \(p(\theta)\) ist eine Wahrscheinlichkeitsverteilung über Parameter vor Betrachtung der aktuellen Daten.
+\end{definitionbox}
+
+Beispiele:
+
+\[
+    p(\mu)
+    =
+    \mathcal{N}(\mu \mid 0,\tau^2)
+\]
+
+bedeutet:
+Vor den Daten halten wir Werte von \(\mu\) nahe \(0\) für plausibler als sehr große Werte.
+
+Für einen Gewichtsvektor \(\vec{w}\) kann ein Prior sein:
+
+\[
+    p(\vec{w})
+    =
+    \mathcal{N}
+    \left(
+        \vec{w}
+        \mid
+        \vec{0},
+        \alpha^{-1}I
+    \right).
+\]
+
+Dieser Prior bevorzugt kleine Gewichte.
+
+\begin{notebox}
+Der Prior ist kein Trick, sondern eine Modellannahme.
+
+Er beschreibt, welche Parameterwerte vor Beobachtung der Daten plausibel sind.
+\end{notebox}
+
+\section{Posterior}
+
+Wenn Daten beobachtet werden, aktualisiert Bayes' Regel die Verteilung über Parameter.
+
+\[
+    p(\theta \mid \mathcal{D})
+    =
+    \frac{
+        p(\mathcal{D} \mid \theta)p(\theta)
+    }{
+        p(\mathcal{D})
+    }.
+\]
+
+\begin{definitionbox}
+Der Posterior \(p(\theta \mid \mathcal{D})\) ist die Verteilung über Parameter nach Beobachtung der Daten.
+\end{definitionbox}
+
+Die einzelnen Bestandteile sind:
+
+\[
+    \underbrace{p(\theta \mid \mathcal{D})}_{\text{Posterior}}
+    =
+    \frac{
+        \underbrace{p(\mathcal{D} \mid \theta)}_{\text{Likelihood}}
+        \underbrace{p(\theta)}_{\text{Prior}}
+    }{
+        \underbrace{p(\mathcal{D})}_{\text{Evidence}}
+    }.
+\]
+
+Die Evidence ist:
+
+\[
+    p(\mathcal{D})
+    =
+    \int
+    p(\mathcal{D} \mid \theta)
+    p(\theta)
+    \,d\theta.
+\]
+
+Im diskreten Fall:
+
+\[
+    p(\mathcal{D})
+    =
+    \sum_{\theta}
+    p(\mathcal{D} \mid \theta)
+    p(\theta).
+\]
+
+\begin{conceptbox}
+Bayes' Regel für Parameter lautet:
+
+\[
+    \text{Posterior}
+    =
+    \frac{
+        \text{Likelihood}
+        \cdot
+        \text{Prior}
+    }{
+        \text{Evidence}
+    }.
+\]
+
+Oder proportional:
+
+\[
+    p(\theta \mid \mathcal{D})
+    \propto
+    p(\mathcal{D} \mid \theta)p(\theta).
+\]
+\end{conceptbox}
+
+\section{Maximum-a-posteriori-Schätzung}
+
+Die Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation, MAP) wählt den Parameterwert, der den Posterior maximiert.
+
+\begin{definitionbox}
+Der MAP-Schätzer ist
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\theta \mid \mathcal{D}).
+\]
+\end{definitionbox}
+
+Mit Bayes' Regel:
+
+\[
+    p(\theta \mid \mathcal{D})
+    =
+    \frac{
+        p(\mathcal{D} \mid \theta)p(\theta)
+    }{
+        p(\mathcal{D})
+    }.
+\]
+
+Da \(p(\mathcal{D})\) nicht von \(\theta\) abhängt, ist der Nenner für die Maximierung irrelevant:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D} \mid \theta)p(\theta).
+\]
+
+Mit Logarithmus:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    \left[
+        \log p(\mathcal{D} \mid \theta)
+        +
+        \log p(\theta)
+    \right].
+\]
+
+\begin{conceptbox}
+MAP maximiert die Summe aus Log-Likelihood und Log-Prior:
+
+\[
+    \log p(\theta \mid \mathcal{D})
+    =
+    \log p(\mathcal{D} \mid \theta)
+    +
+    \log p(\theta)
+    -
+    \log p(\mathcal{D}).
+\]
+
+Für die Maximierung nach \(\theta\) kann \(\log p(\mathcal{D})\) ignoriert werden.
+\end{conceptbox}
+
+\section{MLE als Spezialfall von MAP}
+
+Wenn der Prior konstant ist, dann ist MAP dasselbe wie MLE.
+
+Angenommen:
+
+\[
+    p(\theta) = \text{konstant}.
+\]
+
+Dann:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D} \mid \theta)p(\theta).
+\]
+
+Da \(p(\theta)\) konstant ist:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D} \mid \theta)
+    =
+    \hat{\theta}_{\mathrm{ML}}.
+\]
+
+\begin{notebox}
+Man sagt oft:
+MLE entspricht MAP mit einem flachen oder uninformativem Prior.
+
+Das ist eine nützliche Intuition, aber mathematisch muss man bei kontinuierlichen Parametern vorsichtig sein, weil ein wirklich konstanter Prior auf ganz \(\mathbb{R}\) nicht normalisierbar ist.
+\end{notebox}
+
+\section{MAP und Regularisierung}
+
+MAP ist besonders wichtig, weil es Regularisierung (regularization) probabilistisch erklärt.
+
+Wir betrachten wieder ein lineares Modell:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Die Likelihood unter Gaußschem Rauschen führt auf den quadratischen Fehler:
+
+\[
+    \frac{1}{2\sigma^2}
+    \sum_{n=1}^{N}
+    \left(
+        t_n
+        -
+        \vec{w}^{\top}\vec{x}_n
+    \right)^2.
+\]
+
+Nun nehmen wir einen Gauß-Prior auf \(\vec{w}\) an:
+
+\[
+    p(\vec{w})
+    =
+    \mathcal{N}
+    \left(
+        \vec{w}
+        \mid
+        \vec{0},
+        \alpha^{-1}I
+    \right).
+\]
+
+Die Dichte ist proportional zu:
+
+\[
+    p(\vec{w})
+    \propto
+    \exp\left(
+        -\frac{\alpha}{2}
+        \vec{w}^{\top}\vec{w}
+    \right).
+\]
+
+Der negative Log-Prior ist daher bis auf Konstanten:
+
+\[
+    -\log p(\vec{w})
+    =
+    \frac{\alpha}{2}
+    \vec{w}^{\top}\vec{w}
+    +
+    \text{const}.
+\]
+
+Die negative Log-Posterior ist also bis auf Konstanten:
+
+\[
+    \mathcal{L}_{\mathrm{MAP}}(\vec{w})
+    =
+    \frac{1}{2\sigma^2}
+    \sum_{n=1}^{N}
+    \left(
+        t_n
+        -
+        \vec{w}^{\top}\vec{x}_n
+    \right)^2
+    +
+    \frac{\alpha}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Multipliziert man mit der positiven Konstanten \(\sigma^2\), erhält man ein äquivalentes Optimierungsproblem:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        t_n
+        -
+        \vec{w}^{\top}\vec{x}_n
+    \right)^2
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w},
+\]
+
+mit
+
+\[
+    \lambda = \alpha\sigma^2.
+\]
+
+\begin{conceptbox}
+Ein Gauß-Prior auf Gewichte führt zu \(L_2\)-Regularisierung:
+
+\[
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Das ist die probabilistische Interpretation von Ridge Regression.
+\end{conceptbox}
+
+\section{Laplace-Prior und \(L_1\)-Regularisierung}
+
+Nicht nur Gauß-Priors sind möglich.
+Ein Laplace-Prior auf Gewichte hat die Form:
+
+\[
+    p(w_i)
+    \propto
+    \exp(-\lambda |w_i|).
+\]
+
+Für einen Gewichtsvektor mit unabhängigen Komponenten:
+
+\[
+    p(\vec{w})
+    \propto
+    \exp\left(
+        -\lambda
+        \sum_{i}
+        |w_i|
+    \right).
+\]
+
+Dann ist der negative Log-Prior proportional zu:
+
+\[
+    \lambda
+    \sum_i
+    |w_i|.
+\]
+
+\begin{conceptbox}
+Ein Laplace-Prior führt zu \(L_1\)-Regularisierung:
+
+\[
+    \lambda
+    \sum_i
+    |w_i|.
+\]
+
+\(L_1\)-Regularisierung fördert sparse Lösungen, also Lösungen, bei denen viele Gewichte exakt oder nahezu \(0\) sind.
+\end{conceptbox}
+
+\section{Bayessche Schätzung}
+
+MLE und MAP liefern jeweils einen einzelnen Parameterwert.
+Bayessche Schätzung (Bayesian estimation) betrachtet dagegen die ganze Posterior-Verteilung.
+
+\begin{definitionbox}
+Bei Bayesscher Schätzung wird der Parameter \(\theta\) selbst als Zufallsvariable behandelt.
+
+Nach Beobachtung der Daten beschreibt der Posterior
+
+\[
+    p(\theta \mid \mathcal{D})
+\]
+
+die Unsicherheit über \(\theta\).
+\end{definitionbox}
+
+Das Ziel ist also nicht nur:
+
+\[
+    \hat{\theta}
+\]
+
+zu finden, sondern die gesamte Verteilung
+
+\[
+    p(\theta \mid \mathcal{D})
+\]
+
+zu berechnen oder zu approximieren.
+
+\begin{conceptbox}
+Bayesian Estimation behält Unsicherheit über Parameter bei.
+
+Das ist besonders wichtig, wenn wenige Daten vorhanden sind oder wenn Entscheidungen die Unsicherheit berücksichtigen sollen.
+\end{conceptbox}
+
+\section{Punktschätzer aus dem Posterior}
+
+Auch in der Bayesschen Statistik kann man aus dem Posterior einen einzelnen Punktschätzer ableiten.
+
+\subsection{Posterior-Mittelwert}
+
+Der Posterior-Mittelwert ist:
+
+\[
+    \hat{\theta}_{\mathrm{Bayes}}
+    =
+    \mathbb{E}[\theta \mid \mathcal{D}].
+\]
+
+Im kontinuierlichen Fall:
+
+\[
+    \hat{\theta}_{\mathrm{Bayes}}
+    =
+    \int
+    \theta
+    p(\theta \mid \mathcal{D})
+    \,d\theta.
+\]
+
+\subsection{Posterior-Modus}
+
+Der Posterior-Modus ist der Wert mit größter Posterior-Dichte:
+
+\[
+    \hat{\theta}_{\mathrm{mode}}
+    =
+    \arg\max_{\theta}
+    p(\theta \mid \mathcal{D}).
+\]
+
+Das ist genau der MAP-Schätzer:
+
+\[
+    \hat{\theta}_{\mathrm{mode}}
+    =
+    \hat{\theta}_{\mathrm{MAP}}.
+\]
+
+\begin{notebox}
+MAP ist ein Punktschätzer aus dem Posterior.
+
+Bayessche Schätzung als Ganzes ist aber mehr als MAP:
+Sie betrachtet die gesamte Posterior-Verteilung.
+\end{notebox}
+
+\section{Prädiktive Verteilung}
+
+In maschinellem Lernen wollen wir oft nicht nur Parameter schätzen, sondern Vorhersagen für neue Daten machen.
+
+Sei \(x_*\) ein neuer Eingabewert und \(t_*\) der unbekannte Zielwert.
+Wenn \(\theta\) unbekannt ist, sollte man die Unsicherheit über \(\theta\) in der Vorhersage berücksichtigen.
+
+\begin{definitionbox}
+Die prädiktive Verteilung (predictive distribution) ist
+
+\[
+    p(t_* \mid x_*,\mathcal{D})
+    =
+    \int
+    p(t_* \mid x_*,\theta)
+    p(\theta \mid \mathcal{D})
+    \,d\theta.
+\]
+\end{definitionbox}
+
+Diese Formel mittelt Vorhersagen über alle möglichen Parameterwerte, gewichtet mit deren Posterior-Wahrscheinlichkeit.
+
+\begin{conceptbox}
+Bayessche Vorhersage integriert über Parameterunsicherheit:
+
+\[
+    \text{Vorhersage}
+    =
+    \text{Mittel über alle plausiblen Parameter}.
+\]
+
+Das unterscheidet Bayesian Prediction von einer reinen Punktschätzung.
+\end{conceptbox}
+
+\section{Beispiel: Beta-Bernoulli-Modell}
+
+Ein klassisches Beispiel für Bayessche Schätzung ist das Beta-Bernoulli-Modell.
+
+Wir beobachten binäre Daten:
+
+\[
+    x_n \in \{0,1\}.
+\]
+
+Die Likelihood ist Bernoulli:
+
+\[
+    p(x_n \mid \pi)
+    =
+    \pi^{x_n}
+    (1-\pi)^{1-x_n}.
+\]
+
+Für den Parameter \(\pi\) verwenden wir einen Beta-Prior:
+
+\[
+    p(\pi)
+    =
+    \mathrm{Beta}(\pi \mid a,b).
+\]
+
+Die Beta-Verteilung hat die Form:
+
+\[
+    \mathrm{Beta}(\pi \mid a,b)
+    =
+    \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}
+    \pi^{a-1}
+    (1-\pi)^{b-1},
+\]
+
+für
+
+\[
+    0 \leq \pi \leq 1.
+\]
+
+\subsection{Likelihood}
+
+Für \(N\) Datenpunkte:
+
+\[
+    p(\mathcal{D} \mid \pi)
+    =
+    \prod_{n=1}^{N}
+    \pi^{x_n}
+    (1-\pi)^{1-x_n}.
+\]
+
+Setze
+
+\[
+    S
+    =
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+Dann ist
+
+\[
+    \sum_{n=1}^{N}
+    (1-x_n)
+    =
+    N-S.
+\]
+
+Also:
+
+\[
+    p(\mathcal{D} \mid \pi)
+    =
+    \pi^S
+    (1-\pi)^{N-S}.
+\]
+
+\subsection{Posterior}
+
+Nach Bayes:
+
+\[
+    p(\pi \mid \mathcal{D})
+    \propto
+    p(\mathcal{D} \mid \pi)p(\pi).
+\]
+
+Einsetzen:
+
+\[
+    p(\pi \mid \mathcal{D})
+    \propto
+    \pi^S
+    (1-\pi)^{N-S}
+    \pi^{a-1}
+    (1-\pi)^{b-1}.
+\]
+
+Zusammenfassen der Exponenten:
+
+\[
+    p(\pi \mid \mathcal{D})
+    \propto
+    \pi^{a+S-1}
+    (1-\pi)^{b+N-S-1}.
+\]
+
+Das ist wieder eine Beta-Verteilung:
+
+\[
+    p(\pi \mid \mathcal{D})
+    =
+    \mathrm{Beta}(\pi \mid a+S,b+N-S).
+\]
+
+\begin{conceptbox}
+Beim Beta-Bernoulli-Modell ist der Posterior wieder eine Beta-Verteilung:
+
+\[
+    \mathrm{Beta}(a,b)
+    \quad
+    \longrightarrow
+    \quad
+    \mathrm{Beta}(a+S,b+N-S).
+\]
+
+Der Parameter \(a\) zählt sozusagen vorherige Erfolge, \(b\) vorherige Misserfolge.
+\end{conceptbox}
+
+\section{Konjugierte Priors}
+
+Das Beta-Bernoulli-Beispiel zeigt eine wichtige Idee.
+
+\begin{definitionbox}
+Ein Prior heißt konjugierter Prior (conjugate prior) für eine Likelihood, wenn der Posterior zur selben Verteilungsfamilie gehört wie der Prior.
+\end{definitionbox}
+
+Beim Beta-Bernoulli-Modell:
+
+\[
+    \text{Prior}
+    =
+    \mathrm{Beta},
+\]
+
+\[
+    \text{Likelihood}
+    =
+    \mathrm{Bernoulli},
+\]
+
+\[
+    \text{Posterior}
+    =
+    \mathrm{Beta}.
+\]
+
+\begin{notebox}
+Konjugierte Priors sind mathematisch praktisch, weil der Posterior analytisch berechnet werden kann.
+
+In komplexeren ML-Modellen ist der Posterior oft nicht analytisch berechenbar.
+Dann braucht man Approximationen.
+\end{notebox}
+
+\section{Vergleich von MLE, MAP und Bayesscher Schätzung}
+
+\[
+\begin{array}{c|c|c|c}
+\text{Methode}
+&
+\text{Ziel}
+&
+\text{Prior}
+&
+\text{Ergebnis}
+\\
+\hline
+\text{MLE}
+&
+\max_{\theta} p(\mathcal{D}\mid\theta)
+&
+\text{nein}
+&
+\hat{\theta}_{\mathrm{ML}}
+\\
+\hline
+\text{MAP}
+&
+\max_{\theta} p(\theta\mid\mathcal{D})
+&
+\text{ja}
+&
+\hat{\theta}_{\mathrm{MAP}}
+\\
+\hline
+\text{Bayesian}
+&
+p(\theta\mid\mathcal{D})
+&
+\text{ja}
+&
+\text{Posterior-Verteilung}
+\end{array}
+\]
+
+\begin{conceptbox}
+MLE:
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D}\mid\theta).
+\]
+
+MAP:
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D}\mid\theta)p(\theta).
+\]
+
+Bayesian:
+\[
+    p(\theta\mid\mathcal{D})
+    =
+    \frac{
+        p(\mathcal{D}\mid\theta)p(\theta)
+    }{
+        p(\mathcal{D})
+    }.
+\]
+\end{conceptbox}
+
+\section{Interpretation bei wenigen und vielen Daten}
+
+Der Unterschied zwischen MLE, MAP und Bayesian Estimation ist besonders bei kleinen Datensätzen wichtig.
+
+\subsection{Wenige Daten}
+
+Wenn nur wenige Daten vorhanden sind, kann MLE stark schwanken.
+Ein Prior kann dann helfen, unplausible Parameterwerte zu vermeiden.
+
+\[
+    \text{wenige Daten}
+    \quad
+    \Rightarrow
+    \quad
+    \text{Prior hat starken Einfluss}.
+\]
+
+\subsection{Viele Daten}
+
+Wenn sehr viele Daten vorhanden sind, dominiert oft die Likelihood.
+Dann wird der Einfluss des Priors relativ kleiner.
+
+\[
+    \text{viele Daten}
+    \quad
+    \Rightarrow
+    \quad
+    \text{Likelihood dominiert}.
+\]
+
+\begin{notebox}
+Das bedeutet nicht, dass der Prior bei vielen Daten immer egal ist.
+Aber in vielen einfachen regulären Modellen wird sein Einfluss im Vergleich zur Datenmenge kleiner.
+\end{notebox}
+
+\section{Zusammenhang zu Overfitting}
+
+Maximum-Likelihood kann bei flexiblen Modellen zu Überanpassung (overfitting) führen.
+Das passiert, wenn Parameter so gewählt werden, dass sie die Trainingsdaten sehr gut erklären, aber auf neuen Daten schlecht generalisieren.
+
+MAP kann dem entgegenwirken, wenn der Prior komplexe oder extreme Parameterwerte bestraft.
+
+\begin{conceptbox}
+Regularisierung kann probabilistisch als Prior interpretiert werden.
+
+\[
+    \text{Regularisierung}
+    \quad
+    \Longleftrightarrow
+    \quad
+    \text{Prior auf Parameter}.
+\]
+\end{conceptbox}
+
+Beispiel:
+
+\[
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}
+\]
+
+bestraft große Gewichte.
+Das entspricht einem Gauß-Prior auf \(\vec{w}\).
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei MLE, MAP und Bayesian Estimation:
+
+\begin{enumerate}
+    \item Likelihood \(p(\mathcal{D}\mid\theta)\) mit Posterior \(p(\theta\mid\mathcal{D})\) verwechseln.
+    \item Denken, dass die Likelihood eine Wahrscheinlichkeitsverteilung über \(\theta\) sein muss.
+    \item Bei MLE den Logarithmus falsch verwenden.
+    \item Vergessen, dass Maximieren der Log-Likelihood äquivalent zum Maximieren der Likelihood ist.
+    \item Negative Log-Likelihood und Log-Likelihood mit falschem Vorzeichen verwenden.
+    \item Bei MAP den Prior vergessen.
+    \item Die Evidence \(p(\mathcal{D})\) bei der Maximierung nach \(\theta\) unnötig mitoptimieren.
+    \item MAP mit vollständiger Bayesscher Schätzung gleichsetzen.
+    \item Quadratischen Fehler als rein willkürlichen Verlust betrachten, obwohl er aus Gaußschem Rauschen folgt.
+    \item \(L_2\)-Regularisierung nicht als Gauß-Prior erkennen.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Bernoulli-MLE}
+
+Gegeben sind die Daten
+
+\[
+    x_1=1,
+    \quad
+    x_2=0,
+    \quad
+    x_3=1,
+    \quad
+    x_4=1,
+    \quad
+    x_5=0.
+\]
+
+Berechne den Maximum-Likelihood-Schätzer für \(\pi\).
+
+\begin{examplebox}
+Für Bernoulli-Daten gilt:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+Hier ist:
+
+\[
+    N=5
+\]
+
+und
+
+\[
+    \sum_{n=1}^{5}
+    x_n
+    =
+    1+0+1+1+0
+    =
+    3.
+\]
+
+Also:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{3}{5}
+    =
+    0{,}6.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Negative Log-Likelihood}
+
+Für ein Bernoulli-Modell sei
+
+\[
+    t=1
+\]
+
+und das Modell sagt
+
+\[
+    y = 0{,}8.
+\]
+
+Berechne die negative Log-Likelihood für diesen einzelnen Datenpunkt.
+
+\begin{examplebox}
+Die negative Log-Likelihood ist:
+
+\[
+    -\left[
+        t\log y
+        +
+        (1-t)\log(1-y)
+    \right].
+\]
+
+Mit \(t=1\):
+
+\[
+    -\left[
+        1\cdot\log(0{,}8)
+        +
+        0\cdot\log(0{,}2)
+    \right]
+    =
+    -\log(0{,}8).
+\]
+
+Also:
+
+\[
+    \mathcal{L}
+    =
+    -\log(0{,}8).
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: MAP mit konstantem Prior}
+
+Zeige, dass MAP mit konstantem Prior zu MLE wird.
+
+\begin{examplebox}
+MAP ist:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D}\mid\theta)p(\theta).
+\]
+
+Wenn
+
+\[
+    p(\theta)=c
+\]
+
+konstant ist, dann:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    c\,p(\mathcal{D}\mid\theta).
+\]
+
+Da \(c\) positiv und konstant ist, ändert es die Stelle des Maximums nicht:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\mathcal{D}\mid\theta)
+    =
+    \hat{\theta}_{\mathrm{ML}}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Beta-Bernoulli-Posterior}
+
+Ein Prior sei
+
+\[
+    \pi \sim \mathrm{Beta}(2,3).
+\]
+
+In den Daten gibt es
+
+\[
+    S=4
+\]
+
+Einsen und
+
+\[
+    N-S=6
+\]
+
+Nullen.
+Berechne den Posterior.
+
+\begin{examplebox}
+Beim Beta-Bernoulli-Modell gilt:
+
+\[
+    \mathrm{Beta}(a,b)
+    \longrightarrow
+    \mathrm{Beta}(a+S,b+N-S).
+\]
+
+Hier ist:
+
+\[
+    a=2,
+    \quad
+    b=3,
+    \quad
+    S=4,
+    \quad
+    N-S=6.
+\]
+
+Also:
+
+\[
+    \pi \mid \mathcal{D}
+    \sim
+    \mathrm{Beta}(2+4,3+6).
+\]
+
+Damit:
+
+\[
+    \pi \mid \mathcal{D}
+    \sim
+    \mathrm{Beta}(6,9).
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Die Likelihood ist:
+    \[
+        L(\theta)
+        =
+        p(\mathcal{D}\mid\theta).
+    \]
+    \item Bei i.i.d. Daten faktorisiert sie:
+    \[
+        p(\mathcal{D}\mid\theta)
+        =
+        \prod_{n=1}^{N}
+        p(x_n\mid\theta).
+    \]
+    \item Die Log-Likelihood ist:
+    \[
+        \ell(\theta)
+        =
+        \sum_{n=1}^{N}
+        \log p(x_n\mid\theta).
+    \]
+    \item MLE maximiert die Likelihood:
+    \[
+        \hat{\theta}_{\mathrm{ML}}
+        =
+        \arg\max_{\theta}
+        p(\mathcal{D}\mid\theta).
+    \]
+    \item Negative Log-Likelihood ist eine Verlustfunktion:
+    \[
+        \mathcal{L}(\theta)
+        =
+        -\log p(\mathcal{D}\mid\theta).
+    \]
+    \item Bernoulli-MLE ergibt den Anteil der Einsen:
+    \[
+        \hat{\pi}_{\mathrm{ML}}
+        =
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        x_n.
+    \]
+    \item Gaußsche Likelihood führt zu quadratischem Fehler.
+    \item Ein Prior \(p(\theta)\) beschreibt Vorwissen über Parameter.
+    \item Der Posterior ist:
+    \[
+        p(\theta\mid\mathcal{D})
+        =
+        \frac{
+            p(\mathcal{D}\mid\theta)p(\theta)
+        }{
+            p(\mathcal{D})
+        }.
+    \]
+    \item MAP maximiert den Posterior:
+    \[
+        \hat{\theta}_{\mathrm{MAP}}
+        =
+        \arg\max_{\theta}
+        p(\theta\mid\mathcal{D}).
+    \]
+    \item MAP ist äquivalent zu:
+    \[
+        \hat{\theta}_{\mathrm{MAP}}
+        =
+        \arg\max_{\theta}
+        p(\mathcal{D}\mid\theta)p(\theta).
+    \]
+    \item Ein Gauß-Prior auf Gewichte führt zu \(L_2\)-Regularisierung.
+    \item Ein Laplace-Prior führt zu \(L_1\)-Regularisierung.
+    \item Bayessche Schätzung betrachtet die gesamte Posterior-Verteilung \(p(\theta\mid\mathcal{D})\).
+    \item Die prädiktive Verteilung integriert über Parameterunsicherheit:
+    \[
+        p(t_* \mid x_*,\mathcal{D})
+        =
+        \int
+        p(t_* \mid x_*,\theta)
+        p(\theta\mid\mathcal{D})
+        \,d\theta.
+    \]
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist eine Likelihood?
+    \item Warum ist die Likelihood keine Wahrscheinlichkeitsverteilung über Parameter?
+    \item Definiere den Maximum-Likelihood-Schätzer.
+    \item Warum verwendet man die Log-Likelihood?
+    \item Was ist die negative Log-Likelihood?
+    \item Leite den MLE für den Parameter einer Bernoulli-Verteilung her.
+    \item Warum führt Bernoulli-Likelihood zur binären Kreuzentropie?
+    \item Leite den MLE für den Mittelwert einer Normalverteilung mit bekannter Varianz her.
+    \item Warum führt Gaußsches Rauschen zu quadratischem Fehler?
+    \item Was ist ein Prior?
+    \item Was ist ein Posterior?
+    \item Leite MAP aus Bayes' Regel her.
+    \item Warum kann die Evidence bei MAP ignoriert werden?
+    \item Wann ist MAP gleich MLE?
+    \item Wie hängt MAP mit Regularisierung zusammen?
+    \item Warum führt ein Gauß-Prior zu \(L_2\)-Regularisierung?
+    \item Warum führt ein Laplace-Prior zu \(L_1\)-Regularisierung?
+    \item Was ist der Unterschied zwischen MAP und vollständiger Bayesscher Schätzung?
+    \item Was ist eine prädiktive Verteilung?
+    \item Erkläre das Beta-Bernoulli-Modell.
+\end{enumerate}
+\end{examtipbox}

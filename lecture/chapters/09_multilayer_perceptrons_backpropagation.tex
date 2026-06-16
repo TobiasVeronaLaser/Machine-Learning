@@ -1,0 +1,1627 @@
+\chapter{Mehrschichtige Perzeptrons und Backpropagation}
+
+\section{Ziel dieses Kapitels}
+
+In den vorherigen Kapiteln haben wir lineare Modelle betrachtet:
+lineare Regression (linear regression), logistische Regression (logistic regression) und Perzeptrons (perceptrons).
+Diese Modelle berechnen im Kern einen linearen Score der Form
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Solche Modelle sind wichtig, aber sie haben eine zentrale Einschränkung:
+Ohne geeignete Merkmalsabbildung können sie nur lineare Entscheidungsgrenzen oder lineare Zusammenhänge darstellen.
+
+Mehrschichtige Perzeptrons (multilayer perceptrons), kurz MLPs, erweitern diese Idee.
+Sie bestehen aus mehreren Schichten (layers) von künstlichen Neuronen (artificial neurons).
+Durch nichtlineare Aktivierungsfunktionen (activation functions) können sie komplexe nichtlineare Funktionen lernen.
+
+\begin{conceptbox}
+Ein mehrschichtiges Perzeptron (multilayer perceptron) ist ein neuronales Netz (neural network), das Eingaben durch mehrere Schichten transformiert.
+
+Jede Schicht berechnet eine affine Transformation und danach eine Nichtlinearität:
+
+\[
+    \vec{z}^{(l)}
+    =
+    g^{(l)}
+    \left(
+        W^{(l)}\vec{z}^{(l-1)}+\vec{b}^{(l)}
+    \right).
+\]
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist ein mehrschichtiges Perzeptron (multilayer perceptron)?
+    \item Was ist der Unterschied zwischen Eingabeschicht, versteckter Schicht und Ausgabeschicht?
+    \item Warum braucht man nichtlineare Aktivierungsfunktionen?
+    \item Was ist ein Forward Pass?
+    \item Was ist eine Verlustfunktion (loss function)?
+    \item Was ist Backpropagation?
+    \item Wie berechnet man Gradienten mit der Kettenregel?
+    \item Was bedeuten lokale Gradienten und Fehlerterme?
+    \item Wie sehen die Gradienten für Gewichte und Biases aus?
+    \item Wie trainiert man ein neuronales Netz mit Gradientenabstieg?
+    \item Warum können Gradienten verschwinden oder explodieren?
+    \item Welche Rolle spielen Sigmoid, Tanh und ReLU?
+\end{itemize}
+
+\section{Vom Perzeptron zum neuronalen Netz}
+
+Ein einzelnes Perzeptron berechnet
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}+b
+\]
+
+und danach eine Aktivierungsfunktion:
+
+\[
+    z
+    =
+    g(a).
+\]
+
+Beim klassischen Perzeptron ist \(g\) eine Schwellenfunktion.
+In modernen neuronalen Netzen verwendet man meistens differenzierbare Aktivierungsfunktionen wie Sigmoid, Tanh oder ReLU.
+
+\begin{definitionbox}
+Ein künstliches Neuron (artificial neuron) berechnet
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}+b,
+\]
+
+und danach
+
+\[
+    z
+    =
+    g(a).
+\]
+
+Dabei ist \(a\) die Voraktivierung (pre-activation), \(z\) die Aktivierung (activation), \(\vec{w}\) der Gewichtsvektor, \(b\) der Bias und \(g\) die Aktivierungsfunktion.
+\end{definitionbox}
+
+Ein einzelnes Neuron ist noch stark eingeschränkt.
+Die Idee eines neuronalen Netzes ist, viele solcher Neuronen in Schichten zu organisieren.
+
+\section{Schichten eines neuronalen Netzes}
+
+Ein mehrschichtiges Perzeptron besteht aus mehreren Schichten:
+
+\begin{itemize}
+    \item Eingabeschicht (input layer),
+    \item eine oder mehrere versteckte Schichten (hidden layers),
+    \item Ausgabeschicht (output layer).
+\end{itemize}
+
+Die Eingabeschicht enthält die Eingabedaten.
+Die versteckten Schichten berechnen interne Repräsentationen.
+Die Ausgabeschicht erzeugt die Vorhersage.
+
+\begin{definitionbox}
+Eine versteckte Schicht (hidden layer) ist eine Schicht zwischen Eingabe und Ausgabe.
+
+Sie heißt versteckt, weil ihre Zielwerte nicht direkt im Datensatz beobachtet werden.
+Sie wird nur indirekt durch das Trainingsziel gelernt.
+\end{definitionbox}
+
+Für ein Netz mit \(L\) Schichten schreiben wir:
+
+\[
+    \vec{z}^{(0)}
+    =
+    \vec{x}.
+\]
+
+Die Eingabe \(\vec{x}\) ist also die Aktivierung der Schicht \(0\).
+Für Schicht \(l\) gilt dann:
+
+\[
+    \vec{a}^{(l)}
+    =
+    W^{(l)}\vec{z}^{(l-1)}
+    +
+    \vec{b}^{(l)},
+\]
+
+und
+
+\[
+    \vec{z}^{(l)}
+    =
+    g^{(l)}(\vec{a}^{(l)}).
+\]
+
+Dabei ist:
+
+\[
+    l \in \{1,\dots,L\}.
+\]
+
+Die Ausgabe des Netzes ist:
+
+\[
+    \vec{y}
+    =
+    \vec{z}^{(L)}.
+\]
+
+\section{Dimensionen der Parameter}
+
+Angenommen, Schicht \(l-1\) hat \(D_{l-1}\) Einheiten und Schicht \(l\) hat \(D_l\) Einheiten.
+Dann gilt:
+
+\[
+    \vec{z}^{(l-1)} \in \mathbb{R}^{D_{l-1}},
+\]
+
+\[
+    W^{(l)} \in \mathbb{R}^{D_l \times D_{l-1}},
+\]
+
+\[
+    \vec{b}^{(l)} \in \mathbb{R}^{D_l},
+\]
+
+\[
+    \vec{a}^{(l)} \in \mathbb{R}^{D_l},
+\]
+
+und
+
+\[
+    \vec{z}^{(l)} \in \mathbb{R}^{D_l}.
+\]
+
+\begin{notebox}
+Die Gewichtsmatrix \(W^{(l)}\) hat eine Zeile pro Neuron der aktuellen Schicht und eine Spalte pro Ausgabe der vorherigen Schicht.
+
+Das Produkt
+
+\[
+    W^{(l)}\vec{z}^{(l-1)}
+\]
+
+hat daher die Dimension \(\mathbb{R}^{D_l}\).
+\end{notebox}
+
+\section{Forward Pass}
+
+Der Forward Pass ist die Berechnung der Ausgabe aus der Eingabe.
+
+Für ein Netz mit zwei Schichten, also einer versteckten Schicht und einer Ausgabeschicht, gilt:
+
+\[
+    \vec{z}^{(0)}
+    =
+    \vec{x}.
+\]
+
+Die versteckte Schicht berechnet:
+
+\[
+    \vec{a}^{(1)}
+    =
+    W^{(1)}\vec{x}
+    +
+    \vec{b}^{(1)},
+\]
+
+\[
+    \vec{z}^{(1)}
+    =
+    g^{(1)}(\vec{a}^{(1)}).
+\]
+
+Die Ausgabeschicht berechnet:
+
+\[
+    \vec{a}^{(2)}
+    =
+    W^{(2)}\vec{z}^{(1)}
+    +
+    \vec{b}^{(2)},
+\]
+
+\[
+    \vec{y}
+    =
+    \vec{z}^{(2)}
+    =
+    g^{(2)}(\vec{a}^{(2)}).
+\]
+
+\begin{definitionbox}
+Der Forward Pass ist die schichtweise Berechnung
+
+\[
+    \vec{x}
+    \longrightarrow
+    \vec{z}^{(1)}
+    \longrightarrow
+    \vec{z}^{(2)}
+    \longrightarrow
+    \dots
+    \longrightarrow
+    \vec{y}.
+\]
+
+Dabei werden die aktuellen Parameter \(W^{(l)}\) und \(\vec{b}^{(l)}\) verwendet.
+\end{definitionbox}
+
+\section{Warum Nichtlinearitäten notwendig sind}
+
+Angenommen, ein Netz hätte zwei lineare Schichten ohne Aktivierungsfunktion:
+
+\[
+    \vec{z}^{(1)}
+    =
+    W^{(1)}\vec{x}
+    +
+    \vec{b}^{(1)}
+\]
+
+und
+
+\[
+    \vec{y}
+    =
+    W^{(2)}\vec{z}^{(1)}
+    +
+    \vec{b}^{(2)}.
+\]
+
+Einsetzen ergibt:
+
+\[
+    \vec{y}
+    =
+    W^{(2)}
+    \left(
+        W^{(1)}\vec{x}
+        +
+        \vec{b}^{(1)}
+    \right)
+    +
+    \vec{b}^{(2)}.
+\]
+
+Also:
+
+\[
+    \vec{y}
+    =
+    W^{(2)}W^{(1)}\vec{x}
+    +
+    W^{(2)}\vec{b}^{(1)}
+    +
+    \vec{b}^{(2)}.
+\]
+
+Setze:
+
+\[
+    W
+    =
+    W^{(2)}W^{(1)}
+\]
+
+und
+
+\[
+    \vec{b}
+    =
+    W^{(2)}\vec{b}^{(1)}
+    +
+    \vec{b}^{(2)}.
+\]
+
+Dann:
+
+\[
+    \vec{y}
+    =
+    W\vec{x}
+    +
+    \vec{b}.
+\]
+
+Das ist wieder nur eine affine Abbildung.
+
+\begin{conceptbox}
+Mehrere lineare Schichten ohne Nichtlinearität sind äquivalent zu einer einzigen linearen Schicht.
+
+Nichtlineare Aktivierungsfunktionen sind deshalb notwendig, damit tiefe Netze komplexe nichtlineare Funktionen darstellen können.
+\end{conceptbox}
+
+\section{Wichtige Aktivierungsfunktionen}
+
+\subsection{Sigmoid}
+
+Die Sigmoid-Funktion (sigmoid function) ist:
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+Sie bildet auf das Intervall \((0,1)\) ab.
+
+Die Ableitung ist:
+
+\[
+    \sigma'(a)
+    =
+    \sigma(a)(1-\sigma(a)).
+\]
+
+\begin{notebox}
+Sigmoid eignet sich als Ausgabeaktivierung für binäre Klassifikation.
+In versteckten Schichten kann Sigmoid problematisch sein, weil die Ableitung für große positive oder negative Werte sehr klein wird.
+\end{notebox}
+
+\subsection{Tanh}
+
+Die Tanh-Funktion ist:
+
+\[
+    \tanh(a)
+    =
+    \frac{\exp(a)-\exp(-a)}
+    {\exp(a)+\exp(-a)}.
+\]
+
+Sie bildet auf das Intervall \((-1,1)\) ab.
+
+Die Ableitung ist:
+
+\[
+    \frac{d}{da}\tanh(a)
+    =
+    1-\tanh^2(a).
+\]
+
+\subsection{ReLU}
+
+Die ReLU-Funktion (rectified linear unit) ist:
+
+\[
+    \operatorname{ReLU}(a)
+    =
+    \max(0,a).
+\]
+
+Also:
+
+\[
+    \operatorname{ReLU}(a)
+    =
+    \begin{cases}
+        a, & a>0, \\
+        0, & a\leq 0.
+    \end{cases}
+\]
+
+Die Ableitung ist für \(a\neq 0\):
+
+\[
+    \operatorname{ReLU}'(a)
+    =
+    \begin{cases}
+        1, & a>0, \\
+        0, & a<0.
+    \end{cases}
+\]
+
+\begin{conceptbox}
+ReLU ist in modernen neuronalen Netzen sehr beliebt, weil sie einfach ist und für positive Aktivierungen keinen kleinen Sättigungsgradienten hat.
+\end{conceptbox}
+
+\section{Ausgabeschichten}
+
+Die Wahl der Ausgabeschicht hängt vom Problemtyp ab.
+
+\subsection{Regression}
+
+Für Regression verwendet man oft eine lineare Ausgabe:
+
+\[
+    \vec{y}
+    =
+    \vec{a}^{(L)}.
+\]
+
+Bei eindimensionaler Regression:
+
+\[
+    y \in \mathbb{R}.
+\]
+
+Eine typische Verlustfunktion ist der quadratische Fehler:
+
+\[
+    E
+    =
+    \frac{1}{2}
+    (y-t)^2.
+\]
+
+\subsection{Binäre Klassifikation}
+
+Für binäre Klassifikation verwendet man meistens eine Sigmoid-Ausgabe:
+
+\[
+    y
+    =
+    \sigma(a^{(L)}).
+\]
+
+Dann gilt:
+
+\[
+    y
+    =
+    p(t=1\mid\vec{x}).
+\]
+
+Die passende Verlustfunktion ist die binäre Kreuzentropie (binary cross-entropy):
+
+\[
+    E
+    =
+    -\left[
+        t\log y
+        +
+        (1-t)\log(1-y)
+    \right].
+\]
+
+\subsection{Mehrklassen-Klassifikation}
+
+Für \(K\) Klassen verwendet man Softmax:
+
+\[
+    y_k
+    =
+    \frac{\exp(a_k)}
+    {\sum_{j=1}^{K}\exp(a_j)}.
+\]
+
+Die passende Verlustfunktion ist die Mehrklassen-Kreuzentropie (multiclass cross-entropy):
+
+\[
+    E
+    =
+    -\sum_{k=1}^{K}
+    t_k\log y_k.
+\]
+
+\section{Verlustfunktion für einen Datensatz}
+
+Für einen einzelnen Datenpunkt schreiben wir den Verlust als
+
+\[
+    E_n(\Theta),
+\]
+
+wobei \(\Theta\) alle Parameter des Netzes bezeichnet:
+
+\[
+    \Theta
+    =
+    \{W^{(1)},\vec{b}^{(1)},\dots,W^{(L)},\vec{b}^{(L)}\}.
+\]
+
+Für einen Datensatz mit \(N\) Datenpunkten ist der Gesamtverlust häufig:
+
+\[
+    E(\Theta)
+    =
+    \sum_{n=1}^{N}
+    E_n(\Theta).
+\]
+
+Oder als Durchschnitt:
+
+\[
+    E(\Theta)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    E_n(\Theta).
+\]
+
+\begin{definitionbox}
+Training eines neuronalen Netzes bedeutet, die Parameter \(\Theta\) so zu wählen, dass eine Verlustfunktion minimiert wird:
+
+\[
+    \Theta^*
+    =
+    \arg\min_{\Theta}
+    E(\Theta).
+\]
+\end{definitionbox}
+
+\section{Das Problem: Viele Parameter}
+
+Ein neuronales Netz kann sehr viele Parameter haben.
+Für jede Schicht \(l\) gibt es:
+
+\[
+    W^{(l)}
+\]
+
+und
+
+\[
+    \vec{b}^{(l)}.
+\]
+
+Um Gradientenabstieg zu verwenden, brauchen wir alle Ableitungen:
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}
+\]
+
+und
+
+\[
+    \frac{\partial E}{\partial \vec{b}^{(l)}}.
+\]
+
+Direkt alle Ableitungen einzeln auszurechnen wäre unübersichtlich und ineffizient.
+Backpropagation löst genau dieses Problem.
+
+\begin{conceptbox}
+Backpropagation ist ein effizienter Algorithmus zur Berechnung aller Gradienten in einem neuronalen Netz.
+
+Die zentrale mathematische Grundlage ist die Kettenregel (chain rule).
+\end{conceptbox}
+
+\section{Kettenregel}
+
+Backpropagation basiert auf der Kettenregel.
+Für skalare Funktionen gilt:
+
+\[
+    z = f(y),
+    \qquad
+    y = g(x).
+\]
+
+Dann ist:
+
+\[
+    \frac{dz}{dx}
+    =
+    \frac{dz}{dy}
+    \frac{dy}{dx}.
+\]
+
+In neuronalen Netzen sind die Größen meistens Vektoren und Matrizen.
+Die Idee bleibt aber gleich:
+Eine Änderung in einer frühen Schicht beeinflusst alle späteren Schichten.
+
+\begin{definitionbox}
+Die Kettenregel erlaubt, Ableitungen zusammengesetzter Funktionen zu berechnen.
+
+Für neuronale Netze bedeutet das:
+Der Fehler wird von der Ausgabe zurück durch die Schichten propagiert.
+\end{definitionbox}
+
+\section{Backpropagation-Idee}
+
+Der Forward Pass berechnet:
+
+\[
+    \vec{x}
+    \longrightarrow
+    \vec{z}^{(1)}
+    \longrightarrow
+    \dots
+    \longrightarrow
+    \vec{z}^{(L)}
+    =
+    \vec{y}
+    \longrightarrow
+    E.
+\]
+
+Backpropagation läuft in umgekehrter Richtung:
+
+\[
+    E
+    \longrightarrow
+    \vec{z}^{(L)}
+    \longrightarrow
+    \vec{a}^{(L)}
+    \longrightarrow
+    \dots
+    \longrightarrow
+    \vec{a}^{(1)}.
+\]
+
+Dabei werden sogenannte Fehlerterme (error terms) berechnet.
+
+\begin{definitionbox}
+Der Fehlerterm einer Schicht \(l\) ist
+
+\[
+    \vec{\delta}^{(l)}
+    =
+    \frac{\partial E}{\partial \vec{a}^{(l)}}.
+\]
+
+Er beschreibt, wie stark der Verlust auf Änderungen der Voraktivierung \(\vec{a}^{(l)}\) reagiert.
+\end{definitionbox}
+
+\section{Ein einfaches Zwei-Schichten-Netz}
+
+Wir betrachten nun ein Netz mit einer versteckten Schicht und einer Ausgabeschicht.
+
+Forward Pass:
+
+\[
+    \vec{z}^{(0)}
+    =
+    \vec{x}.
+\]
+
+Versteckte Schicht:
+
+\[
+    \vec{a}^{(1)}
+    =
+    W^{(1)}\vec{x}
+    +
+    \vec{b}^{(1)},
+\]
+
+\[
+    \vec{z}^{(1)}
+    =
+    g^{(1)}(\vec{a}^{(1)}).
+\]
+
+Ausgabeschicht:
+
+\[
+    \vec{a}^{(2)}
+    =
+    W^{(2)}\vec{z}^{(1)}
+    +
+    \vec{b}^{(2)},
+\]
+
+\[
+    \vec{y}
+    =
+    \vec{z}^{(2)}
+    =
+    g^{(2)}(\vec{a}^{(2)}).
+\]
+
+Der Verlust ist:
+
+\[
+    E
+    =
+    E(\vec{y},\vec{t}).
+\]
+
+\section{Gradienten der Ausgabeschicht}
+
+Wir wollen die Ableitung nach \(W^{(2)}\) berechnen.
+Für die Ausgabeschicht gilt:
+
+\[
+    \vec{a}^{(2)}
+    =
+    W^{(2)}\vec{z}^{(1)}
+    +
+    \vec{b}^{(2)}.
+\]
+
+Der Fehlerterm ist:
+
+\[
+    \vec{\delta}^{(2)}
+    =
+    \frac{\partial E}{\partial \vec{a}^{(2)}}.
+\]
+
+Dann gilt für die Gewichtsmatrix:
+
+\[
+    \frac{\partial E}{\partial W^{(2)}}
+    =
+    \vec{\delta}^{(2)}
+    (\vec{z}^{(1)})^{\top}.
+\]
+
+Für den Bias gilt:
+
+\[
+    \frac{\partial E}{\partial \vec{b}^{(2)}}
+    =
+    \vec{\delta}^{(2)}.
+\]
+
+\begin{definitionbox}
+Für eine Schicht \(l\) gilt allgemein:
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}
+    =
+    \vec{\delta}^{(l)}
+    (\vec{z}^{(l-1)})^{\top},
+\]
+
+und
+
+\[
+    \frac{\partial E}{\partial \vec{b}^{(l)}}
+    =
+    \vec{\delta}^{(l)}.
+\]
+\end{definitionbox}
+
+\section{Fehlerterm der Ausgabeschicht}
+
+Der Fehlerterm der Ausgabeschicht hängt von der gewählten Ausgabefunktion und Verlustfunktion ab.
+
+\subsection{Quadratischer Fehler}
+
+Bei quadratischem Fehler:
+
+\[
+    E
+    =
+    \frac{1}{2}
+    \|\vec{y}-\vec{t}\|^2
+\]
+
+gilt:
+
+\[
+    \frac{\partial E}{\partial \vec{y}}
+    =
+    \vec{y}-\vec{t}.
+\]
+
+Wenn
+
+\[
+    \vec{y}
+    =
+    g^{(L)}(\vec{a}^{(L)}),
+\]
+
+dann ist:
+
+\[
+    \vec{\delta}^{(L)}
+    =
+    (\vec{y}-\vec{t})
+    \odot
+    (g^{(L)})'(\vec{a}^{(L)}).
+\]
+
+Dabei bedeutet \(\odot\) komponentenweise Multiplikation.
+
+\subsection{Softmax mit Kreuzentropie}
+
+Bei Softmax-Ausgabe und Kreuzentropie vereinfacht sich der Fehlerterm zu:
+
+\[
+    \vec{\delta}^{(L)}
+    =
+    \vec{y}-\vec{t}.
+\]
+
+\subsection{Sigmoid mit binärer Kreuzentropie}
+
+Bei Sigmoid-Ausgabe und binärer Kreuzentropie gilt ebenfalls:
+
+\[
+    \delta^{(L)}
+    =
+    y-t.
+\]
+
+\begin{conceptbox}
+Die Kombination aus Sigmoid und Kreuzentropie oder Softmax und Kreuzentropie führt zu einem einfachen Ausgabefehler:
+
+\[
+    \text{Ausgabefehler}
+    =
+    \text{Vorhersage}
+    -
+    \text{Ziel}.
+\]
+\end{conceptbox}
+
+\section{Fehlerterm der versteckten Schicht}
+
+Nun wollen wir den Fehlerterm der versteckten Schicht berechnen:
+
+\[
+    \vec{\delta}^{(1)}
+    =
+    \frac{\partial E}{\partial \vec{a}^{(1)}}.
+\]
+
+Die versteckte Schicht beeinflusst den Verlust über die Ausgabeschicht.
+Daher verwenden wir die Kettenregel.
+
+Für allgemeine Schicht \(l\) gilt:
+
+\[
+    \vec{\delta}^{(l)}
+    =
+    \left(
+        (W^{(l+1)})^{\top}
+        \vec{\delta}^{(l+1)}
+    \right)
+    \odot
+    (g^{(l)})'(\vec{a}^{(l)}).
+\]
+
+Für die versteckte Schicht im Zwei-Schichten-Netz:
+
+\[
+    \vec{\delta}^{(1)}
+    =
+    \left(
+        (W^{(2)})^{\top}
+        \vec{\delta}^{(2)}
+    \right)
+    \odot
+    (g^{(1)})'(\vec{a}^{(1)}).
+\]
+
+\begin{definitionbox}
+Die Backpropagation-Rekursion für versteckte Schichten lautet:
+
+\[
+    \vec{\delta}^{(l)}
+    =
+    \left(
+        (W^{(l+1)})^{\top}
+        \vec{\delta}^{(l+1)}
+    \right)
+    \odot
+    (g^{(l)})'(\vec{a}^{(l)}).
+\]
+\end{definitionbox}
+
+\section{Backpropagation-Algorithmus}
+
+Für einen einzelnen Datenpunkt läuft Backpropagation so ab:
+
+\begin{enumerate}
+    \item Forward Pass:
+    Berechne für alle Schichten
+    \[
+        \vec{a}^{(l)}
+        =
+        W^{(l)}\vec{z}^{(l-1)}
+        +
+        \vec{b}^{(l)}
+    \]
+    und
+    \[
+        \vec{z}^{(l)}
+        =
+        g^{(l)}(\vec{a}^{(l)}).
+    \]
+
+    \item Verlust berechnen:
+    \[
+        E
+        =
+        E(\vec{z}^{(L)},\vec{t}).
+    \]
+
+    \item Ausgabefehler berechnen:
+    \[
+        \vec{\delta}^{(L)}
+        =
+        \frac{\partial E}{\partial \vec{a}^{(L)}}.
+    \]
+
+    \item Rückwärts durch die versteckten Schichten:
+    \[
+        \vec{\delta}^{(l)}
+        =
+        \left(
+            (W^{(l+1)})^{\top}
+            \vec{\delta}^{(l+1)}
+        \right)
+        \odot
+        (g^{(l)})'(\vec{a}^{(l)}).
+    \]
+
+    \item Gradienten berechnen:
+    \[
+        \frac{\partial E}{\partial W^{(l)}}
+        =
+        \vec{\delta}^{(l)}
+        (\vec{z}^{(l-1)})^{\top},
+    \]
+    \[
+        \frac{\partial E}{\partial \vec{b}^{(l)}}
+        =
+        \vec{\delta}^{(l)}.
+    \]
+\end{enumerate}
+
+\begin{conceptbox}
+Backpropagation speichert im Forward Pass die Aktivierungen und Voraktivierungen.
+Im Backward Pass werden daraus effizient alle Gradienten berechnet.
+\end{conceptbox}
+
+\section{Gradientenabstieg für MLPs}
+
+Nach der Berechnung der Gradienten werden die Parameter aktualisiert.
+Für Batch-Gradientenabstieg gilt:
+
+\[
+    W^{(l)}
+    \leftarrow
+    W^{(l)}
+    -
+    \eta
+    \frac{\partial E}{\partial W^{(l)}},
+\]
+
+und
+
+\[
+    \vec{b}^{(l)}
+    \leftarrow
+    \vec{b}^{(l)}
+    -
+    \eta
+    \frac{\partial E}{\partial \vec{b}^{(l)}}.
+\]
+
+Dabei ist \(\eta>0\) die Lernrate (learning rate).
+
+\begin{definitionbox}
+Training mit Gradientenabstieg bedeutet:
+
+\[
+    \Theta
+    \leftarrow
+    \Theta
+    -
+    \eta
+    \nabla_{\Theta}E(\Theta).
+\]
+
+Dabei enthält \(\Theta\) alle Gewichte und Biases des Netzes.
+\end{definitionbox}
+
+\section{Mini-Batch-Training}
+
+In der Praxis verwendet man selten den ganzen Datensatz auf einmal.
+Stattdessen verwendet man Mini-Batches.
+
+Ein Mini-Batch \(\mathcal{B}\) ist eine Teilmenge der Trainingsdaten.
+Der Mini-Batch-Verlust ist:
+
+\[
+    E_{\mathcal{B}}(\Theta)
+    =
+    \frac{1}{|\mathcal{B}|}
+    \sum_{n\in\mathcal{B}}
+    E_n(\Theta).
+\]
+
+Die Parameter werden mit dem Gradienten dieses Mini-Batch-Verlusts aktualisiert:
+
+\[
+    \Theta
+    \leftarrow
+    \Theta
+    -
+    \eta
+    \nabla_{\Theta}E_{\mathcal{B}}(\Theta).
+\]
+
+\begin{conceptbox}
+Mini-Batch-Training ist ein Kompromiss zwischen Batch-Gradientenabstieg und stochastischem Gradientenabstieg.
+
+Es ist effizient, skaliert gut und nutzt moderne Hardware besser.
+\end{conceptbox}
+
+\section{Matrixform für mehrere Datenpunkte}
+
+Für einen Mini-Batch kann man die Aktivierungen als Matrizen schreiben.
+Sei \(Z^{(0)}\) eine Matrix, deren Spalten die Eingaben des Mini-Batches sind.
+
+Für Schicht \(l\):
+
+\[
+    A^{(l)}
+    =
+    W^{(l)}Z^{(l-1)}
+    +
+    \vec{b}^{(l)}\vec{1}^{\top}.
+\]
+
+Die Aktivierungen sind:
+
+\[
+    Z^{(l)}
+    =
+    g^{(l)}(A^{(l)}).
+\]
+
+Die Fehlerterme werden ebenfalls als Matrizen geschrieben:
+
+\[
+    \Delta^{(l)}
+    =
+    \frac{\partial E}{\partial A^{(l)}}.
+\]
+
+Dann gilt:
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}
+    =
+    \Delta^{(l)}
+    (Z^{(l-1)})^{\top},
+\]
+
+und
+
+\[
+    \frac{\partial E}{\partial \vec{b}^{(l)}}
+    =
+    \Delta^{(l)}\vec{1}.
+\]
+
+\begin{notebox}
+Je nach Konvention liegen Datenpunkte als Zeilen oder Spalten in den Matrizen.
+Die Formeln müssen dann entsprechend transponiert werden.
+Wichtig ist nicht die Konvention, sondern konsistente Dimensionen.
+\end{notebox}
+
+\section{Initialisierung der Gewichte}
+
+Die Wahl der Anfangswerte ist wichtig.
+Wenn alle Gewichte mit \(0\) initialisiert werden, sind Neuronen derselben Schicht symmetrisch.
+Dann lernen sie dieselben Features.
+
+\begin{conceptbox}
+Gewichte neuronaler Netze sollten zufällig initialisiert werden, damit verschiedene Neuronen unterschiedliche Funktionen lernen können.
+\end{conceptbox}
+
+Typische Initialisierungen berücksichtigen die Anzahl der Eingänge und Ausgänge einer Schicht.
+
+\subsection{Xavier-Initialisierung}
+
+Xavier-Initialisierung wird häufig für Sigmoid oder Tanh verwendet.
+Die Varianz der Gewichte wird so gewählt, dass Aktivierungen und Gradienten nicht zu stark wachsen oder schrumpfen.
+
+\subsection{He-Initialisierung}
+
+He-Initialisierung wird häufig für ReLU-Netze verwendet.
+Sie berücksichtigt, dass ReLU ungefähr die Hälfte der Aktivierungen auf \(0\) setzt.
+
+\begin{notebox}
+Die genaue Initialisierung ist ein praktisches Detail, aber die Grundidee ist wichtig:
+Zu große Gewichte können Aktivierungen und Gradienten explodieren lassen.
+Zu kleine Gewichte können Signale verschwinden lassen.
+\end{notebox}
+
+\section{Verschwindende und explodierende Gradienten}
+
+Bei tiefen Netzen werden viele Ableitungen miteinander multipliziert.
+Dadurch können Gradienten sehr klein oder sehr groß werden.
+
+Wenn viele Faktoren kleiner als \(1\) sind, kann der Gradient verschwinden:
+
+\[
+    \|\nabla E\|
+    \approx
+    0.
+\]
+
+Das nennt man verschwindende Gradienten (vanishing gradients).
+
+Wenn viele Faktoren größer als \(1\) sind, kann der Gradient explodieren:
+
+\[
+    \|\nabla E\|
+    \gg
+    1.
+\]
+
+Das nennt man explodierende Gradienten (exploding gradients).
+
+\begin{conceptbox}
+Verschwindende Gradienten erschweren das Lernen früher Schichten.
+
+Explodierende Gradienten machen das Training instabil.
+\end{conceptbox}
+
+Sigmoid und Tanh können verschwindende Gradienten begünstigen, wenn sie in Sättigungsbereiche geraten.
+ReLU reduziert dieses Problem teilweise, hat aber eigene Probleme wie tote Neuronen.
+
+\section{Tote ReLU-Neuronen}
+
+Ein ReLU-Neuron ist tot, wenn es für alle oder fast alle Eingaben
+
+\[
+    a \leq 0
+\]
+
+hat.
+Dann ist:
+
+\[
+    \operatorname{ReLU}(a)=0
+\]
+
+und
+
+\[
+    \operatorname{ReLU}'(a)=0.
+\]
+
+Der Gradient für dieses Neuron ist dann \(0\), und es kann kaum noch lernen.
+
+\begin{notebox}
+Tote ReLUs können durch zu große Lernraten oder ungünstige Initialisierung entstehen.
+Varianten wie Leaky ReLU reduzieren dieses Problem.
+\end{notebox}
+
+\section{Regularisierung neuronaler Netze}
+
+Neuronale Netze können sehr flexibel sein und daher überanpassen.
+Typische Regularisierungsmethoden sind:
+
+\begin{itemize}
+    \item \(L_2\)-Regularisierung,
+    \item Early Stopping,
+    \item Dropout,
+    \item Datenaugmentation (data augmentation),
+    \item kleinere Netzwerkarchitekturen.
+\end{itemize}
+
+\subsection{\(L_2\)-Regularisierung}
+
+Man ergänzt den Verlust um:
+
+\[
+    \frac{\lambda}{2}
+    \sum_l
+    \|W^{(l)}\|_F^2.
+\]
+
+Dann ist:
+
+\[
+    E_{\mathrm{reg}}(\Theta)
+    =
+    E(\Theta)
+    +
+    \frac{\lambda}{2}
+    \sum_l
+    \|W^{(l)}\|_F^2.
+\]
+
+\subsection{Early Stopping}
+
+Beim Early Stopping wird das Training beendet, wenn der Validierungsfehler nicht mehr besser wird.
+
+\begin{conceptbox}
+Early Stopping wirkt als Regularisierung, weil das Netz nicht beliebig lange an die Trainingsdaten angepasst wird.
+\end{conceptbox}
+
+\subsection{Dropout}
+
+Bei Dropout werden während des Trainings zufällig Aktivierungen auf \(0\) gesetzt.
+Dadurch soll das Netz robuster werden und sich weniger auf einzelne Neuronen verlassen.
+
+\section{Universal Approximation}
+
+Ein wichtiger theoretischer Satz sagt:
+Ein neuronales Netz mit mindestens einer versteckten Schicht und geeigneter Aktivierungsfunktion kann unter bestimmten Bedingungen jede stetige Funktion auf einem kompakten Bereich beliebig gut approximieren.
+
+\begin{conceptbox}
+Der Universal-Approximation-Satz sagt nicht, dass ein Netz automatisch gut lernt.
+
+Er sagt nur, dass es prinzipiell genug Ausdruckskraft haben kann.
+Training, Datenmenge, Optimierung und Regularisierung bleiben trotzdem entscheidend.
+\end{conceptbox}
+
+\section{Vergleich mit linearen Modellen}
+
+\[
+\begin{array}{c|c|c}
+\text{Modell}
+&
+\text{Form}
+&
+\text{Nichtlinearität}
+\\
+\hline
+\text{Lineare Regression}
+&
+\vec{w}^{\top}\vec{x}
+&
+\text{keine}
+\\
+\hline
+\text{Logistische Regression}
+&
+\sigma(\vec{w}^{\top}\vec{x})
+&
+\text{nur Ausgabe}
+\\
+\hline
+\text{MLP}
+&
+g^{(L)}(W^{(L)}\cdots g^{(1)}(W^{(1)}\vec{x}+\vec{b}^{(1)}))
+&
+\text{mehrere Schichten}
+\end{array}
+\]
+
+\begin{conceptbox}
+Lineare und logistische Regression lernen eine direkte Abbildung aus den gegebenen Features.
+
+Ein MLP lernt zusätzlich interne Features in den versteckten Schichten.
+\end{conceptbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei MLPs und Backpropagation:
+
+\begin{enumerate}
+    \item Denken, mehrere lineare Schichten ohne Aktivierungsfunktion seien mächtiger als eine lineare Schicht.
+    \item Die Dimensionen von \(W^{(l)}\), \(\vec{z}^{(l)}\) und \(\vec{b}^{(l)}\) verwechseln.
+    \item Voraktivierung \(\vec{a}^{(l)}\) und Aktivierung \(\vec{z}^{(l)}\) verwechseln.
+    \item Die Ableitung der Aktivierungsfunktion in Backpropagation vergessen.
+    \item Den Fehlerterm \(\vec{\delta}^{(l)}\) mit dem Gradienten nach den Gewichten verwechseln.
+    \item Bei \(\frac{\partial E}{\partial W^{(l)}}\) das äußere Produkt vergessen.
+    \item Softmax mit Sigmoid verwechseln.
+    \item Kreuzentropie und quadratischen Fehler unpassend kombinieren.
+    \item Gewichte mit \(0\) initialisieren und dadurch Symmetrieprobleme erzeugen.
+    \item Training Error und Validation Error verwechseln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Dimensionen einer Schicht}
+
+Eine Schicht erhält Eingaben
+
+\[
+    \vec{z}^{(l-1)}\in\mathbb{R}^{5}
+\]
+
+und hat
+
+\[
+    3
+\]
+
+Neuronen.
+Welche Dimensionen haben \(W^{(l)}\), \(\vec{b}^{(l)}\), \(\vec{a}^{(l)}\) und \(\vec{z}^{(l)}\)?
+
+\begin{examplebox}
+Da die Schicht \(3\) Ausgaben und \(5\) Eingaben hat:
+
+\[
+    W^{(l)}\in\mathbb{R}^{3\times 5}.
+\]
+
+Der Bias hat eine Komponente pro Neuron:
+
+\[
+    \vec{b}^{(l)}\in\mathbb{R}^{3}.
+\]
+
+Daher:
+
+\[
+    \vec{a}^{(l)}\in\mathbb{R}^{3},
+    \qquad
+    \vec{z}^{(l)}\in\mathbb{R}^{3}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: ReLU berechnen}
+
+Berechne
+
+\[
+    \operatorname{ReLU}(-2),
+    \qquad
+    \operatorname{ReLU}(3).
+\]
+
+\begin{examplebox}
+Mit
+
+\[
+    \operatorname{ReLU}(a)=\max(0,a)
+\]
+
+folgt:
+
+\[
+    \operatorname{ReLU}(-2)=0,
+\]
+
+und
+
+\[
+    \operatorname{ReLU}(3)=3.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Ausgabefehler bei Softmax}
+
+Für einen Datenpunkt sei
+
+\[
+    \vec{y}
+    =
+    \begin{pmatrix}
+        0{,}1 \\
+        0{,}7 \\
+        0{,}2
+    \end{pmatrix},
+    \qquad
+    \vec{t}
+    =
+    \begin{pmatrix}
+        0 \\
+        1 \\
+        0
+    \end{pmatrix}.
+\]
+
+Berechne den Fehlerterm der Ausgabeschicht bei Softmax mit Kreuzentropie.
+
+\begin{examplebox}
+Bei Softmax mit Kreuzentropie gilt:
+
+\[
+    \vec{\delta}^{(L)}
+    =
+    \vec{y}-\vec{t}.
+\]
+
+Also:
+
+\[
+    \vec{\delta}^{(L)}
+    =
+    \begin{pmatrix}
+        0{,}1 \\
+        0{,}7 \\
+        0{,}2
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        0 \\
+        1 \\
+        0
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        0{,}1 \\
+        -0{,}3 \\
+        0{,}2
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Gewichtgradient einer Schicht}
+
+Gegeben seien
+
+\[
+    \vec{\delta}^{(l)}
+    =
+    \begin{pmatrix}
+        2 \\
+        -1
+    \end{pmatrix},
+    \qquad
+    \vec{z}^{(l-1)}
+    =
+    \begin{pmatrix}
+        3 \\
+        4
+    \end{pmatrix}.
+\]
+
+Berechne
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}.
+\]
+
+\begin{examplebox}
+Es gilt:
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}
+    =
+    \vec{\delta}^{(l)}
+    (\vec{z}^{(l-1)})^{\top}.
+\]
+
+Also:
+
+\[
+    \frac{\partial E}{\partial W^{(l)}}
+    =
+    \begin{pmatrix}
+        2 \\
+        -1
+    \end{pmatrix}
+    \begin{pmatrix}
+        3 & 4
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        6 & 8 \\
+        -3 & -4
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Warum Nichtlinearität?}
+
+Warum ist ein Netz aus mehreren linearen Schichten ohne Aktivierungsfunktionen nicht mächtiger als eine einzelne lineare Schicht?
+
+\begin{examplebox}
+Zwei lineare Schichten ergeben:
+
+\[
+    \vec{h}=W^{(1)}\vec{x},
+\]
+
+\[
+    \vec{y}=W^{(2)}\vec{h}.
+\]
+
+Einsetzen liefert:
+
+\[
+    \vec{y}=W^{(2)}W^{(1)}\vec{x}.
+\]
+
+Setze
+
+\[
+    W=W^{(2)}W^{(1)}.
+\]
+
+Dann:
+
+\[
+    \vec{y}=W\vec{x}.
+\]
+
+Das ist wieder eine einzige lineare Schicht.
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Ein mehrschichtiges Perzeptron (multilayer perceptron) besteht aus mehreren Schichten künstlicher Neuronen.
+    \item Eine Schicht berechnet:
+    \[
+        \vec{a}^{(l)}
+        =
+        W^{(l)}\vec{z}^{(l-1)}
+        +
+        \vec{b}^{(l)}.
+    \]
+    \item Danach folgt eine Aktivierung:
+    \[
+        \vec{z}^{(l)}
+        =
+        g^{(l)}(\vec{a}^{(l)}).
+    \]
+    \item Nichtlineare Aktivierungsfunktionen sind notwendig, weil mehrere lineare Schichten sonst wieder nur eine lineare Abbildung ergeben.
+    \item Der Forward Pass berechnet die Ausgabe des Netzes aus der Eingabe.
+    \item Backpropagation berechnet Gradienten effizient mit der Kettenregel.
+    \item Der Fehlerterm einer Schicht ist:
+    \[
+        \vec{\delta}^{(l)}
+        =
+        \frac{\partial E}{\partial \vec{a}^{(l)}}.
+    \]
+    \item Für versteckte Schichten gilt:
+    \[
+        \vec{\delta}^{(l)}
+        =
+        \left(
+            (W^{(l+1)})^{\top}
+            \vec{\delta}^{(l+1)}
+        \right)
+        \odot
+        (g^{(l)})'(\vec{a}^{(l)}).
+    \]
+    \item Die Gradienten sind:
+    \[
+        \frac{\partial E}{\partial W^{(l)}}
+        =
+        \vec{\delta}^{(l)}
+        (\vec{z}^{(l-1)})^{\top},
+    \]
+    \[
+        \frac{\partial E}{\partial \vec{b}^{(l)}}
+        =
+        \vec{\delta}^{(l)}.
+    \]
+    \item Bei Softmax mit Kreuzentropie gilt:
+    \[
+        \vec{\delta}^{(L)}
+        =
+        \vec{y}-\vec{t}.
+    \]
+    \item Bei Sigmoid mit binärer Kreuzentropie gilt:
+    \[
+        \delta^{(L)}
+        =
+        y-t.
+    \]
+    \item MLPs werden meist mit Mini-Batch-Gradientenabstieg trainiert.
+    \item Initialisierung, Aktivierungsfunktionen und Regularisierung sind entscheidend für stabiles Training.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist ein mehrschichtiges Perzeptron?
+    \item Was ist der Unterschied zwischen Eingabeschicht, versteckter Schicht und Ausgabeschicht?
+    \item Warum braucht man nichtlineare Aktivierungsfunktionen?
+    \item Zeige, dass mehrere lineare Schichten ohne Aktivierung äquivalent zu einer linearen Schicht sind.
+    \item Was ist ein Forward Pass?
+    \item Was ist Backpropagation?
+    \item Welche Rolle spielt die Kettenregel?
+    \item Definiere den Fehlerterm \(\vec{\delta}^{(l)}\).
+    \item Leite die Backpropagation-Rekursion für versteckte Schichten her.
+    \item Wie berechnet man \(\frac{\partial E}{\partial W^{(l)}}\)?
+    \item Wie berechnet man \(\frac{\partial E}{\partial \vec{b}^{(l)}}\)?
+    \item Warum vereinfacht sich der Ausgabefehler bei Softmax mit Kreuzentropie zu \(\vec{y}-\vec{t}\)?
+    \item Was ist der Unterschied zwischen Sigmoid, Tanh und ReLU?
+    \item Was sind verschwindende Gradienten?
+    \item Was sind explodierende Gradienten?
+    \item Warum sollte man Gewichte nicht alle mit \(0\) initialisieren?
+    \item Was ist Mini-Batch-Training?
+    \item Was ist Early Stopping?
+    \item Was ist Dropout?
+    \item Was sagt der Universal-Approximation-Satz aus und was sagt er nicht aus?
+\end{enumerate}
+\end{examtipbox}

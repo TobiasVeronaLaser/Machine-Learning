@@ -1,0 +1,2549 @@
+\chapter{Schätzer}
+
+\section{Ziel dieses Kapitels}
+
+In den vorherigen Kapiteln haben wir Wahrscheinlichkeiten, Wahrscheinlichkeitsdichten, Erwartungswerte, Varianz und Kovarianz kennengelernt.
+Jetzt betrachten wir die umgekehrte Situation:
+
+\begin{center}
+\textbf{Wir kennen die Verteilung nicht vollständig, sondern haben nur Daten.}
+\end{center}
+
+Aus diesen Daten möchten wir unbekannte Größen einer Verteilung bestimmen.
+Solche unbekannten Größen nennt man Parameter (parameters).
+Eine Vorschrift, die aus Daten einen Parameter schätzt, nennt man Schätzer (estimator).
+
+\begin{conceptbox}
+Ein Schätzer (estimator) ist eine Funktion der Daten, mit der wir eine unbekannte Größe einer Verteilung approximieren.
+
+Typische unbekannte Größen sind:
+
+\begin{itemize}
+    \item ein Mittelwert \(\mu\),
+    \item eine Varianz \(\sigma^2\),
+    \item ein Parameter einer Gleichverteilung,
+    \item ein Parameter einer Bernoulli-Verteilung,
+    \item die Gewichte eines Regressionsmodells.
+\end{itemize}
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist ein statistischer Schätzer (statistical estimator)?
+    \item Was ist der Unterschied zwischen Parameter, Schätzer und Schätzwert?
+    \item Was bedeutet i.i.d. (independent and identically distributed)?
+    \item Was ist Bias eines Schätzers?
+    \item Was ist die Varianz eines Schätzers?
+    \item Was ist der mittlere quadratische Fehler (mean squared error)?
+    \item Wie hängen Bias, Varianz und Fehler zusammen?
+    \item Warum ist das Stichprobenmittel ein erwartungstreuer Schätzer?
+    \item Warum ist die naive Stichprobenvarianz verzerrt?
+    \item Warum teilt man bei der unverzerrten Stichprobenvarianz durch \(N-1\)?
+    \item Was ist Maximum-Likelihood-Schätzung (maximum likelihood estimation)?
+    \item Was ist Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation)?
+    \item Was ist ein Bayesian Estimator?
+\end{itemize}
+
+\section{Parameter, Schätzer und Schätzwert}
+
+Wir beginnen mit einer wichtigen sprachlichen Unterscheidung.
+
+\begin{definitionbox}
+Ein Parameter (parameter) ist eine feste, aber unbekannte Größe eines Modells oder einer Verteilung.
+
+Ein Schätzer (estimator) ist eine Funktion der Daten, die diesen Parameter schätzen soll.
+
+Ein Schätzwert (estimate) ist der konkrete Zahlenwert, den der Schätzer für einen konkreten Datensatz liefert.
+\end{definitionbox}
+
+Angenommen, die Zufallsvariable \(X\) hat einen unbekannten Mittelwert
+
+\[
+    \mu_X = \mathbb{E}[X].
+\]
+
+Wir beobachten Daten
+
+\[
+    x_1,x_2,\dots,x_N.
+\]
+
+Ein möglicher Schätzer für \(\mu_X\) ist das Stichprobenmittel (sample mean):
+
+\[
+    \hat{\mu}_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    X_n.
+\]
+
+Wichtig ist:
+Der Schätzer \(\hat{\mu}_N\) ist selbst eine Zufallsvariable, weil er von den Zufallsvariablen \(X_1,\dots,X_N\) abhängt.
+Wenn wir konkrete Daten \(x_1,\dots,x_N\) einsetzen, erhalten wir einen konkreten Schätzwert:
+
+\[
+    \hat{\mu}_N(x_1,\dots,x_N)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+\begin{notebox}
+In der Praxis schreibt man oft einfach \(\hat{\mu}_N\), obwohl eigentlich eine Funktion der Daten gemeint ist.
+
+Strenger wäre:
+
+\[
+    \hat{\mu}_N
+    =
+    \hat{\mu}_N(X_1,\dots,X_N).
+\]
+
+Diese Unterscheidung ist wichtig:
+Der wahre Parameter \(\mu_X\) ist eine feste Zahl.
+Der Schätzer \(\hat{\mu}_N\) ist eine Zufallsvariable.
+\end{notebox}
+
+\section{Daten als Zufallsvariablen}
+
+In der Statistik und im maschinellen Lernen nehmen wir häufig an, dass Datenpunkte zufällige Realisierungen einer Verteilung sind.
+
+Wir schreiben:
+
+\[
+    X_1,X_2,\dots,X_N.
+\]
+
+Das sind Zufallsvariablen.
+Eine konkrete Beobachtung schreiben wir als
+
+\[
+    x_1,x_2,\dots,x_N.
+\]
+
+\begin{definitionbox}
+Die Daten \(X_1,\dots,X_N\) heißen unabhängig und identisch verteilt (independent and identically distributed), kurz i.i.d., wenn gilt:
+
+\begin{itemize}
+    \item Alle \(X_n\) haben dieselbe Verteilung.
+    \item Die Zufallsvariablen \(X_1,\dots,X_N\) sind unabhängig.
+\end{itemize}
+\end{definitionbox}
+
+Identisch verteilt bedeutet:
+
+\[
+    X_n \sim p(x)
+    \quad
+    \text{für alle}
+    \quad
+    n \in \{1,\dots,N\}.
+\]
+
+Unabhängig bedeutet:
+
+\[
+    p(x_1,\dots,x_N)
+    =
+    \prod_{n=1}^{N}
+    p(x_n).
+\]
+
+\begin{conceptbox}
+Die i.i.d.-Annahme ist eine Standardannahme in vielen Herleitungen.
+
+Sie bedeutet:
+Alle Datenpunkte stammen aus derselben Quelle und beeinflussen sich nicht gegenseitig.
+\end{conceptbox}
+
+\begin{examplebox}
+Wenn wir \(N=100\) zufällig ausgewählte Personen messen und \(X_n\) die Körpergröße der \(n\)-ten Person ist, dann modellieren wir oft:
+
+\[
+    X_1,\dots,X_N
+    \overset{\mathrm{i.i.d.}}{\sim}
+    p(x).
+\]
+
+Das bedeutet:
+Alle Körpergrößen werden als unabhängige Ziehungen aus derselben Verteilung betrachtet.
+\end{examplebox}
+
+\section{Beispiel: Parameter einer Gleichverteilung schätzen}
+
+Ein einfaches Beispiel ist die Gleichverteilung (uniform distribution).
+
+Angenommen, die Daten stammen aus einer Gleichverteilung auf einem unbekannten Intervall:
+
+\[
+    X \sim \mathrm{Uniform}(a,b).
+\]
+
+Die Dichte ist:
+
+\[
+    p(x \mid a,b)
+    =
+    \begin{cases}
+        \frac{1}{b-a}, & x \in [a,b], \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+Die Parameter sind \(a\) und \(b\).
+Wir beobachten Daten:
+
+\[
+    x_1,x_2,\dots,x_N.
+\]
+
+Die Frage lautet:
+
+\begin{center}
+\textbf{Wie können wir aus den Daten \(a\) und \(b\) schätzen?}
+\end{center}
+
+\section{Heuristischer Schätzer mit Minimum und Maximum}
+
+Eine naheliegende Idee ist:
+Das kleinste beobachtete \(x_n\) sollte ungefähr bei \(a\) liegen, und das größte beobachtete \(x_n\) ungefähr bei \(b\).
+
+Wir definieren:
+
+\[
+    \hat{a}_{\mathrm{mima}}
+    =
+    \min_{n \in \{1,\dots,N\}} X_n,
+\]
+
+und
+
+\[
+    \hat{b}_{\mathrm{mima}}
+    =
+    \max_{n \in \{1,\dots,N\}} X_n.
+\]
+
+Der Name \(\mathrm{mima}\) steht hier für Minimum-Maximum.
+
+\begin{definitionbox}
+Der Minimum-Maximum-Schätzer (minimum-maximum estimator) für die Gleichverteilung ist:
+
+\[
+    \hat{a}_{\mathrm{mima}}
+    =
+    \min_n X_n,
+    \qquad
+    \hat{b}_{\mathrm{mima}}
+    =
+    \max_n X_n.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Idee ist sehr intuitiv:
+Wenn die Daten aus dem Intervall \([a,b]\) kommen, dann muss \(a\) links vom kleinsten Datenpunkt und \(b\) rechts vom größten Datenpunkt liegen.
+
+Daher verwendet man den kleinsten und größten Datenpunkt als Schätzung der Intervallgrenzen.
+\end{conceptbox}
+
+Dieser Schätzer ist einfach, aber er ist nicht perfekt.
+Bei endlichem \(N\) ist der kleinste Datenpunkt typischerweise größer als \(a\), und der größte Datenpunkt typischerweise kleiner als \(b\).
+Das Intervall wird also tendenziell zu klein geschätzt.
+
+\section{Methode der Momente}
+
+Eine zweite Idee ist die Methode der Momente (method of moments).
+Sie nutzt bekannte Formeln für Erwartungswert und Varianz einer Verteilung.
+
+Für die Gleichverteilung auf \([a,b]\) gilt:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{a+b}{2},
+\]
+
+und
+
+\[
+    \mathrm{Var}(X)
+    =
+    \frac{(b-a)^2}{12}.
+\]
+
+Aus Daten können wir Mittelwert und Varianz schätzen.
+Dann lösen wir diese Gleichungen nach \(a\) und \(b\) auf.
+
+\subsection{Empirischer Mittelwert}
+
+Der empirische Mittelwert (empirical mean) ist:
+
+\[
+    \hat{\mu}_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    X_n.
+\]
+
+\subsection{Empirische Varianz}
+
+Eine einfache empirische Varianz ist:
+
+\[
+    \hat{\sigma}^2_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+Für die Gleichverteilung gilt:
+
+\[
+    \mu
+    =
+    \frac{a+b}{2},
+\]
+
+und
+
+\[
+    \sigma^2
+    =
+    \frac{(b-a)^2}{12}.
+\]
+
+Daraus folgt:
+
+\[
+    a+b = 2\mu,
+\]
+
+und
+
+\[
+    b-a = \sqrt{12\sigma^2}.
+\]
+
+Wir setzen
+
+\[
+    d = b-a.
+\]
+
+Dann gilt:
+
+\[
+    d = \sqrt{12\sigma^2}.
+\]
+
+Außerdem:
+
+\[
+    a = \mu - \frac{d}{2},
+    \qquad
+    b = \mu + \frac{d}{2}.
+\]
+
+Einsetzen von \(d=\sqrt{12\sigma^2}\) ergibt:
+
+\[
+    a = \mu - \sqrt{3\sigma^2},
+\]
+
+und
+
+\[
+    b = \mu + \sqrt{3\sigma^2}.
+\]
+
+Für die Schätzer verwenden wir \(\hat{\mu}_N\) und \(\hat{\sigma}^2_N\):
+
+\[
+    \hat{a}_{\mathrm{MoM}}
+    =
+    \hat{\mu}_N
+    -
+    \sqrt{3\hat{\sigma}^2_N},
+\]
+
+und
+
+\[
+    \hat{b}_{\mathrm{MoM}}
+    =
+    \hat{\mu}_N
+    +
+    \sqrt{3\hat{\sigma}^2_N}.
+\]
+
+\begin{definitionbox}
+Die Methode der Momente (method of moments) schätzt Parameter, indem theoretische Momente einer Verteilung mit empirischen Momenten aus den Daten gleichgesetzt werden.
+
+Für die Gleichverteilung ergibt sich:
+
+\[
+    \hat{a}_{\mathrm{MoM}}
+    =
+    \hat{\mu}_N
+    -
+    \sqrt{3\hat{\sigma}^2_N},
+\]
+
+\[
+    \hat{b}_{\mathrm{MoM}}
+    =
+    \hat{\mu}_N
+    +
+    \sqrt{3\hat{\sigma}^2_N}.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Momente (moments) sind Erwartungswerte von Potenzen einer Zufallsvariable.
+
+Das erste Moment hängt mit dem Mittelwert zusammen.
+Das zweite zentrale Moment ist die Varianz.
+\end{notebox}
+
+\section{Welcher Schätzer ist besser?}
+
+Für die Gleichverteilung haben wir nun mindestens zwei Möglichkeiten:
+
+\[
+    (\hat{a}_{\mathrm{mima}},\hat{b}_{\mathrm{mima}})
+\]
+
+und
+
+\[
+    (\hat{a}_{\mathrm{MoM}},\hat{b}_{\mathrm{MoM}}).
+\]
+
+Die Frage ist:
+
+\begin{center}
+\textbf{Welcher Schätzer ist besser?}
+\end{center}
+
+Um das mathematisch zu beantworten, brauchen wir Kriterien.
+Die wichtigsten Kriterien sind:
+
+\begin{itemize}
+    \item Bias,
+    \item Varianz,
+    \item mittlerer quadratischer Fehler (mean squared error),
+    \item Konsistenz (consistency).
+\end{itemize}
+
+\section{Bias eines Schätzers}
+
+Ein Schätzer kann systematisch zu groß oder zu klein sein.
+Diese systematische Abweichung nennt man Bias.
+
+\begin{definitionbox}
+Sei \(\hat{\theta}_N\) ein Schätzer für einen wahren Parameter \(\theta\).
+Der Bias des Schätzers ist
+
+\[
+    \mathrm{Bias}[\hat{\theta}_N]
+    =
+    \mathbb{E}[\hat{\theta}_N] - \theta.
+\]
+\end{definitionbox}
+
+Falls
+
+\[
+    \mathrm{Bias}[\hat{\theta}_N] = 0,
+\]
+
+dann heißt der Schätzer erwartungstreu oder unverzerrt (unbiased).
+
+\begin{definitionbox}
+Ein Schätzer \(\hat{\theta}_N\) heißt erwartungstreu (unbiased), wenn gilt:
+
+\[
+    \mathbb{E}[\hat{\theta}_N] = \theta.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Bias misst systematischen Fehler.
+
+Ein positiver Bias bedeutet:
+Der Schätzer ist im Durchschnitt zu groß.
+
+Ein negativer Bias bedeutet:
+Der Schätzer ist im Durchschnitt zu klein.
+\end{conceptbox}
+
+\section{Varianz eines Schätzers}
+
+Neben systematischem Fehler gibt es zufällige Schwankung.
+Ein Schätzer kann bei verschiedenen Datensätzen stark unterschiedliche Werte liefern.
+Diese Schwankung misst die Varianz des Schätzers.
+
+\begin{definitionbox}
+Die Varianz eines Schätzers \(\hat{\theta}_N\) ist
+
+\[
+    \mathrm{Var}[\hat{\theta}_N]
+    =
+    \mathbb{E}\left[
+        \left(
+            \hat{\theta}_N
+            -
+            \mathbb{E}[\hat{\theta}_N]
+        \right)^2
+    \right].
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Varianz eines Schätzers misst, wie stark der Schätzer von Datensatz zu Datensatz schwankt.
+
+Kleine Varianz bedeutet:
+Der Schätzer ist stabil.
+
+Große Varianz bedeutet:
+Der Schätzer reagiert stark auf die zufällige Auswahl der Daten.
+\end{conceptbox}
+
+\section{Mittlerer quadratischer Fehler}
+
+Bias und Varianz beschreiben unterschiedliche Fehlerquellen.
+Der mittlere quadratische Fehler (mean squared error, MSE) kombiniert beide.
+
+\begin{definitionbox}
+Der mittlere quadratische Fehler (mean squared error) eines Schätzers \(\hat{\theta}_N\) für einen Parameter \(\theta\) ist
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathbb{E}\left[
+        \left(
+            \hat{\theta}_N - \theta
+        \right)^2
+    \right].
+\]
+\end{definitionbox}
+
+\subsection{Bias-Varianz-Zerlegung}
+
+Der MSE kann zerlegt werden in Bias und Varianz:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathrm{Bias}[\hat{\theta}_N]^2
+    +
+    \mathrm{Var}[\hat{\theta}_N].
+\]
+
+\subsection{Herleitung}
+
+Wir starten mit der Definition:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathbb{E}\left[
+        \left(
+            \hat{\theta}_N-\theta
+        \right)^2
+    \right].
+\]
+
+Wir addieren und subtrahieren \(\mathbb{E}[\hat{\theta}_N]\):
+
+\[
+    \hat{\theta}_N-\theta
+    =
+    \hat{\theta}_N
+    -
+    \mathbb{E}[\hat{\theta}_N]
+    +
+    \mathbb{E}[\hat{\theta}_N]
+    -
+    \theta.
+\]
+
+Setze
+
+\[
+    A
+    =
+    \hat{\theta}_N
+    -
+    \mathbb{E}[\hat{\theta}_N],
+\]
+
+und
+
+\[
+    B
+    =
+    \mathbb{E}[\hat{\theta}_N]
+    -
+    \theta.
+\]
+
+Dann gilt:
+
+\[
+    \hat{\theta}_N-\theta
+    =
+    A+B.
+\]
+
+Also:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathbb{E}[(A+B)^2].
+\]
+
+Ausmultiplizieren ergibt:
+
+\[
+    \mathbb{E}[(A+B)^2]
+    =
+    \mathbb{E}[A^2]
+    +
+    2\mathbb{E}[AB]
+    +
+    \mathbb{E}[B^2].
+\]
+
+Da \(B\) konstant ist, gilt:
+
+\[
+    \mathbb{E}[AB]
+    =
+    B\mathbb{E}[A].
+\]
+
+Außerdem:
+
+\[
+    \mathbb{E}[A]
+    =
+    \mathbb{E}\left[
+        \hat{\theta}_N
+        -
+        \mathbb{E}[\hat{\theta}_N]
+    \right]
+    =
+    \mathbb{E}[\hat{\theta}_N]
+    -
+    \mathbb{E}[\hat{\theta}_N]
+    =
+    0.
+\]
+
+Daher verschwindet der Kreuzterm:
+
+\[
+    2\mathbb{E}[AB] = 0.
+\]
+
+Weiter gilt:
+
+\[
+    \mathbb{E}[A^2]
+    =
+    \mathrm{Var}[\hat{\theta}_N],
+\]
+
+und
+
+\[
+    \mathbb{E}[B^2]
+    =
+    B^2
+    =
+    \left(
+        \mathbb{E}[\hat{\theta}_N]
+        -
+        \theta
+    \right)^2
+    =
+    \mathrm{Bias}[\hat{\theta}_N]^2.
+\]
+
+Damit:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathrm{Var}[\hat{\theta}_N]
+    +
+    \mathrm{Bias}[\hat{\theta}_N]^2.
+\]
+
+\begin{conceptbox}
+Die Bias-Varianz-Zerlegung lautet:
+
+\[
+    \mathrm{MSE}
+    =
+    \text{Bias}^2
+    +
+    \text{Varianz}.
+\]
+
+Ein guter Schätzer sollte idealerweise kleinen Bias und kleine Varianz haben.
+Oft stehen diese beiden Ziele aber in Konkurrenz.
+\end{conceptbox}
+
+\section{Bias-Varianz-Trade-off}
+
+Ein Schätzer mit sehr kleinem Bias kann hohe Varianz haben.
+Ein Schätzer mit kleiner Varianz kann dafür verzerrt sein.
+Dieses Spannungsverhältnis nennt man Bias-Varianz-Trade-off (bias-variance trade-off).
+
+\begin{conceptbox}
+Beim Bias-Varianz-Trade-off versucht man, den gesamten erwarteten Fehler zu minimieren, nicht nur Bias oder Varianz einzeln.
+
+Ein leicht verzerrter Schätzer kann besser sein als ein unverzerrter Schätzer, wenn seine Varianz deutlich kleiner ist.
+\end{conceptbox}
+
+\begin{examtipbox}
+Wichtig:
+Unverzerrt bedeutet nicht automatisch gut.
+
+Ein Schätzer kann Bias \(0\) haben, aber sehr stark schwanken.
+Dann kann sein MSE trotzdem groß sein.
+\end{examtipbox}
+
+\section{Konsistenz}
+
+Ein Schätzer sollte besser werden, wenn mehr Daten verfügbar sind.
+Diese Eigenschaft nennt man Konsistenz (consistency).
+
+\begin{definitionbox}
+Ein Schätzer \(\hat{\theta}_N\) heißt konsistent (consistent), wenn er für \(N \to \infty\) gegen den wahren Parameter \(\theta\) konvergiert.
+
+Eine einfache ausreichende Intuition ist:
+
+\[
+    \lim_{N \to \infty}
+    \mathrm{Bias}[\hat{\theta}_N]
+    =
+    0,
+\]
+
+und
+
+\[
+    \lim_{N \to \infty}
+    \mathrm{Var}[\hat{\theta}_N]
+    =
+    0.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Konsistenz bedeutet:
+Mit unendlich vielen Daten verschwindet der Schätzfehler.
+
+Für maschinelles Lernen ist das wichtig, weil wir erwarten, dass mehr Daten zu besseren Schätzungen führen.
+\end{conceptbox}
+
+\section{Das Stichprobenmittel}
+
+Das Stichprobenmittel (sample mean) ist einer der wichtigsten Schätzer.
+
+Seien
+
+\[
+    X_1,\dots,X_N
+\]
+
+i.i.d. Zufallsvariablen mit
+
+\[
+    \mathbb{E}[X_n] = \mu_X
+\]
+
+und
+
+\[
+    \mathrm{Var}(X_n) = \sigma_X^2.
+\]
+
+Der Schätzer für den Mittelwert ist:
+
+\[
+    \hat{\mu}_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    X_n.
+\]
+
+\begin{definitionbox}
+Das Stichprobenmittel (sample mean, empirical mean) ist
+
+\[
+    \hat{\mu}_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    X_n.
+\]
+
+Es schätzt den wahren Mittelwert
+
+\[
+    \mu_X
+    =
+    \mathbb{E}[X].
+\]
+\end{definitionbox}
+
+\section{Bias des Stichprobenmittels}
+
+Wir berechnen:
+
+\[
+    \mathrm{Bias}[\hat{\mu}_N]
+    =
+    \mathbb{E}[\hat{\mu}_N]
+    -
+    \mu_X.
+\]
+
+Zuerst:
+
+\[
+    \mathbb{E}[\hat{\mu}_N]
+    =
+    \mathbb{E}\left[
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        X_n
+    \right].
+\]
+
+Wegen Linearität des Erwartungswerts:
+
+\[
+    \mathbb{E}[\hat{\mu}_N]
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mathbb{E}[X_n].
+\]
+
+Da alle \(X_n\) identisch verteilt sind:
+
+\[
+    \mathbb{E}[X_n] = \mu_X.
+\]
+
+Also:
+
+\[
+    \mathbb{E}[\hat{\mu}_N]
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mu_X
+    =
+    \frac{1}{N}
+    N\mu_X
+    =
+    \mu_X.
+\]
+
+Damit:
+
+\[
+    \mathrm{Bias}[\hat{\mu}_N]
+    =
+    \mu_X-\mu_X
+    =
+    0.
+\]
+
+\begin{conceptbox}
+Das Stichprobenmittel ist ein erwartungstreuer Schätzer (unbiased estimator) für den wahren Mittelwert:
+
+\[
+    \mathbb{E}[\hat{\mu}_N]
+    =
+    \mu_X.
+\]
+\end{conceptbox}
+
+\section{Varianz des Stichprobenmittels}
+
+Nun berechnen wir die Varianz von \(\hat{\mu}_N\):
+
+\[
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \mathrm{Var}\left[
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        X_n
+    \right].
+\]
+
+Konstanten ziehen quadratisch aus der Varianz:
+
+\[
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \frac{1}{N^2}
+    \mathrm{Var}\left[
+        \sum_{n=1}^{N}
+        X_n
+    \right].
+\]
+
+Da die \(X_n\) unabhängig sind, addieren sich die Varianzen:
+
+\[
+    \mathrm{Var}\left[
+        \sum_{n=1}^{N}
+        X_n
+    \right]
+    =
+    \sum_{n=1}^{N}
+    \mathrm{Var}[X_n].
+\]
+
+Da alle \(X_n\) identisch verteilt sind:
+
+\[
+    \mathrm{Var}[X_n] = \sigma_X^2.
+\]
+
+Also:
+
+\[
+    \sum_{n=1}^{N}
+    \mathrm{Var}[X_n]
+    =
+    N\sigma_X^2.
+\]
+
+Damit:
+
+\[
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \frac{1}{N^2}
+    N\sigma_X^2
+    =
+    \frac{\sigma_X^2}{N}.
+\]
+
+\begin{definitionbox}
+Für das Stichprobenmittel gilt:
+
+\[
+    \mathrm{Bias}[\hat{\mu}_N] = 0,
+\]
+
+und
+
+\[
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \frac{\sigma_X^2}{N}.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Je größer \(N\) ist, desto kleiner ist die Varianz des Stichprobenmittels.
+
+\[
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \frac{\sigma_X^2}{N}
+    \longrightarrow
+    0
+    \quad
+    \text{für}
+    \quad
+    N \to \infty.
+\]
+
+Das Stichprobenmittel wird also mit mehr Daten stabiler.
+\end{conceptbox}
+
+Da der Bias \(0\) ist, ist der MSE des Stichprobenmittels gleich seiner Varianz:
+
+\[
+    \mathrm{MSE}[\hat{\mu}_N]
+    =
+    \mathrm{Var}[\hat{\mu}_N]
+    =
+    \frac{\sigma_X^2}{N}.
+\]
+
+\section{Die naive Stichprobenvarianz}
+
+Wir möchten nun die wahre Varianz
+
+\[
+    \sigma_X^2
+    =
+    \mathrm{Var}(X)
+\]
+
+schätzen.
+
+Eine naheliegende Idee ist:
+
+\[
+    \hat{\sigma}^2_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+\begin{definitionbox}
+Die naive Stichprobenvarianz ist
+
+\[
+    \hat{\sigma}^2_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+Sie verwendet das Stichprobenmittel \(\hat{\mu}_N\) anstelle des unbekannten wahren Mittelwerts \(\mu_X\).
+\end{definitionbox}
+
+Diese Formel wirkt natürlich, ist aber verzerrt.
+Sie unterschätzt die wahre Varianz im Mittel.
+
+\section{Bias der naiven Stichprobenvarianz}
+
+Für die naive Stichprobenvarianz gilt:
+
+\[
+    \mathbb{E}[\hat{\sigma}^2_N]
+    =
+    \frac{N-1}{N}
+    \sigma_X^2.
+\]
+
+Damit ist der Bias:
+
+\[
+    \mathrm{Bias}[\hat{\sigma}^2_N]
+    =
+    \mathbb{E}[\hat{\sigma}^2_N]
+    -
+    \sigma_X^2.
+\]
+
+Einsetzen ergibt:
+
+\[
+    \mathrm{Bias}[\hat{\sigma}^2_N]
+    =
+    \frac{N-1}{N}
+    \sigma_X^2
+    -
+    \sigma_X^2.
+\]
+
+Wir schreiben
+
+\[
+    \sigma_X^2
+    =
+    \frac{N}{N}
+    \sigma_X^2.
+\]
+
+Dann:
+
+\[
+    \mathrm{Bias}[\hat{\sigma}^2_N]
+    =
+    \frac{N-1}{N}
+    \sigma_X^2
+    -
+    \frac{N}{N}
+    \sigma_X^2
+    =
+    -\frac{1}{N}
+    \sigma_X^2.
+\]
+
+\begin{conceptbox}
+Die naive Stichprobenvarianz ist verzerrt:
+
+\[
+    \mathrm{Bias}[\hat{\sigma}^2_N]
+    =
+    -\frac{1}{N}
+    \sigma_X^2.
+\]
+
+Sie unterschätzt die wahre Varianz im Durchschnitt.
+\end{conceptbox}
+
+\subsection{Intuition für die Verzerrung}
+
+Der Grund ist:
+Wir kennen den wahren Mittelwert \(\mu_X\) nicht.
+Stattdessen verwenden wir das aus denselben Daten berechnete Stichprobenmittel \(\hat{\mu}_N\).
+
+Das Stichprobenmittel liegt näher an den Daten als der wahre Mittelwert.
+Dadurch werden die Abstände
+
+\[
+    X_n-\hat{\mu}_N
+\]
+
+im Durchschnitt zu klein.
+Also wird auch die Varianz zu klein geschätzt.
+
+\section{Unverzerrte Stichprobenvarianz}
+
+Um den Bias zu korrigieren, multiplizieren wir die naive Stichprobenvarianz mit
+
+\[
+    \frac{N}{N-1}.
+\]
+
+Wir definieren:
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{N}{N-1}
+    \hat{\sigma}^2_N.
+\]
+
+Einsetzen der naiven Stichprobenvarianz ergibt:
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{N}{N-1}
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+Damit:
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{1}{N-1}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+\begin{definitionbox}
+Die unverzerrte Stichprobenvarianz ist
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{1}{N-1}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+Sie ist ein erwartungstreuer Schätzer für \(\sigma_X^2\).
+\end{definitionbox}
+
+\subsection{Nachweis der Erwartungstreue}
+
+Wir wissen:
+
+\[
+    \mathbb{E}[\hat{\sigma}^2_N]
+    =
+    \frac{N-1}{N}
+    \sigma_X^2.
+\]
+
+Da
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{N}{N-1}
+    \hat{\sigma}^2_N
+\]
+
+gilt:
+
+\[
+    \mathbb{E}[\hat{s}^2_N]
+    =
+    \mathbb{E}\left[
+        \frac{N}{N-1}
+        \hat{\sigma}^2_N
+    \right].
+\]
+
+Der Faktor ist konstant:
+
+\[
+    \mathbb{E}[\hat{s}^2_N]
+    =
+    \frac{N}{N-1}
+    \mathbb{E}[\hat{\sigma}^2_N].
+\]
+
+Einsetzen:
+
+\[
+    \mathbb{E}[\hat{s}^2_N]
+    =
+    \frac{N}{N-1}
+    \frac{N-1}{N}
+    \sigma_X^2.
+\]
+
+Damit:
+
+\[
+    \mathbb{E}[\hat{s}^2_N]
+    =
+    \sigma_X^2.
+\]
+
+Also:
+
+\[
+    \mathrm{Bias}[\hat{s}^2_N] = 0.
+\]
+
+\begin{examtipbox}
+Der Grund für \(N-1\) im Nenner ist die Bias-Korrektur.
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2
+\]
+
+ist verzerrt.
+
+\[
+    \frac{1}{N-1}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2
+\]
+
+ist unverzerrt.
+\end{examtipbox}
+
+\section{Vergleich der Varianzschätzer}
+
+Wir haben zwei Schätzer für \(\sigma_X^2\):
+
+\[
+    \hat{\sigma}^2_N
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2,
+\]
+
+und
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{1}{N-1}
+    \sum_{n=1}^{N}
+    (X_n-\hat{\mu}_N)^2.
+\]
+
+Zwischen ihnen gilt:
+
+\[
+    \hat{s}^2_N
+    =
+    \frac{N}{N-1}
+    \hat{\sigma}^2_N.
+\]
+
+Daher gilt für die Varianzen:
+
+\[
+    \mathrm{Var}[\hat{s}^2_N]
+    =
+    \mathrm{Var}\left[
+        \frac{N}{N-1}
+        \hat{\sigma}^2_N
+    \right].
+\]
+
+Konstanten gehen quadratisch in die Varianz ein:
+
+\[
+    \mathrm{Var}[\hat{s}^2_N]
+    =
+    \left(
+        \frac{N}{N-1}
+    \right)^2
+    \mathrm{Var}[\hat{\sigma}^2_N].
+\]
+
+Da
+
+\[
+    \frac{N}{N-1} > 1
+\]
+
+für \(N>1\), gilt:
+
+\[
+    \mathrm{Var}[\hat{s}^2_N]
+    >
+    \mathrm{Var}[\hat{\sigma}^2_N].
+\]
+
+\begin{conceptbox}
+Die unverzerrte Stichprobenvarianz hat Bias \(0\), aber etwas größere Varianz als die naive Stichprobenvarianz.
+
+Das ist ein Beispiel für den Bias-Varianz-Trade-off.
+\end{conceptbox}
+
+\section{Übersicht: Mittelwert- und Varianzschätzer}
+
+\[
+\begin{array}{c|c|c|c}
+\text{Zielgröße}
+&
+\text{Schätzer}
+&
+\text{Bias}
+&
+\text{Varianz}
+\\
+\hline
+\mu_X
+&
+\hat{\mu}_N
+=
+\frac{1}{N}\sum_{n=1}^{N}X_n
+&
+0
+&
+\frac{1}{N}\sigma_X^2
+\\
+\hline
+\sigma_X^2
+&
+\hat{\sigma}^2_N
+=
+\frac{1}{N}
+\sum_{n=1}^{N}
+(X_n-\hat{\mu}_N)^2
+&
+-\frac{1}{N}\sigma_X^2
+&
+\mathrm{Var}[\hat{\sigma}^2_N]
+\\
+\hline
+\sigma_X^2
+&
+\hat{s}^2_N
+=
+\frac{1}{N-1}
+\sum_{n=1}^{N}
+(X_n-\hat{\mu}_N)^2
+&
+0
+&
+\left(\frac{N}{N-1}\right)^2
+\mathrm{Var}[\hat{\sigma}^2_N]
+\end{array}
+\]
+
+\begin{notebox}
+Die Tabelle zeigt:
+Der unverzerrte Varianzschätzer reduziert den Bias auf \(0\), zahlt dafür aber mit etwas höherer Varianz.
+Für große \(N\) wird der Unterschied zwischen \(N\) und \(N-1\) klein.
+\end{notebox}
+
+\section{Maximum-Likelihood-Schätzung}
+
+Die Maximum-Likelihood-Schätzung (maximum likelihood estimation, MLE) ist eine der wichtigsten Methoden im maschinellen Lernen.
+
+Die Idee ist:
+
+\begin{center}
+\textbf{Wähle die Parameter so, dass die beobachteten Daten unter dem Modell möglichst wahrscheinlich sind.}
+\end{center}
+
+\begin{definitionbox}
+Sei \(p(\vec{X} \mid \theta)\) die Wahrscheinlichkeit oder Dichte der Daten unter dem Parameter \(\theta\).
+
+Die Likelihood ist
+
+\[
+    L(\theta;\vec{X})
+    =
+    p(\vec{X} \mid \theta).
+\]
+
+Der Maximum-Likelihood-Schätzer ist
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    p(\vec{X} \mid \theta).
+\]
+\end{definitionbox}
+
+Hier bezeichnet
+
+\[
+    \vec{X}
+    =
+    (X_1,\dots,X_N)^\top
+\]
+
+den gesamten Datensatz als Zufallsvektor.
+
+Für konkrete Daten
+
+\[
+    \vec{x}
+    =
+    (x_1,\dots,x_N)^\top
+\]
+
+betrachtet man
+
+\[
+    L(\theta;\vec{x})
+    =
+    p(\vec{x} \mid \theta)
+\]
+
+als Funktion von \(\theta\).
+
+\begin{notebox}
+Die Likelihood \(L(\theta;\vec{x})\) ist keine Wahrscheinlichkeitsverteilung über \(\theta\).
+
+Sie ist eine Funktion, die sagt, wie plausibel die beobachteten Daten \(\vec{x}\) für verschiedene Parameterwerte \(\theta\) sind.
+\end{notebox}
+
+\section{Likelihood bei i.i.d. Daten}
+
+Wenn die Daten i.i.d. sind, gilt:
+
+\[
+    p(\vec{x} \mid \theta)
+    =
+    p(x_1,\dots,x_N \mid \theta)
+    =
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+Damit ist der Maximum-Likelihood-Schätzer:
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+\begin{conceptbox}
+Bei i.i.d. Daten faktorisiert die Likelihood als Produkt der Einzelwahrscheinlichkeiten oder Einzeldichten:
+
+\[
+    L(\theta;\vec{x})
+    =
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+\end{conceptbox}
+
+\section{Log-Likelihood}
+
+Produkte vieler Wahrscheinlichkeiten sind mathematisch unpraktisch.
+Deshalb nimmt man meistens den Logarithmus.
+Da der Logarithmus streng monoton wächst, ändert sich die Stelle des Maximums nicht.
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    L(\theta;\vec{x})
+\]
+
+ist äquivalent zu
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+    =
+    \arg\max_{\theta}
+    \log L(\theta;\vec{x}).
+\]
+
+Für i.i.d. Daten gilt:
+
+\[
+    \log L(\theta;\vec{x})
+    =
+    \log
+    \prod_{n=1}^{N}
+    p(x_n \mid \theta).
+\]
+
+Der Logarithmus macht aus dem Produkt eine Summe:
+
+\[
+    \log L(\theta;\vec{x})
+    =
+    \sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+
+\begin{definitionbox}
+Die Log-Likelihood ist
+
+\[
+    \ell(\theta)
+    =
+    \log L(\theta;\vec{x})
+    =
+    \sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+\end{definitionbox}
+
+\begin{examtipbox}
+Standardtechnik für Maximum-Likelihood-Herleitungen:
+
+\begin{enumerate}
+    \item Likelihood \(L(\theta;\vec{x})\) aufschreiben.
+    \item Log-Likelihood \(\ell(\theta)\) bilden.
+    \item Nach \(\theta\) ableiten.
+    \item Ableitung gleich \(0\) setzen.
+    \item Nach \(\theta\) lösen.
+    \item Prüfen, ob die Lösung zulässig ist und wirklich ein Maximum liefert.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Beispiel: MLE für Bernoulli-Verteilung}
+
+Die Bernoulli-Verteilung (Bernoulli distribution) modelliert binäre Daten:
+
+\[
+    X \in \{0,1\}.
+\]
+
+Der Parameter sei
+
+\[
+    \pi \in [0,1].
+\]
+
+Die Verteilung ist:
+
+\[
+    p(X=x \mid \pi)
+    =
+    \pi^x(1-\pi)^{1-x}.
+\]
+
+Wir beobachten i.i.d. Daten:
+
+\[
+    x_1,\dots,x_N
+    \in
+    \{0,1\}.
+\]
+
+Die Likelihood ist:
+
+\[
+    L(\pi;\vec{x})
+    =
+    \prod_{n=1}^{N}
+    \pi^{x_n}
+    (1-\pi)^{1-x_n}.
+\]
+
+Die Log-Likelihood ist:
+
+\[
+    \ell(\pi)
+    =
+    \sum_{n=1}^{N}
+    \left[
+        x_n \log \pi
+        +
+        (1-x_n)\log(1-\pi)
+    \right].
+\]
+
+Ableiten nach \(\pi\):
+
+\[
+    \frac{\partial \ell}{\partial \pi}
+    =
+    \sum_{n=1}^{N}
+    \left[
+        \frac{x_n}{\pi}
+        -
+        \frac{1-x_n}{1-\pi}
+    \right].
+\]
+
+Setze die Ableitung gleich \(0\):
+
+\[
+    \sum_{n=1}^{N}
+    \left[
+        \frac{x_n}{\pi}
+        -
+        \frac{1-x_n}{1-\pi}
+    \right]
+    =
+    0.
+\]
+
+Das ist:
+
+\[
+    \frac{1}{\pi}
+    \sum_{n=1}^{N}
+    x_n
+    -
+    \frac{1}{1-\pi}
+    \sum_{n=1}^{N}
+    (1-x_n)
+    =
+    0.
+\]
+
+Setze
+
+\[
+    S
+    =
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+Dann ist
+
+\[
+    \sum_{n=1}^{N}
+    (1-x_n)
+    =
+    N-S.
+\]
+
+Also:
+
+\[
+    \frac{S}{\pi}
+    -
+    \frac{N-S}{1-\pi}
+    =
+    0.
+\]
+
+Damit:
+
+\[
+    \frac{S}{\pi}
+    =
+    \frac{N-S}{1-\pi}.
+\]
+
+Kreuzmultiplizieren:
+
+\[
+    S(1-\pi)
+    =
+    \pi(N-S).
+\]
+
+Ausmultiplizieren:
+
+\[
+    S - S\pi
+    =
+    \pi N - \pi S.
+\]
+
+Die Terme \(-S\pi\) und \(-\pi S\) heben sich auf:
+
+\[
+    S
+    =
+    \pi N.
+\]
+
+Also:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{S}{N}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+\begin{conceptbox}
+Der Maximum-Likelihood-Schätzer für den Parameter einer Bernoulli-Verteilung ist der Anteil der Einsen:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+\end{conceptbox}
+
+\section{MLE für die Normalverteilung}
+
+Seien
+
+\[
+    X_1,\dots,X_N
+    \overset{\mathrm{i.i.d.}}{\sim}
+    \mathcal{N}(\mu,\sigma^2).
+\]
+
+Die Parameter sind \(\mu\) und \(\sigma^2\).
+Für die Normalverteilung ergibt Maximum-Likelihood:
+
+\[
+    \hat{\mu}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n,
+\]
+
+und
+
+\[
+    \hat{\sigma}^2_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (x_n-\hat{\mu}_{\mathrm{ML}})^2.
+\]
+
+\begin{notebox}
+Der ML-Schätzer für die Varianz der Normalverteilung teilt durch \(N\), nicht durch \(N-1\).
+
+Er ist daher identisch mit der naiven Stichprobenvarianz und ist bei endlichem \(N\) verzerrt.
+\end{notebox}
+
+\begin{conceptbox}
+Maximum-Likelihood-Schätzer sind oft sehr allgemein herleitbar.
+Sie sind deshalb für maschinelles Lernen besonders wichtig.
+
+Aber:
+MLE ist nicht automatisch unverzerrt.
+\end{conceptbox}
+
+\section{MLE für die Gleichverteilung}
+
+Für die Gleichverteilung
+
+\[
+    X \sim \mathrm{Uniform}(a,b)
+\]
+
+ist die Dichte:
+
+\[
+    p(x \mid a,b)
+    =
+    \begin{cases}
+        \frac{1}{b-a}, & x \in [a,b], \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+Für i.i.d. Daten ergibt sich die Likelihood:
+
+\[
+    L(a,b;\vec{x})
+    =
+    \prod_{n=1}^{N}
+    p(x_n \mid a,b).
+\]
+
+Damit gilt:
+
+\[
+    L(a,b;\vec{x})
+    =
+    \begin{cases}
+        \left(\frac{1}{b-a}\right)^N,
+        & \text{wenn } a \leq x_n \leq b \text{ für alle } n, \\
+        0,
+        & \text{sonst}.
+    \end{cases}
+\]
+
+Damit die Likelihood nicht \(0\) ist, muss das Intervall \([a,b]\) alle Datenpunkte enthalten:
+
+\[
+    a \leq \min_n x_n,
+    \qquad
+    b \geq \max_n x_n.
+\]
+
+Wenn diese Bedingung erfüllt ist, ist
+
+\[
+    L(a,b;\vec{x})
+    =
+    \left(\frac{1}{b-a}\right)^N.
+\]
+
+Diese Likelihood wird größer, wenn \(b-a\) kleiner wird.
+Das kleinste Intervall, das alle Daten enthält, ist:
+
+\[
+    \hat{a}_{\mathrm{ML}}
+    =
+    \min_n x_n,
+\]
+
+und
+
+\[
+    \hat{b}_{\mathrm{ML}}
+    =
+    \max_n x_n.
+\]
+
+\begin{definitionbox}
+Für die Gleichverteilung auf \([a,b]\) ist der Maximum-Likelihood-Schätzer:
+
+\[
+    \hat{a}_{\mathrm{ML}}
+    =
+    \min_n x_n,
+    \qquad
+    \hat{b}_{\mathrm{ML}}
+    =
+    \max_n x_n.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Für die Gleichverteilung fällt der Maximum-Likelihood-Schätzer mit dem Minimum-Maximum-Schätzer zusammen.
+
+Das ist ein gutes Beispiel dafür, dass MLE nicht immer alle gewünschten Eigenschaften hat:
+Bei endlichem \(N\) schätzt dieser Schätzer das Intervall tendenziell zu klein.
+\end{notebox}
+
+\section{Maximum-a-posteriori-Schätzung}
+
+Maximum-Likelihood verwendet nur die Daten.
+Manchmal haben wir aber Vorwissen über plausible Parameter.
+Dieses Vorwissen modellieren wir mit einem Prior.
+
+\begin{definitionbox}
+Bei der Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation, MAP) maximiert man die Posterior-Verteilung der Parameter:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\theta \mid \vec{x}).
+\]
+\end{definitionbox}
+
+Mit Bayes' Regel gilt:
+
+\[
+    p(\theta \mid \vec{x})
+    =
+    \frac{
+        p(\vec{x} \mid \theta)p(\theta)
+    }{
+        p(\vec{x})
+    }.
+\]
+
+Dabei ist:
+
+\begin{itemize}
+    \item \(p(\vec{x} \mid \theta)\) die Likelihood,
+    \item \(p(\theta)\) der Prior,
+    \item \(p(\theta \mid \vec{x})\) der Posterior,
+    \item \(p(\vec{x})\) die Evidence.
+\end{itemize}
+
+Da \(p(\vec{x})\) nicht von \(\theta\) abhängt, ist es für die Maximierung konstant.
+Daher:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\vec{x} \mid \theta)p(\theta).
+\]
+
+Oder proportional geschrieben:
+
+\[
+    p(\theta \mid \vec{x})
+    \propto
+    p(\vec{x} \mid \theta)p(\theta).
+\]
+
+\begin{conceptbox}
+MAP kombiniert Daten und Vorwissen:
+
+\[
+    \text{Posterior}
+    \propto
+    \text{Likelihood}
+    \cdot
+    \text{Prior}.
+\]
+
+MLE maximiert nur die Likelihood.
+MAP maximiert Likelihood mal Prior.
+\end{conceptbox}
+
+\section{Log-Posterior bei MAP}
+
+Wie bei MLE verwendet man oft den Logarithmus:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    \left[
+        \log p(\vec{x} \mid \theta)
+        +
+        \log p(\theta)
+    \right].
+\]
+
+Für i.i.d. Daten ist:
+
+\[
+    \log p(\vec{x} \mid \theta)
+    =
+    \sum_{n=1}^{N}
+    \log p(x_n \mid \theta).
+\]
+
+Damit:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    \left[
+        \sum_{n=1}^{N}
+        \log p(x_n \mid \theta)
+        +
+        \log p(\theta)
+    \right].
+\]
+
+\begin{examtipbox}
+Standardtechnik für MAP-Herleitungen:
+
+\begin{enumerate}
+    \item Likelihood \(p(\vec{x}\mid\theta)\) aufschreiben.
+    \item Prior \(p(\theta)\) aufschreiben.
+    \item Produkt \(p(\vec{x}\mid\theta)p(\theta)\) bilden.
+    \item Logarithmus nehmen.
+    \item Nach \(\theta\) ableiten.
+    \item Ableitung gleich \(0\) setzen.
+    \item Zulässige optimale Lösung wählen.
+\end{enumerate}
+\end{examtipbox}
+
+\section{MLE als Spezialfall von MAP}
+
+Wenn der Prior konstant ist, dann ist MAP äquivalent zu MLE.
+
+Angenommen:
+
+\[
+    p(\theta) = \text{konstant}.
+\]
+
+Dann gilt:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\vec{x}\mid\theta)p(\theta).
+\]
+
+Da \(p(\theta)\) konstant ist, ändert es die Stelle des Maximums nicht:
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}
+    =
+    \arg\max_{\theta}
+    p(\vec{x}\mid\theta)
+    =
+    \hat{\theta}_{\mathrm{ML}}.
+\]
+
+\begin{conceptbox}
+MLE ist MAP mit einem konstanten oder uninformativem Prior.
+
+MAP erweitert MLE, indem Vorwissen über plausible Parameterwerte berücksichtigt wird.
+\end{conceptbox}
+
+\section{MAP und Regularisierung}
+
+MAP ist wichtig, weil es direkt mit Regularisierung (regularization) zusammenhängt.
+
+Wenn wir einen Prior verwenden, der große Parameterwerte unwahrscheinlich macht, dann werden solche Parameterwerte beim Schätzen bestraft.
+
+Ein Beispiel ist ein Gauß-Prior auf einen Parametervektor \(\vec{w}\):
+
+\[
+    p(\vec{w})
+    =
+    \mathcal{N}
+    \left(
+        \vec{w}
+        \mid
+        \vec{0},
+        \lambda^{-1}I
+    \right).
+\]
+
+Dieser Prior bevorzugt kleine Gewichte.
+Der Log-Prior enthält dann einen Term der Form:
+
+\[
+    -\lambda \vec{w}^{\top}\vec{w}.
+\]
+
+Beim Maximieren des Log-Posteriors entspricht das einer Bestrafung großer Gewichte.
+Beim Minimieren eines negativen Log-Posteriors wird daraus ein Regularisierungsterm:
+
+\[
+    \lambda \vec{w}^{\top}\vec{w}.
+\]
+
+\begin{conceptbox}
+MAP-Schätzung kann als Maximum-Likelihood-Schätzung mit zusätzlichem Prior-Wissen verstanden werden.
+
+In vielen Modellen führt ein Gauß-Prior auf Parameter zu \(L_2\)-Regularisierung.
+Bei linearer Regression ergibt das Ridge Regression.
+\end{conceptbox}
+
+\section{Bayesian Estimator}
+
+MLE und MAP liefern jeweils einen einzelnen besten Parameterwert:
+
+\[
+    \hat{\theta}_{\mathrm{ML}}
+\]
+
+oder
+
+\[
+    \hat{\theta}_{\mathrm{MAP}}.
+\]
+
+Bayesian Estimation geht einen Schritt weiter:
+Statt nur einen Punkt zu schätzen, betrachtet man die ganze Posterior-Verteilung.
+
+\begin{definitionbox}
+Ein Bayesian Estimator verwendet die Posterior-Verteilung
+
+\[
+    p(\theta \mid \vec{x})
+    =
+    \frac{
+        p(\vec{x}\mid\theta)p(\theta)
+    }{
+        p(\vec{x})
+    }.
+\]
+
+Die Unsicherheit über \(\theta\) bleibt also als Verteilung erhalten.
+\end{definitionbox}
+
+Man kann schreiben:
+
+\[
+    \hat{\Theta}_N
+    \sim
+    p(\theta \mid \vec{x}).
+\]
+
+Das bedeutet:
+Die Schätzung ist nicht nur ein Punkt, sondern wird durch eine Verteilung über mögliche Parameterwerte beschrieben.
+
+\begin{conceptbox}
+Bayesian Estimation modelliert Unsicherheit über Parameter explizit.
+
+Das ist besonders nützlich, wenn nur wenige Daten vorhanden sind oder wenn Unsicherheit in Entscheidungen einfließen soll.
+\end{conceptbox}
+
+\section{Vergleich: MLE, MAP und Bayesian}
+
+\[
+\begin{array}{c|c|c}
+\text{Methode}
+&
+\text{Was wird berechnet?}
+&
+\text{Verwendet Prior?}
+\\
+\hline
+\text{MLE}
+&
+\hat{\theta}_{\mathrm{ML}}
+=
+\arg\max_{\theta}p(\vec{x}\mid\theta)
+&
+\text{Nein}
+\\
+\hline
+\text{MAP}
+&
+\hat{\theta}_{\mathrm{MAP}}
+=
+\arg\max_{\theta}p(\theta\mid\vec{x})
+&
+\text{Ja}
+\\
+\hline
+\text{Bayesian}
+&
+p(\theta\mid\vec{x})
+&
+\text{Ja}
+\end{array}
+\]
+
+\begin{notebox}
+MLE und MAP geben Punktschätzungen.
+
+Bayesian Estimation gibt eine ganze Verteilung über Parameter.
+\end{notebox}
+
+\section{Effizienz eines Schätzers}
+
+Ein Schätzer ist effizient (efficient), wenn er im Vergleich zu anderen Schätzern einen kleinen erwarteten Fehler hat.
+Meistens betrachtet man dafür den MSE.
+
+\begin{definitionbox}
+Ein Schätzer \(\hat{\theta}^{A}_N\) ist effizienter als ein Schätzer \(\hat{\theta}^{B}_N\), wenn gilt:
+
+\[
+    \mathrm{MSE}[\hat{\theta}^{A}_N]
+    <
+    \mathrm{MSE}[\hat{\theta}^{B}_N].
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Effizienz hängt vom gewählten Fehlermaß ab.
+In diesem Kurs ist der MSE das zentrale Fehlermaß für Schätzer.
+\end{notebox}
+
+\section{Zusammenhang zu maschinellem Lernen}
+
+Schätzer sind eine Grundlage für viele ML-Algorithmen.
+
+\begin{itemize}
+    \item In der linearen Regression schätzen wir Gewichte \(\vec{w}\).
+    \item In der logistischen Regression schätzen wir Parameter eines Klassifikators.
+    \item In Gaussian Mixture Models schätzen wir Mittelwerte, Kovarianzen und Mischgewichte.
+    \item Im EM-Algorithmus wechseln sich Posterior-Berechnung und Parameterschätzung ab.
+    \item In neuronalen Netzen schätzen wir sehr viele Gewichte durch Optimierung einer Verlustfunktion.
+\end{itemize}
+
+\begin{conceptbox}
+Viele Lernalgorithmen können als Parameterschätzung verstanden werden:
+
+\[
+    \text{Daten}
+    \longrightarrow
+    \text{Schätzer}
+    \longrightarrow
+    \text{Parameter}
+    \longrightarrow
+    \text{Modell}.
+\]
+\end{conceptbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Schätzern:
+
+\begin{enumerate}
+    \item Parameter \(\theta\), Schätzer \(\hat{\theta}_N\) und Schätzwert \(\hat{\theta}_N(\vec{x})\) verwechseln.
+    \item Vergessen, dass ein Schätzer eine Zufallsvariable ist.
+    \item Unbiased mit gut gleichsetzen.
+    \item Bias und Varianz getrennt betrachten, aber den MSE vergessen.
+    \item Bei der Stichprobenvarianz durch \(N\) teilen, obwohl ein unverzerrter Schätzer gefragt ist.
+    \item MLE für automatisch unverzerrt halten.
+    \item Likelihood \(p(\vec{x}\mid\theta)\) mit Posterior \(p(\theta\mid\vec{x})\) verwechseln.
+    \item Bei MAP den Prior vergessen.
+    \item Bei der Log-Likelihood das Produkt nicht korrekt in eine Summe umwandeln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Bias eines einfachen Schätzers}
+
+Sei \(\hat{\theta}_N\) ein Schätzer für \(\theta\).
+Angenommen:
+
+\[
+    \mathbb{E}[\hat{\theta}_N]
+    =
+    \theta + 2.
+\]
+
+Berechne den Bias.
+
+\begin{examplebox}
+Nach Definition:
+
+\[
+    \mathrm{Bias}[\hat{\theta}_N]
+    =
+    \mathbb{E}[\hat{\theta}_N]
+    -
+    \theta.
+\]
+
+Einsetzen ergibt:
+
+\[
+    \mathrm{Bias}[\hat{\theta}_N]
+    =
+    (\theta+2)-\theta
+    =
+    2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: MSE aus Bias und Varianz}
+
+Angenommen:
+
+\[
+    \mathrm{Bias}[\hat{\theta}_N]
+    =
+    -3,
+\]
+
+und
+
+\[
+    \mathrm{Var}[\hat{\theta}_N]
+    =
+    5.
+\]
+
+Berechne den MSE.
+
+\begin{examplebox}
+Mit der Bias-Varianz-Zerlegung:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    \mathrm{Bias}[\hat{\theta}_N]^2
+    +
+    \mathrm{Var}[\hat{\theta}_N].
+\]
+
+Also:
+
+\[
+    \mathrm{MSE}[\hat{\theta}_N]
+    =
+    (-3)^2 + 5
+    =
+    9+5
+    =
+    14.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Stichprobenmittel}
+
+Gegeben sind die Daten:
+
+\[
+    x_1=2,
+    \quad
+    x_2=4,
+    \quad
+    x_3=6.
+\]
+
+Berechne das Stichprobenmittel.
+
+\begin{examplebox}
+Das Stichprobenmittel ist:
+
+\[
+    \hat{\mu}_3
+    =
+    \frac{1}{3}
+    (2+4+6)
+    =
+    4.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Unverzerrte Stichprobenvarianz}
+
+Für dieselben Daten
+
+\[
+    x_1=2,
+    \quad
+    x_2=4,
+    \quad
+    x_3=6
+\]
+
+ist
+
+\[
+    \hat{\mu}_3 = 4.
+\]
+
+Berechne die unverzerrte Stichprobenvarianz.
+
+\begin{examplebox}
+Die unverzerrte Stichprobenvarianz ist:
+
+\[
+    \hat{s}^2_3
+    =
+    \frac{1}{3-1}
+    \sum_{n=1}^{3}
+    (x_n-\hat{\mu}_3)^2.
+\]
+
+Einsetzen:
+
+\[
+    \hat{s}^2_3
+    =
+    \frac{1}{2}
+    \left[
+        (2-4)^2
+        +
+        (4-4)^2
+        +
+        (6-4)^2
+    \right].
+\]
+
+Also:
+
+\[
+    \hat{s}^2_3
+    =
+    \frac{1}{2}
+    (4+0+4)
+    =
+    4.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: MLE für Bernoulli}
+
+Gegeben sind binäre Daten:
+
+\[
+    x_1=1,
+    \quad
+    x_2=0,
+    \quad
+    x_3=1,
+    \quad
+    x_4=1.
+\]
+
+Berechne den Maximum-Likelihood-Schätzer für \(\pi\).
+
+\begin{examplebox}
+Für Bernoulli-Daten gilt:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    x_n.
+\]
+
+Hier ist \(N=4\) und
+
+\[
+    \sum_{n=1}^{4}x_n
+    =
+    1+0+1+1
+    =
+    3.
+\]
+
+Also:
+
+\[
+    \hat{\pi}_{\mathrm{ML}}
+    =
+    \frac{3}{4}
+    =
+    0{,}75.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Ein Parameter \(\theta\) ist eine feste, unbekannte Modellgröße.
+    \item Ein Schätzer \(\hat{\theta}_N\) ist eine Funktion der Daten.
+    \item Ein Schätzwert ist der konkrete Wert des Schätzers auf einem konkreten Datensatz.
+    \item i.i.d. bedeutet unabhängig und identisch verteilt.
+    \item Bias misst systematische Abweichung:
+    \[
+        \mathrm{Bias}[\hat{\theta}_N]
+        =
+        \mathbb{E}[\hat{\theta}_N]-\theta.
+    \]
+    \item Varianz misst die Schwankung des Schätzers:
+    \[
+        \mathrm{Var}[\hat{\theta}_N]
+        =
+        \mathbb{E}\left[
+            \left(
+                \hat{\theta}_N
+                -
+                \mathbb{E}[\hat{\theta}_N]
+            \right)^2
+        \right].
+    \]
+    \item Der mittlere quadratische Fehler ist:
+    \[
+        \mathrm{MSE}[\hat{\theta}_N]
+        =
+        \mathbb{E}\left[
+            (\hat{\theta}_N-\theta)^2
+        \right].
+    \]
+    \item Es gilt:
+    \[
+        \mathrm{MSE}
+        =
+        \mathrm{Bias}^2
+        +
+        \mathrm{Varianz}.
+    \]
+    \item Das Stichprobenmittel ist unverzerrt:
+    \[
+        \mathrm{Bias}[\hat{\mu}_N]=0.
+    \]
+    \item Die Varianz des Stichprobenmittels ist:
+    \[
+        \mathrm{Var}[\hat{\mu}_N]
+        =
+        \frac{\sigma_X^2}{N}.
+    \]
+    \item Die naive Stichprobenvarianz ist verzerrt:
+    \[
+        \mathrm{Bias}[\hat{\sigma}^2_N]
+        =
+        -\frac{1}{N}\sigma_X^2.
+    \]
+    \item Die unverzerrte Stichprobenvarianz ist:
+    \[
+        \hat{s}^2_N
+        =
+        \frac{1}{N-1}
+        \sum_{n=1}^{N}
+        (X_n-\hat{\mu}_N)^2.
+    \]
+    \item Maximum-Likelihood schätzt Parameter durch Maximieren der Datenwahrscheinlichkeit:
+    \[
+        \hat{\theta}_{\mathrm{ML}}
+        =
+        \arg\max_{\theta}
+        p(\vec{x}\mid\theta).
+    \]
+    \item MAP maximiert den Posterior:
+    \[
+        \hat{\theta}_{\mathrm{MAP}}
+        =
+        \arg\max_{\theta}
+        p(\theta\mid\vec{x}).
+    \]
+    \item Bayesian Estimation betrachtet die ganze Posterior-Verteilung \(p(\theta\mid\vec{x})\).
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist der Unterschied zwischen Parameter, Schätzer und Schätzwert?
+    \item Warum ist ein Schätzer eine Zufallsvariable?
+    \item Was bedeutet i.i.d.?
+    \item Definiere Bias eines Schätzers.
+    \item Definiere Varianz eines Schätzers.
+    \item Definiere MSE und leite die Bias-Varianz-Zerlegung her.
+    \item Zeige, dass das Stichprobenmittel erwartungstreu ist.
+    \item Berechne die Varianz des Stichprobenmittels.
+    \item Warum ist die naive Stichprobenvarianz verzerrt?
+    \item Warum verwendet man bei der unverzerrten Stichprobenvarianz \(N-1\)?
+    \item Was ist der Bias der naiven Stichprobenvarianz?
+    \item Was ist Maximum-Likelihood-Schätzung?
+    \item Warum verwendet man die Log-Likelihood?
+    \item Leite den MLE für eine Bernoulli-Verteilung her.
+    \item Was ist der Unterschied zwischen MLE und MAP?
+    \item Welche Rolle spielt der Prior bei MAP?
+    \item Warum ist Bayesian Estimation mehr als eine Punktschätzung?
+    \item Erkläre den Bias-Varianz-Trade-off.
+    \item Warum ist ein unverzerrter Schätzer nicht automatisch der beste Schätzer?
+    \item Wie hängt Parameterschätzung mit maschinellem Lernen zusammen?
+\end{enumerate}
+\end{examtipbox}

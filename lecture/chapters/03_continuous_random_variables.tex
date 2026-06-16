@@ -1,0 +1,1608 @@
+\chapter{Kontinuierliche Zufallsvariablen}
+
+\section{Ziel dieses Kapitels}
+
+Im vorherigen Kapitel wurden diskrete Zufallsvariablen (discrete random variables) betrachtet.
+Eine diskrete Zufallsvariable kann nur endlich viele oder abzählbar viele Werte annehmen.
+Viele Größen in Anwendungen sind aber nicht sinnvoll diskret, sondern kontinuierlich (continuous).
+
+Beispiele sind:
+
+\begin{itemize}
+    \item Körpergröße,
+    \item Temperatur,
+    \item Zeit,
+    \item Geschwindigkeit,
+    \item Position auf einer Linie,
+    \item Messwerte mit Rauschen (noise),
+    \item Pixelintensitäten, wenn sie als reelle Werte modelliert werden.
+\end{itemize}
+
+In diesem Kapitel lernen wir, wie man solche Größen mit Wahrscheinlichkeitsdichten (probability density functions) beschreibt.
+
+\begin{conceptbox}
+Bei diskreten Zufallsvariablen ordnet man einzelnen Werten Wahrscheinlichkeiten zu.
+
+Bei kontinuierlichen Zufallsvariablen ordnet man einzelnen Werten keine direkten Wahrscheinlichkeiten zu.
+Stattdessen verwendet man eine Wahrscheinlichkeitsdichte (probability density function), die über Intervalle integriert wird.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist eine kontinuierliche Zufallsvariable (continuous random variable)?
+    \item Warum ist \(p(X=x)\) bei kontinuierlichen Zufallsvariablen meistens \(0\)?
+    \item Was ist eine Wahrscheinlichkeitsdichte (probability density function)?
+    \item Wie berechnet man Wahrscheinlichkeiten über Intervalle?
+    \item Welche Bedingungen muss eine Wahrscheinlichkeitsdichte erfüllen?
+    \item Wie funktionieren Summenregel, Produktregel und Bayes-Regel für Dichten?
+    \item Was ist ein Histogramm (histogram) und wie hängt es mit Dichteschätzung zusammen?
+    \item Was sind Erwartungswert (expectation), Mittelwert (mean), Varianz (variance), Kovarianz (covariance) und Korrelation (correlation)?
+    \item Was bedeutet Sampling-Approximation (sampling approximation)?
+\end{itemize}
+
+\section{Von diskreten zu kontinuierlichen Zufallsvariablen}
+
+Eine diskrete Zufallsvariable \(X\) kann nur einzelne Werte annehmen.
+Zum Beispiel beim Würfeln:
+
+\[
+    X \in \{1,2,3,4,5,6\}.
+\]
+
+Dann ist eine Wahrscheinlichkeit wie
+
+\[
+    p(X=3)
+\]
+
+sinnvoll und kann zum Beispiel den Wert
+
+\[
+    p(X=3) = \frac{1}{6}
+\]
+
+haben.
+
+Bei einer kontinuierlichen Zufallsvariable ist die Situation anders.
+Angenommen, \(X\) beschreibt eine Position auf einer Linie:
+
+\[
+    X \in \mathbb{R}.
+\]
+
+Dann gibt es unendlich viele mögliche Werte.
+Die Wahrscheinlichkeit, genau einen einzelnen Wert zu treffen, ist in typischen kontinuierlichen Modellen gleich \(0\):
+
+\[
+    p(X=x) = 0.
+\]
+
+Das bedeutet aber nicht, dass nichts passieren kann.
+Sinnvoll sind Wahrscheinlichkeiten für Intervalle:
+
+\[
+    p(X \in [a,b]).
+\]
+
+\begin{examplebox}
+Wenn \(X\) die Körpergröße einer zufällig ausgewählten Person in Zentimetern beschreibt, ist die Wahrscheinlichkeit, exakt
+
+\[
+    X = 178{,}0000000000\ldots
+\]
+
+zu erhalten, praktisch \(0\).
+
+Sinnvoll ist dagegen eine Frage wie:
+
+\[
+    p(175 \leq X \leq 180).
+\]
+\end{examplebox}
+
+\begin{notebox}
+Bei kontinuierlichen Zufallsvariablen sind einzelne Punkte normalerweise nicht wichtig.
+Wichtig sind Bereiche, Intervalle oder allgemeiner Mengen.
+\end{notebox}
+
+\section{Wahrscheinlichkeitsdichten}
+
+Für kontinuierliche Zufallsvariablen verwendet man Wahrscheinlichkeitsdichten (probability density functions).
+Eine Wahrscheinlichkeitsdichte beschreibt nicht direkt die Wahrscheinlichkeit eines einzelnen Wertes, sondern wie stark Wahrscheinlichkeit in einem Bereich konzentriert ist.
+
+\begin{definitionbox}
+Eine Wahrscheinlichkeitsdichte (probability density function) einer kontinuierlichen Zufallsvariable \(X\) ist eine Funktion
+
+\[
+    p : \Omega_x \to \mathbb{R},
+\]
+
+wobei \(\Omega_x\) der Wertebereich von \(X\) ist.
+
+Für eine eindimensionale kontinuierliche Zufallsvariable schreibt man meistens \(p(x)\).
+\end{definitionbox}
+
+Eine Dichte \(p(x)\) muss zwei wichtige Eigenschaften erfüllen:
+
+\[
+    p(x) \geq 0
+    \quad
+    \text{für alle}
+    \quad
+    x \in \Omega_x,
+\]
+
+und
+
+\[
+    \int_{x \in \Omega_x} p(x)\,dx = 1.
+\]
+
+Falls \(\Omega_x = \mathbb{R}\), schreibt man:
+
+\[
+    \int_{-\infty}^{\infty} p(x)\,dx = 1.
+\]
+
+\begin{conceptbox}
+Eine Wahrscheinlichkeitsdichte muss nicht kleiner oder gleich \(1\) sein.
+
+Wichtig ist nicht die Höhe der Dichte an einem Punkt, sondern die Fläche unter der Dichte.
+Diese gesamte Fläche muss \(1\) ergeben.
+\end{conceptbox}
+
+\section{Wahrscheinlichkeiten als Integrale}
+
+Bei kontinuierlichen Zufallsvariablen erhält man Wahrscheinlichkeiten durch Integration der Dichte.
+
+\begin{definitionbox}
+Für eine kontinuierliche Zufallsvariable \(X\) mit Dichte \(p(x)\) gilt:
+
+\[
+    p(X \in [a,b])
+    =
+    \int_a^b p(x)\,dx.
+\]
+
+Die Wahrscheinlichkeit, dass \(X\) im Intervall \([a,b]\) liegt, ist also die Fläche unter der Dichte zwischen \(a\) und \(b\).
+\end{definitionbox}
+
+\begin{examplebox}
+Wenn \(p(x)\) die Dichte einer Messgröße ist, dann bedeutet
+
+\[
+    \int_2^5 p(x)\,dx
+\]
+
+die Wahrscheinlichkeit, dass der Messwert zwischen \(2\) und \(5\) liegt.
+\end{examplebox}
+
+\begin{notebox}
+Für kontinuierliche Zufallsvariablen ist es meistens egal, ob man
+
+\[
+    [a,b],
+    \quad
+    (a,b),
+    \quad
+    [a,b),
+    \quad
+    (a,b]
+\]
+
+verwendet.
+Die Randpunkte haben Wahrscheinlichkeit \(0\).
+Daher gilt typischerweise:
+
+\[
+    p(X \in [a,b])
+    =
+    p(X \in (a,b)).
+\]
+\end{notebox}
+
+\section{Die Gleichverteilung}
+
+Ein einfaches Beispiel für eine kontinuierliche Verteilung ist die Gleichverteilung (uniform distribution).
+
+\begin{definitionbox}
+Eine kontinuierliche Zufallsvariable \(X\) ist gleichverteilt auf dem Intervall \([\alpha,\beta]\), wenn ihre Dichte gegeben ist durch
+
+\[
+    p(x \mid \alpha,\beta)
+    =
+    \begin{cases}
+        \frac{1}{\beta-\alpha}, & x \in [\alpha,\beta], \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+Dabei gilt \(\alpha < \beta\).
+\end{definitionbox}
+
+Die Dichte ist auf dem Intervall konstant.
+Außerhalb des Intervalls ist sie \(0\).
+
+Die Normalisierung stimmt, denn:
+
+\[
+    \int_{-\infty}^{\infty} p(x \mid \alpha,\beta)\,dx
+    =
+    \int_{\alpha}^{\beta}
+    \frac{1}{\beta-\alpha}\,dx.
+\]
+
+Da \(\frac{1}{\beta-\alpha}\) konstant ist, gilt:
+
+\[
+    \int_{\alpha}^{\beta}
+    \frac{1}{\beta-\alpha}\,dx
+    =
+    \frac{1}{\beta-\alpha}
+    \int_{\alpha}^{\beta} 1\,dx
+    =
+    \frac{1}{\beta-\alpha}
+    (\beta-\alpha)
+    =
+    1.
+\]
+
+\begin{examplebox}
+Für eine Gleichverteilung auf \([0,1]\) gilt:
+
+\[
+    p(x)
+    =
+    \begin{cases}
+        1, & x \in [0,1], \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+Dann ist zum Beispiel:
+
+\[
+    p(X \in [0{,}2,0{,}7])
+    =
+    \int_{0{,}2}^{0{,}7} 1\,dx
+    =
+    0{,}5.
+\]
+\end{examplebox}
+
+\section{Erwartungswert}
+
+Der Erwartungswert (expectation) ist eine der wichtigsten Größen in der Wahrscheinlichkeitstheorie.
+Er beschreibt den durchschnittlich erwarteten Wert einer Zufallsvariable oder einer Funktion einer Zufallsvariable.
+
+\begin{definitionbox}
+Sei \(X\) eine kontinuierliche Zufallsvariable mit Dichte \(p(x)\).
+Für eine Funktion \(f(X)\) ist der Erwartungswert (expectation) definiert als
+
+\[
+    \langle f(X) \rangle_p
+    =
+    \int_{x \in \Omega_x}
+    p(x) f(x)\,dx.
+\]
+
+Alternativ schreibt man oft:
+
+\[
+    \mathbb{E}_p[f(X)]
+    =
+    \int_{x \in \Omega_x}
+    p(x) f(x)\,dx.
+\]
+\end{definitionbox}
+
+Wenn klar ist, welche Verteilung gemeint ist, schreibt man auch einfach:
+
+\[
+    \mathbb{E}[f(X)].
+\]
+
+\begin{notebox}
+Die Notationen
+
+\[
+    \langle f(X) \rangle_p
+    \quad
+    \text{und}
+    \quad
+    \mathbb{E}_p[f(X)]
+\]
+
+bedeuten dasselbe:
+Erwartungswert von \(f(X)\) bezüglich der Verteilung \(p\).
+\end{notebox}
+
+\section{Mittelwert}
+
+Der Mittelwert (mean) ist der Erwartungswert der Identitätsfunktion.
+Das heißt, man setzt
+
+\[
+    f(X) = X.
+\]
+
+\begin{definitionbox}
+Der Mittelwert (mean) einer kontinuierlichen Zufallsvariable \(X\) mit Dichte \(p(x)\) ist
+
+\[
+    \mu
+    =
+    \mathbb{E}[X]
+    =
+    \int_{x \in \Omega_x} p(x)x\,dx.
+\]
+\end{definitionbox}
+
+Für \(\Omega_x = \mathbb{R}\) schreibt man:
+
+\[
+    \mu
+    =
+    \int_{-\infty}^{\infty} p(x)x\,dx.
+\]
+
+\begin{examplebox}
+Für die Gleichverteilung auf \([\alpha,\beta]\) gilt:
+
+\[
+    p(x \mid \alpha,\beta)
+    =
+    \frac{1}{\beta-\alpha}
+    \quad
+    \text{für}
+    \quad
+    x \in [\alpha,\beta].
+\]
+
+Der Mittelwert ist:
+
+\[
+    \mathbb{E}[X]
+    =
+    \int_{\alpha}^{\beta}
+    \frac{1}{\beta-\alpha}x\,dx.
+\]
+
+Also:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{1}{\beta-\alpha}
+    \int_{\alpha}^{\beta} x\,dx.
+\]
+
+Mit
+
+\[
+    \int_{\alpha}^{\beta} x\,dx
+    =
+    \left[
+        \frac{x^2}{2}
+    \right]_{\alpha}^{\beta}
+    =
+    \frac{\beta^2-\alpha^2}{2}
+\]
+
+folgt:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{1}{\beta-\alpha}
+    \frac{\beta^2-\alpha^2}{2}.
+\]
+
+Da
+
+\[
+    \beta^2-\alpha^2
+    =
+    (\beta-\alpha)(\beta+\alpha)
+\]
+
+gilt:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{\alpha+\beta}{2}.
+\]
+\end{examplebox}
+
+\begin{conceptbox}
+Der Mittelwert der Gleichverteilung auf \([\alpha,\beta]\) liegt genau in der Mitte des Intervalls:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{\alpha+\beta}{2}.
+\]
+\end{conceptbox}
+
+\section{Varianz}
+
+Der Mittelwert beschreibt die Lage einer Verteilung.
+Er sagt aber nicht, wie stark die Werte um diesen Mittelwert streuen.
+Dafür verwendet man die Varianz (variance).
+
+\begin{definitionbox}
+Die Varianz (variance) einer kontinuierlichen Zufallsvariable \(X\) mit Mittelwert \(\mu = \mathbb{E}[X]\) ist
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}\left[(X-\mu)^2\right].
+\]
+
+Als Integral:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \int_{x \in \Omega_x}
+    p(x)(x-\mu)^2\,dx.
+\]
+\end{definitionbox}
+
+Die Varianz ist immer nichtnegativ:
+
+\[
+    \mathrm{Var}(X) \geq 0.
+\]
+
+Das liegt daran, dass
+
+\[
+    (x-\mu)^2 \geq 0
+\]
+
+für alle \(x\) gilt.
+
+\begin{conceptbox}
+Die Varianz misst die mittlere quadratische Abweichung vom Mittelwert.
+
+Große Varianz bedeutet:
+Die Werte streuen stark.
+
+Kleine Varianz bedeutet:
+Die Werte liegen nah am Mittelwert.
+\end{conceptbox}
+
+\subsection{Alternative Formel für die Varianz}
+
+Die Varianz kann auch anders geschrieben werden:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    \mathbb{E}[X]^2.
+\]
+
+Herleitung:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}\left[(X-\mu)^2\right].
+\]
+
+Ausmultiplizieren ergibt:
+
+\[
+    (X-\mu)^2
+    =
+    X^2 - 2\mu X + \mu^2.
+\]
+
+Also:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2 - 2\mu X + \mu^2].
+\]
+
+Wegen Linearität des Erwartungswerts gilt:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    2\mu \mathbb{E}[X]
+    +
+    \mathbb{E}[\mu^2].
+\]
+
+Da \(\mu\) konstant ist, gilt:
+
+\[
+    \mathbb{E}[\mu^2] = \mu^2.
+\]
+
+Außerdem ist
+
+\[
+    \mathbb{E}[X] = \mu.
+\]
+
+Damit:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    2\mu^2
+    +
+    \mu^2
+    =
+    \mathbb{E}[X^2]
+    -
+    \mu^2.
+\]
+
+Also:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    \mathbb{E}[X]^2.
+\]
+
+\begin{examtipbox}
+Die Formel
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    \mathbb{E}[X]^2
+\]
+
+ist oft praktisch für Rechnungen.
+Sie ist aber nicht die Definition, sondern eine äquivalente Umformung.
+\end{examtipbox}
+
+\section{Standardabweichung}
+
+Die Varianz hat quadrierte Einheiten.
+Wenn \(X\) zum Beispiel in Metern gemessen wird, dann hat \(\mathrm{Var}(X)\) die Einheit Quadratmeter.
+Deshalb verwendet man oft die Standardabweichung (standard deviation).
+
+\begin{definitionbox}
+Die Standardabweichung (standard deviation) ist die Wurzel der Varianz:
+
+\[
+    \sigma
+    =
+    \sqrt{\mathrm{Var}(X)}.
+\]
+\end{definitionbox}
+
+Wenn man schreibt
+
+\[
+    \sigma^2 = \mathrm{Var}(X),
+\]
+
+dann ist \(\sigma\) die Standardabweichung und \(\sigma^2\) die Varianz.
+
+\section{Kovarianz}
+
+Bisher wurde die Streuung einer einzelnen Zufallsvariable betrachtet.
+Oft interessiert man sich aber für den Zusammenhang zwischen zwei Zufallsvariablen.
+Dafür verwendet man die Kovarianz (covariance).
+
+\begin{definitionbox}
+Seien \(X\) und \(Y\) zwei Zufallsvariablen mit Mittelwerten
+
+\[
+    \mu_X = \mathbb{E}[X],
+    \qquad
+    \mu_Y = \mathbb{E}[Y].
+\]
+
+Die Kovarianz (covariance) ist definiert als
+
+\[
+    \mathrm{Cov}(X,Y)
+    =
+    \mathbb{E}\left[(X-\mu_X)(Y-\mu_Y)\right].
+\]
+\end{definitionbox}
+
+Für kontinuierliche Zufallsvariablen mit gemeinsamer Dichte \(p(x,y)\) gilt:
+
+\[
+    \mathrm{Cov}(X,Y)
+    =
+    \int
+    \int
+    p(x,y)
+    (x-\mu_X)(y-\mu_Y)
+    \,dx\,dy.
+\]
+
+\begin{conceptbox}
+Die Kovarianz beschreibt, ob zwei Variablen gemeinsam steigen oder fallen.
+
+\begin{itemize}
+    \item \(\mathrm{Cov}(X,Y) > 0\): Große Werte von \(X\) treten eher mit großen Werten von \(Y\) auf.
+    \item \(\mathrm{Cov}(X,Y) < 0\): Große Werte von \(X\) treten eher mit kleinen Werten von \(Y\) auf.
+    \item \(\mathrm{Cov}(X,Y) \approx 0\): Kein klarer linearer Zusammenhang.
+\end{itemize}
+\end{conceptbox}
+
+Eine alternative Formel ist:
+
+\[
+    \mathrm{Cov}(X,Y)
+    =
+    \mathbb{E}[XY]
+    -
+    \mathbb{E}[X]\mathbb{E}[Y].
+\]
+
+\section{Korrelation}
+
+Die Kovarianz hängt von den Einheiten der Variablen ab.
+Um einen einheitenlosen Zusammenhang zu erhalten, verwendet man die Korrelation (correlation).
+
+\begin{definitionbox}
+Die Korrelation (correlation) von \(X\) und \(Y\) ist
+
+\[
+    \rho_{X,Y}
+    =
+    \frac{
+        \mathrm{Cov}(X,Y)
+    }{
+        \sigma_X \sigma_Y
+    },
+\]
+
+wobei \(\sigma_X\) und \(\sigma_Y\) die Standardabweichungen von \(X\) und \(Y\) sind.
+\end{definitionbox}
+
+Es gilt:
+
+\[
+    -1 \leq \rho_{X,Y} \leq 1.
+\]
+
+\begin{itemize}
+    \item \(\rho_{X,Y} = 1\): perfekter positiver linearer Zusammenhang.
+    \item \(\rho_{X,Y} = -1\): perfekter negativer linearer Zusammenhang.
+    \item \(\rho_{X,Y} = 0\): kein linearer Zusammenhang.
+\end{itemize}
+
+\begin{notebox}
+Korrelation \(0\) bedeutet nicht automatisch Unabhängigkeit.
+Sie bedeutet nur, dass kein linearer Zusammenhang gemessen wird.
+Nichtlineare Zusammenhänge können trotzdem existieren.
+\end{notebox}
+
+\section{Gemeinsame Dichten}
+
+Bei zwei kontinuierlichen Zufallsvariablen \(X\) und \(Y\) verwendet man eine gemeinsame Dichte (joint density)
+
+\[
+    p(x,y).
+\]
+
+\begin{definitionbox}
+Eine gemeinsame Dichte (joint density) \(p(x,y)\) beschreibt die gemeinsame Verteilung zweier kontinuierlicher Zufallsvariablen \(X\) und \(Y\).
+
+Sie muss erfüllen:
+
+\[
+    p(x,y) \geq 0
+\]
+
+und
+
+\[
+    \int_{-\infty}^{\infty}
+    \int_{-\infty}^{\infty}
+    p(x,y)\,dx\,dy
+    =
+    1.
+\]
+\end{definitionbox}
+
+Die Wahrscheinlichkeit, dass \(X\) in \([a,b]\) und \(Y\) in \([c,d]\) liegt, ist:
+
+\[
+    p(X \in [a,b], Y \in [c,d])
+    =
+    \int_a^b
+    \int_c^d
+    p(x,y)\,dy\,dx.
+\]
+
+\begin{notebox}
+Die Reihenfolge der Integrale ist hier nicht wesentlich, solange die Integrationsbereiche korrekt sind.
+Je nach Konvention schreibt man auch
+
+\[
+    \int_c^d
+    \int_a^b
+    p(x,y)\,dx\,dy.
+\]
+\end{notebox}
+
+\section{Marginalisierung bei Dichten}
+
+Bei diskreten Zufallsvariablen erhält man Randwahrscheinlichkeiten durch Summieren.
+Bei kontinuierlichen Zufallsvariablen ersetzt man Summen durch Integrale.
+
+\begin{definitionbox}
+Aus einer gemeinsamen Dichte \(p(x,y)\) erhält man die Randdichte (marginal density) von \(X\) durch Integration über \(y\):
+
+\[
+    p(x)
+    =
+    \int_{y \in \Omega_y}
+    p(x,y)\,dy.
+\]
+
+Analog:
+
+\[
+    p(y)
+    =
+    \int_{x \in \Omega_x}
+    p(x,y)\,dx.
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Diskreter Fall:
+
+\[
+    p(x)
+    =
+    \sum_y p(x,y).
+\]
+
+Kontinuierlicher Fall:
+
+\[
+    p(x)
+    =
+    \int p(x,y)\,dy.
+\]
+
+Die Idee ist dieselbe:
+Man entfernt eine nicht interessierende Variable durch Summieren oder Integrieren.
+\end{conceptbox}
+
+\section{Bedingte Dichten}
+
+Auch für kontinuierliche Zufallsvariablen gibt es bedingte Dichten (conditional densities).
+
+\begin{definitionbox}
+Die bedingte Dichte (conditional density) von \(Y\) gegeben \(X=x\) ist
+
+\[
+    p(y \mid x)
+    =
+    \frac{p(x,y)}{p(x)}
+\]
+
+für \(p(x)>0\).
+\end{definitionbox}
+
+Daraus folgt die Produktregel für Dichten:
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x)
+    =
+    p(x \mid y)p(y).
+\]
+
+\begin{notebox}
+Die Schreibweise sieht genauso aus wie im diskreten Fall.
+Der Unterschied ist:
+Bei kontinuierlichen Variablen sind \(p(x)\), \(p(y)\) und \(p(x,y)\) Dichten, keine Punktwahrscheinlichkeiten.
+\end{notebox}
+
+\section{Bayes-Regel für Dichten}
+
+Die Bayes-Regel gilt auch für Wahrscheinlichkeitsdichten.
+Für kontinuierliches \(x\) und diskretes \(y\) erhält man:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        \sum_{y'} p(x \mid y')p(y')
+    }.
+\]
+
+Wenn auch \(y\) kontinuierlich ist, wird die Summe im Nenner durch ein Integral ersetzt:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        \int p(x \mid y')p(y')\,dy'
+    }.
+\]
+
+\begin{definitionbox}
+Bayes-Regel (Bayes' rule) für kontinuierliche Zufallsvariablen:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        p(x)
+    },
+\]
+
+wobei
+
+\[
+    p(x)
+    =
+    \int p(x \mid y')p(y')\,dy'.
+\]
+\end{definitionbox}
+
+\begin{examtipbox}
+In kontinuierlichen Fällen gilt dieselbe Logik wie im diskreten Fall.
+
+Der wichtigste Unterschied ist:
+
+\[
+    \sum
+    \quad
+    \text{wird ersetzt durch}
+    \quad
+    \int.
+\]
+\end{examtipbox}
+
+\section{Histogramme und Dichteschätzung}
+
+In der Praxis kennt man die echte Dichte \(p(x)\) oft nicht.
+Man hat nur Datenpunkte
+
+\[
+    x_1,x_2,\dots,x_N.
+\]
+
+Eine einfache Methode zur Schätzung einer Dichte ist das Histogramm (histogram).
+
+\begin{definitionbox}
+Ein Histogramm (histogram) teilt den Wertebereich in Intervalle, sogenannte Bins (bins), und zählt, wie viele Datenpunkte in jedem Bin liegen.
+\end{definitionbox}
+
+Sei \(I_i\) ein Bin.
+Die Breite des Bins sei
+
+\[
+    |I_i|.
+\]
+
+Die Anzahl der Datenpunkte im Bin \(I_i\) sei
+
+\[
+    n_i.
+\]
+
+Dann ist die relative Häufigkeit im Bin:
+
+\[
+    \frac{n_i}{N}.
+\]
+
+Diese relative Häufigkeit approximiert die Wahrscheinlichkeit, dass ein Datenpunkt in \(I_i\) liegt:
+
+\[
+    p(X \in I_i)
+    \approx
+    \frac{n_i}{N}.
+\]
+
+Andererseits gilt für die Dichte:
+
+\[
+    p(X \in I_i)
+    =
+    \int_{I_i} p(x)\,dx.
+\]
+
+Wenn das Intervall \(I_i\) klein ist und \(p(x)\) darin ungefähr konstant ist, dann gilt:
+
+\[
+    \int_{I_i} p(x)\,dx
+    \approx
+    p(\bar{x}_i)|I_i|,
+\]
+
+wobei \(\bar{x}_i\) der Mittelpunkt des Bins ist.
+Damit:
+
+\[
+    \frac{n_i}{N}
+    \approx
+    p(\bar{x}_i)|I_i|.
+\]
+
+Also:
+
+\[
+    p(\bar{x}_i)
+    \approx
+    \frac{n_i}{N|I_i|}.
+\]
+
+\begin{conceptbox}
+Die Histogramm-Schätzung einer Dichte lautet:
+
+\[
+    p(x)
+    \approx
+    \frac{n_i}{N|I_i|}
+    \quad
+    \text{für}
+    \quad
+    x \in I_i.
+\]
+
+Dabei ist \(n_i\) die Anzahl der Datenpunkte im Bin \(I_i\), \(N\) die Gesamtzahl der Datenpunkte und \(|I_i|\) die Binbreite.
+\end{conceptbox}
+
+\begin{notebox}
+Wenn die Bins sehr breit sind, wird die Schätzung grob.
+Wenn die Bins sehr schmal sind, wird die Schätzung stark verrauscht.
+Die Wahl der Binbreite ist daher wichtig.
+\end{notebox}
+
+\section{Sampling-Approximation von Erwartungswerten}
+
+Erwartungswerte sind Integrale.
+Viele Integrale sind analytisch schwer oder gar nicht lösbar.
+Wenn man aber Stichproben (samples)
+
+\[
+    x_1,x_2,\dots,x_N
+\]
+
+aus der Verteilung \(p(x)\) ziehen kann, kann man Erwartungswerte näherungsweise berechnen.
+
+\begin{definitionbox}
+Seien \(x_1,\dots,x_N\) Stichproben aus einer Verteilung \(p(x)\).
+Dann kann man den Erwartungswert von \(f(X)\) approximieren durch
+
+\[
+    \mathbb{E}_p[f(X)]
+    =
+    \int p(x)f(x)\,dx
+    \approx
+    \frac{1}{N}
+    \sum_{n=1}^{N} f(x_n).
+\]
+
+Das nennt man Sampling-Approximation (sampling approximation) oder Monte-Carlo-Approximation (Monte Carlo approximation).
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Sampling-Approximation ersetzt ein Integral durch einen Durchschnitt über Stichproben:
+
+\[
+    \int p(x)f(x)\,dx
+    \approx
+    \frac{1}{N}
+    \sum_{n=1}^{N} f(x_n).
+\]
+\end{conceptbox}
+
+Je größer \(N\) ist, desto besser wird die Approximation typischerweise.
+Die Genauigkeit hängt aber auch von der Varianz der Funktion \(f(X)\) ab.
+
+\section{Beispiel: Numerische Integration mit Sampling}
+
+Wir betrachten das Integral
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx.
+\]
+
+Dieses Integral sieht nicht direkt wie ein Erwartungswert aus.
+Wir können es aber so umformen, dass eine Normalverteilung erscheint.
+
+Die Normalverteilung mit Mittelwert \(0\) und Varianz \(\frac{1}{2}\) hat die Dichte
+
+\[
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right)
+    =
+    \frac{1}{\sqrt{\pi}}
+    e^{-x^2}.
+\]
+
+Daraus folgt:
+
+\[
+    e^{-x^2}
+    =
+    \sqrt{\pi}
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right).
+\]
+
+Damit:
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx
+    =
+    \sqrt{\pi}
+    \int_{-\infty}^{\infty}
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right)
+    x^2\,dx.
+\]
+
+Das Integral auf der rechten Seite ist ein Erwartungswert:
+
+\[
+    \int_{-\infty}^{\infty}
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right)
+    x^2\,dx
+    =
+    \mathbb{E}[X^2]
+\]
+
+für
+
+\[
+    X \sim \mathcal{N}\left(0,\frac{1}{2}\right).
+\]
+
+Mit Stichproben
+
+\[
+    x_n \sim \mathcal{N}\left(0,\frac{1}{2}\right)
+\]
+
+gilt daher:
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx
+    \approx
+    \frac{\sqrt{\pi}}{N}
+    \sum_{n=1}^{N}
+    x_n^2.
+\]
+
+\begin{examplebox}
+Das Integral
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}\cos(x)\,dx
+\]
+
+kann analog geschrieben werden als
+
+\[
+    \sqrt{\pi}
+    \int_{-\infty}^{\infty}
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right)
+    \cos(x)\,dx.
+\]
+
+Mit Stichproben \(x_n \sim \mathcal{N}(0,\frac{1}{2})\) erhält man:
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}\cos(x)\,dx
+    \approx
+    \frac{\sqrt{\pi}}{N}
+    \sum_{n=1}^{N}
+    \cos(x_n).
+\]
+\end{examplebox}
+
+\section{Analytische Lösung des ersten Integrals}
+
+Das Integral
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx
+\]
+
+kann mit der Varianz der Normalverteilung interpretiert werden.
+
+Für
+
+\[
+    X \sim \mathcal{N}\left(0,\frac{1}{2}\right)
+\]
+
+gilt:
+
+\[
+    \mathbb{E}[X] = 0
+\]
+
+und
+
+\[
+    \mathrm{Var}(X) = \frac{1}{2}.
+\]
+
+Da der Mittelwert \(0\) ist, gilt:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2].
+\]
+
+Also:
+
+\[
+    \mathbb{E}[X^2]
+    =
+    \frac{1}{2}.
+\]
+
+Daher:
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx
+    =
+    \sqrt{\pi}
+    \mathbb{E}[X^2]
+    =
+    \sqrt{\pi}
+    \frac{1}{2}.
+\]
+
+Somit:
+
+\[
+    \int_{-\infty}^{\infty}
+    e^{-x^2}x^2\,dx
+    =
+    \frac{\sqrt{\pi}}{2}.
+\]
+
+\begin{examtipbox}
+Die wichtige Idee ist nicht nur das Ergebnis, sondern die Umformung:
+
+\[
+    e^{-x^2}
+    =
+    \sqrt{\pi}
+    \mathcal{N}\left(x \mid 0,\frac{1}{2}\right).
+\]
+
+Dadurch wird ein Integral zu einem Erwartungswert bezüglich einer bekannten Verteilung.
+\end{examtipbox}
+
+\section{Symmetrische Dichten}
+
+Eine Dichte ist symmetrisch um \(\mu\), wenn links und rechts von \(\mu\) dieselbe Dichteform liegt.
+
+\begin{definitionbox}
+Eine Dichte \(p(x)\) ist symmetrisch um \(\mu\), wenn für alle \(x \in \mathbb{R}\) gilt:
+
+\[
+    p(\mu - x)
+    =
+    p(\mu + x).
+\]
+\end{definitionbox}
+
+Für eine solche Dichte ist der Erwartungswert gleich dem Symmetriezentrum:
+
+\[
+    \mathbb{E}[X] = \mu.
+\]
+
+\subsection{Intuition}
+
+Wenn die Dichte um \(\mu\) symmetrisch ist, dann gibt es zu jeder Abweichung nach rechts eine gleich wahrscheinliche Abweichung nach links.
+Die Beiträge heben sich im Durchschnitt auf.
+Deshalb liegt der Mittelwert genau bei \(\mu\).
+
+\begin{examplebox}
+Die Normalverteilung
+
+\[
+    \mathcal{N}(x \mid \mu,\sigma^2)
+\]
+
+ist symmetrisch um \(\mu\).
+Daher gilt:
+
+\[
+    \mathbb{E}[X] = \mu.
+\]
+\end{examplebox}
+
+\section{Wichtige Verteilungen}
+
+In diesem Abschnitt sammeln wir einige wichtige kontinuierliche Verteilungen.
+Sie werden später immer wieder verwendet.
+
+\subsection{Gleichverteilung}
+
+Die Gleichverteilung (uniform distribution) auf \([\alpha,\beta]\) ist:
+
+\[
+    p(x \mid \alpha,\beta)
+    =
+    \begin{cases}
+        \frac{1}{\beta-\alpha}, & x \in [\alpha,\beta], \\
+        0, & \text{sonst}.
+    \end{cases}
+\]
+
+Der Mittelwert ist:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{\alpha+\beta}{2}.
+\]
+
+Die Varianz ist:
+
+\[
+    \mathrm{Var}(X)
+    =
+    \frac{(\beta-\alpha)^2}{12}.
+\]
+
+\subsection{Normalverteilung}
+
+Die Normalverteilung (Gaussian distribution) ist eine der wichtigsten Verteilungen im maschinellen Lernen.
+In einer Dimension lautet ihre Dichte:
+
+\[
+    \mathcal{N}(x \mid \mu,\sigma^2)
+    =
+    \frac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\left(
+        -\frac{(x-\mu)^2}{2\sigma^2}
+    \right).
+\]
+
+Dabei ist \(\mu\) der Mittelwert und \(\sigma^2\) die Varianz.
+
+\[
+    \mathbb{E}[X] = \mu,
+    \qquad
+    \mathrm{Var}(X) = \sigma^2.
+\]
+
+\begin{conceptbox}
+Die Normalverteilung ist wichtig, weil sie in vielen Modellen als Rauschmodell (noise model) verwendet wird.
+Außerdem führt sie bei Maximum-Likelihood-Schätzung oft auf quadratische Fehlerfunktionen.
+\end{conceptbox}
+
+\section{Kontinuierliche Zufallsvektoren}
+
+Bisher haben wir eindimensionale kontinuierliche Zufallsvariablen betrachtet.
+In maschinellem Lernen sind Eingaben aber meistens Vektoren:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+    \in \mathbb{R}^D.
+\]
+
+Dann spricht man von einem kontinuierlichen Zufallsvektor (continuous random vector).
+
+\begin{definitionbox}
+Ein kontinuierlicher Zufallsvektor \(\vec{X}\) mit Dichte \(p(\vec{x})\) erfüllt:
+
+\[
+    p(\vec{x}) \geq 0
+    \quad
+    \text{für alle}
+    \quad
+    \vec{x} \in \Omega_{\vec{x}},
+\]
+
+und
+
+\[
+    \int_{\vec{x} \in \Omega_{\vec{x}}}
+    p(\vec{x})\,d\vec{x}
+    =
+    1.
+\]
+\end{definitionbox}
+
+Für \(\vec{x} \in \mathbb{R}^D\) bedeutet \(d\vec{x}\):
+
+\[
+    d\vec{x}
+    =
+    dx_1\,dx_2\,\cdots\,dx_D.
+\]
+
+\begin{notebox}
+In Machine Learning schreibt man häufig \(p(\vec{x})\) für die Dichte eines Datenvektors.
+Das ist keine Wahrscheinlichkeit eines einzelnen Vektors, sondern eine Dichte.
+Wahrscheinlichkeiten erhält man durch Integration über Bereiche im Datenraum.
+\end{notebox}
+
+\section{Zusammenhang zu maschinellem Lernen}
+
+Kontinuierliche Zufallsvariablen treten im maschinellen Lernen an vielen Stellen auf:
+
+\begin{itemize}
+    \item Eingabevektoren \(\vec{x}\) werden oft als kontinuierlich modelliert.
+    \item Regressionsziele \(t\) sind meistens kontinuierlich.
+    \item Rauschen (noise) wird häufig mit Normalverteilungen modelliert.
+    \item Parameter können in Bayesian Learning als Zufallsvariablen mit Dichten beschrieben werden.
+    \item Gaussian Mixture Models verwenden Mischungen kontinuierlicher Dichten.
+    \item PCA und probabilistische PCA arbeiten mit kontinuierlichen Vektoren.
+\end{itemize}
+
+\begin{conceptbox}
+Viele ML-Modelle können als Aussagen über Dichten verstanden werden:
+
+\[
+    p(\vec{x}),
+    \quad
+    p(t \mid \vec{x}),
+    \quad
+    p(c \mid \vec{x}),
+    \quad
+    p(\vec{x} \mid c).
+\]
+
+Je nachdem, welche dieser Größen modelliert wird, entstehen unterschiedliche Arten von Lernverfahren.
+\end{conceptbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei kontinuierlichen Zufallsvariablen:
+
+\begin{enumerate}
+    \item Eine Dichte \(p(x)\) mit einer Wahrscheinlichkeit \(p(X=x)\) verwechseln.
+    \item Vergessen, dass Wahrscheinlichkeiten durch Integrale berechnet werden.
+    \item Annehmen, dass eine Dichte nie größer als \(1\) sein darf.
+    \item Die Normalisierungsbedingung \(\int p(x)\,dx=1\) vergessen.
+    \item Bei Randdichten Summen statt Integrale verwenden.
+    \item Bei Sampling-Approximation vergessen, dass die Stichproben aus der passenden Verteilung kommen müssen.
+    \item Korrelation \(0\) mit Unabhängigkeit verwechseln.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Wahrscheinlichkeit bei Gleichverteilung}
+
+Sei
+
+\[
+    X \sim \mathrm{Uniform}(0,4).
+\]
+
+Berechne
+
+\[
+    p(X \in [1,3]).
+\]
+
+\begin{examplebox}
+Die Dichte ist
+
+\[
+    p(x)
+    =
+    \frac{1}{4}
+    \quad
+    \text{für}
+    \quad
+    x \in [0,4].
+\]
+
+Also:
+
+\[
+    p(X \in [1,3])
+    =
+    \int_1^3
+    \frac{1}{4}\,dx
+    =
+    \frac{1}{4}
+    (3-1)
+    =
+    \frac{1}{2}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Mittelwert einer Gleichverteilung}
+
+Sei
+
+\[
+    X \sim \mathrm{Uniform}(2,8).
+\]
+
+Berechne
+
+\[
+    \mathbb{E}[X].
+\]
+
+\begin{examplebox}
+Für eine Gleichverteilung auf \([\alpha,\beta]\) gilt:
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{\alpha+\beta}{2}.
+\]
+
+Mit \(\alpha=2\) und \(\beta=8\):
+
+\[
+    \mathbb{E}[X]
+    =
+    \frac{2+8}{2}
+    =
+    5.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Varianz aus Momenten}
+
+Angenommen,
+
+\[
+    \mathbb{E}[X] = 3
+\]
+
+und
+
+\[
+    \mathbb{E}[X^2] = 13.
+\]
+
+Berechne
+
+\[
+    \mathrm{Var}(X).
+\]
+
+\begin{examplebox}
+Mit
+
+\[
+    \mathrm{Var}(X)
+    =
+    \mathbb{E}[X^2]
+    -
+    \mathbb{E}[X]^2
+\]
+
+folgt:
+
+\[
+    \mathrm{Var}(X)
+    =
+    13 - 3^2
+    =
+    13 - 9
+    =
+    4.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Kontinuierliche Zufallsvariablen (continuous random variables) nehmen Werte in kontinuierlichen Räumen wie \(\mathbb{R}\) an.
+    \item Einzelne Werte haben typischerweise Wahrscheinlichkeit \(0\).
+    \item Wahrscheinlichkeiten über Intervalle berechnet man durch Integrale.
+    \item Eine Wahrscheinlichkeitsdichte (probability density function) erfüllt:
+    \[
+        p(x) \geq 0
+    \]
+    und
+    \[
+        \int p(x)\,dx = 1.
+    \]
+    \item Für Intervalle gilt:
+    \[
+        p(X \in [a,b])
+        =
+        \int_a^b p(x)\,dx.
+    \]
+    \item Der Erwartungswert (expectation) ist:
+    \[
+        \mathbb{E}_p[f(X)]
+        =
+        \int p(x)f(x)\,dx.
+    \]
+    \item Der Mittelwert (mean) ist:
+    \[
+        \mathbb{E}[X]
+        =
+        \int p(x)x\,dx.
+    \]
+    \item Die Varianz (variance) ist:
+    \[
+        \mathrm{Var}(X)
+        =
+        \mathbb{E}\left[(X-\mu)^2\right].
+    \]
+    \item Die Kovarianz (covariance) misst den gemeinsamen linearen Zusammenhang zweier Variablen.
+    \item Die Korrelation (correlation) ist die normierte Kovarianz.
+    \item Summenregeln werden bei kontinuierlichen Variablen zu Integralen:
+    \[
+        p(x)
+        =
+        \int p(x,y)\,dy.
+    \]
+    \item Sampling-Approximation ersetzt Integrale durch Mittelwerte über Stichproben:
+    \[
+        \int p(x)f(x)\,dx
+        \approx
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        f(x_n).
+    \]
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Warum ist \(p(X=x)=0\) für typische kontinuierliche Zufallsvariablen?
+    \item Was ist eine Wahrscheinlichkeitsdichte (probability density function)?
+    \item Welche zwei Bedingungen muss eine Dichte erfüllen?
+    \item Wie berechnet man \(p(X \in [a,b])\)?
+    \item Was ist der Unterschied zwischen Wahrscheinlichkeit und Dichte?
+    \item Definiere Erwartungswert, Mittelwert und Varianz.
+    \item Zeige, dass \(\mathrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2\).
+    \item Was ist ein Histogramm und wie schätzt es eine Dichte?
+    \item Erkläre die Sampling-Approximation eines Erwartungswerts.
+    \item Wie werden Summenregel und Bayes-Regel im kontinuierlichen Fall geschrieben?
+    \item Warum ist die Normalverteilung für ML wichtig?
+    \item Was ist der Unterschied zwischen Kovarianz und Korrelation?
+\end{enumerate}
+\end{examtipbox}

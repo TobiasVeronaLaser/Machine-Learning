@@ -1,0 +1,2139 @@
+\chapter{Perzeptrons}
+
+\section{Ziel dieses Kapitels}
+
+In den vorherigen Kapiteln haben wir lineare Regression (linear regression) und logistische Regression (logistic regression) betrachtet.
+Beide Modelle verwenden eine lineare Kombination der Eingaben:
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Bei linearer Regression wird daraus direkt ein kontinuierlicher Wert vorhergesagt.
+Bei logistischer Regression wird der lineare Score durch die Sigmoid-Funktion (sigmoid function) in eine Wahrscheinlichkeit umgewandelt.
+
+In diesem Kapitel betrachten wir das Perzeptron (perceptron).
+Das Perzeptron ist ein frühes und sehr wichtiges Modell für binäre Klassifikation.
+Es ist außerdem ein historischer Vorläufer neuronaler Netze (neural networks).
+
+\begin{conceptbox}
+Ein Perzeptron (perceptron) ist ein einfacher linearer Klassifikator.
+
+Es berechnet zuerst einen linearen Score
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}
+\]
+
+und trifft danach mit einer Schwellenfunktion (threshold function) eine binäre Entscheidung.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist ein Perzeptron (perceptron)?
+    \item Wie hängt das Perzeptron mit einem künstlichen Neuron zusammen?
+    \item Was ist eine Schwellenfunktion (threshold function)?
+    \item Was ist eine Aktivierungsfunktion (activation function)?
+    \item Was ist eine Entscheidungsgrenze (decision boundary)?
+    \item Was bedeutet lineare Separierbarkeit (linear separability)?
+    \item Wie funktioniert die Perzeptron-Lernregel (perceptron learning rule)?
+    \item Warum konvergiert das Perzeptron nur bei linear separierbaren Daten?
+    \item Warum kann ein einzelnes Perzeptron das XOR-Problem nicht lösen?
+    \item Wie hängen Perzeptron, logistische Regression und neuronale Netze zusammen?
+\end{itemize}
+
+\section{Motivation}
+
+Wir betrachten ein binäres Klassifikationsproblem.
+Die Zielwerte seien
+
+\[
+    t_n \in \{-1,+1\}.
+\]
+
+Die Eingaben seien
+
+\[
+    \vec{x}_n \in \mathbb{R}^D.
+\]
+
+Das Ziel ist, eine Funktion zu lernen, die für eine neue Eingabe \(\vec{x}\) eine Klasse vorhersagt:
+
+\[
+    y(\vec{x})
+    \in
+    \{-1,+1\}.
+\]
+
+Ein sehr einfacher Ansatz ist:
+Wir berechnen zuerst einen linearen Score
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}
+\]
+
+und entscheiden dann anhand des Vorzeichens von \(a\).
+
+Wenn
+
+\[
+    a \geq 0,
+\]
+
+sagen wir Klasse \(+1\) voraus.
+Wenn
+
+\[
+    a < 0,
+\]
+
+sagen wir Klasse \(-1\) voraus.
+
+\begin{definitionbox}
+Ein binärer linearer Klassifikator (binary linear classifier) entscheidet anhand des Vorzeichens eines linearen Scores:
+
+\[
+    y(\vec{x})
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+\end{definitionbox}
+
+\section{Das Perzeptron-Modell}
+
+Das Perzeptron besteht aus zwei Schritten:
+
+\begin{enumerate}
+    \item Lineare Kombination der Eingabe:
+    \[
+        a
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+
+    \item Anwendung einer Schwellenfunktion:
+    \[
+        y
+        =
+        h(a).
+    \]
+\end{enumerate}
+
+Für Klassen
+
+\[
+    y \in \{-1,+1\}
+\]
+
+verwendet man oft die Vorzeichenfunktion:
+
+\[
+    h(a)
+    =
+    \operatorname{sign}(a).
+\]
+
+Damit ist:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+
+\begin{definitionbox}
+Das Perzeptron (perceptron) ist definiert durch
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+
+Dabei ist \(\vec{x}\) der Eingabevektor, \(\vec{w}\) der Gewichtsvektor und \(y\) die vorhergesagte Klasse.
+\end{definitionbox}
+
+Die Vorzeichenfunktion ist:
+
+\[
+    \operatorname{sign}(a)
+    =
+    \begin{cases}
+        +1, & a \geq 0, \\
+        -1, & a < 0.
+    \end{cases}
+\]
+
+\begin{notebox}
+Manche Darstellungen verwenden Klassen
+
+\[
+    t \in \{0,1\}.
+\]
+
+Dann verwendet man eine Schrittfunktion, die Werte \(0\) und \(1\) ausgibt.
+In diesem Kapitel verwenden wir meistens
+
+\[
+    t \in \{-1,+1\},
+\]
+
+weil die Perzeptron-Lernregel damit besonders einfach aussieht.
+\end{notebox}
+
+\section{Bias-Term}
+
+Wie bei linearer und logistischer Regression ist ein Bias-Term wichtig.
+Ohne Bias hätte das Modell die Form:
+
+\[
+    a
+    =
+    \sum_{j=1}^{D}
+    w_jx_j.
+\]
+
+Die Entscheidungsgrenze müsste dann durch den Ursprung gehen.
+
+Mit Bias-Term:
+
+\[
+    a
+    =
+    w_0
+    +
+    \sum_{j=1}^{D}
+    w_jx_j.
+\]
+
+Wir können den Bias wieder in den Eingabevektor einbauen:
+
+\[
+    \tilde{\vec{x}}
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        \vdots \\
+        x_D
+    \end{pmatrix},
+    \qquad
+    \vec{w}
+    =
+    \begin{pmatrix}
+        w_0 \\
+        w_1 \\
+        \vdots \\
+        w_D
+    \end{pmatrix}.
+\]
+
+Dann gilt:
+
+\[
+    a
+    =
+    \vec{w}^{\top}\tilde{\vec{x}}.
+\]
+
+\begin{conceptbox}
+Der Bias-Term \(w_0\) verschiebt die Entscheidungsgrenze.
+
+Ohne Bias muss die Entscheidungsgrenze durch den Ursprung gehen.
+Mit Bias kann sie frei verschoben werden.
+\end{conceptbox}
+
+Im Folgenden schreiben wir oft einfach \(\vec{x}\), obwohl der Bias-Eintrag \(1\) bereits enthalten sein kann.
+
+\section{Interpretation als künstliches Neuron}
+
+Das Perzeptron kann als einfaches künstliches Neuron (artificial neuron) interpretiert werden.
+
+Ein Neuron erhält Eingaben
+
+\[
+    x_1,x_2,\dots,x_D.
+\]
+
+Jede Eingabe wird mit einem Gewicht multipliziert:
+
+\[
+    w_1x_1,w_2x_2,\dots,w_Dx_D.
+\]
+
+Dann werden die gewichteten Eingaben aufsummiert:
+
+\[
+    a
+    =
+    w_0
+    +
+    \sum_{j=1}^{D}
+    w_jx_j.
+\]
+
+Danach wird eine Aktivierungsfunktion (activation function) angewendet:
+
+\[
+    y
+    =
+    h(a).
+\]
+
+\begin{definitionbox}
+Ein künstliches Neuron (artificial neuron) berechnet typischerweise
+
+\[
+    a
+    =
+    \sum_{j=1}^{D}
+    w_jx_j
+    +
+    w_0
+\]
+
+und danach
+
+\[
+    y
+    =
+    h(a).
+\]
+
+Dabei ist \(h\) eine Aktivierungsfunktion (activation function).
+\end{definitionbox}
+
+Beim Perzeptron ist die Aktivierungsfunktion eine harte Schwellenfunktion:
+
+\[
+    h(a)
+    =
+    \operatorname{sign}(a).
+\]
+
+\section{Entscheidungsgrenze}
+
+Das Perzeptron entscheidet nach dem Vorzeichen von
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Die Entscheidungsgrenze (decision boundary) liegt dort, wo das Modell genau zwischen den Klassen steht:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+
+\begin{definitionbox}
+Die Entscheidungsgrenze eines Perzeptrons ist die Menge aller Punkte \(\vec{x}\), für die gilt:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+\end{definitionbox}
+
+Für zwei Eingabedimensionen mit Bias gilt:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        x_2
+    \end{pmatrix}.
+\]
+
+Dann ist:
+
+\[
+    \vec{w}^{\top}\vec{x}
+    =
+    w_0+w_1x_1+w_2x_2.
+\]
+
+Die Entscheidungsgrenze ist:
+
+\[
+    w_0+w_1x_1+w_2x_2=0.
+\]
+
+Falls
+
+\[
+    w_2 \neq 0,
+\]
+
+kann man nach \(x_2\) auflösen:
+
+\[
+    x_2
+    =
+    -\frac{w_0}{w_2}
+    -
+    \frac{w_1}{w_2}x_1.
+\]
+
+Das ist eine Gerade.
+
+\begin{conceptbox}
+Ein einzelnes Perzeptron ist ein linearer Klassifikator.
+
+In zwei Dimensionen ist die Entscheidungsgrenze eine Gerade.
+In drei Dimensionen ist sie eine Ebene.
+In \(D\) Dimensionen ist sie eine Hyperebene.
+\end{conceptbox}
+
+\section{Geometrische Interpretation des Gewichtsvektors}
+
+Die Entscheidungsgrenze ist:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+
+Der Gewichtsvektor \(\vec{w}\) steht senkrecht auf dieser Entscheidungsgrenze.
+Er zeigt in die Richtung, in der der Score
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}
+\]
+
+am schnellsten größer wird.
+
+Wenn
+
+\[
+    \vec{w}^{\top}\vec{x} > 0,
+\]
+
+liegt \(\vec{x}\) auf der positiven Seite der Grenze.
+Wenn
+
+\[
+    \vec{w}^{\top}\vec{x} < 0,
+\]
+
+liegt \(\vec{x}\) auf der negativen Seite.
+
+\begin{notebox}
+Die Länge von \(\vec{w}\) beeinflusst beim reinen Perzeptron nicht die vorhergesagte Klasse, solange das Vorzeichen gleich bleibt.
+
+Wenn man \(\vec{w}\) mit einer positiven Konstanten \(c>0\) multipliziert, gilt:
+
+\[
+    \operatorname{sign}(c\vec{w}^{\top}\vec{x})
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+\end{notebox}
+
+\section{Lineare Separierbarkeit}
+
+Ein Datensatz ist linear separierbar, wenn es eine Hyperebene gibt, die die beiden Klassen perfekt trennt.
+
+\begin{definitionbox}
+Ein Datensatz
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}
+\]
+
+mit
+
+\[
+    t_n \in \{-1,+1\}
+\]
+
+heißt linear separierbar (linearly separable), wenn es einen Gewichtsvektor \(\vec{w}\) gibt, sodass für alle \(n\) gilt:
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n) > 0.
+\]
+\end{definitionbox}
+
+Warum ist diese Bedingung sinnvoll?
+
+Wenn
+
+\[
+    t_n=+1,
+\]
+
+dann brauchen wir
+
+\[
+    \vec{w}^{\top}\vec{x}_n > 0.
+\]
+
+Dann ist:
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)
+    =
+    +1\cdot(\vec{w}^{\top}\vec{x}_n)
+    >
+    0.
+\]
+
+Wenn
+
+\[
+    t_n=-1,
+\]
+
+dann brauchen wir
+
+\[
+    \vec{w}^{\top}\vec{x}_n < 0.
+\]
+
+Dann ist:
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)
+    =
+    -1\cdot(\vec{w}^{\top}\vec{x}_n)
+    >
+    0.
+\]
+
+\begin{conceptbox}
+Die Bedingung
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)>0
+\]
+
+bedeutet:
+Der Datenpunkt \(\vec{x}_n\) liegt auf der richtigen Seite der Entscheidungsgrenze.
+\end{conceptbox}
+
+\section{Korrekt und falsch klassifizierte Punkte}
+
+Die Perzeptron-Vorhersage ist:
+
+\[
+    y_n
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}_n).
+\]
+
+Ein Punkt ist korrekt klassifiziert, wenn
+
+\[
+    y_n=t_n.
+\]
+
+Für \(t_n \in \{-1,+1\}\) ist das äquivalent zu:
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)>0.
+\]
+
+Ein Punkt ist falsch klassifiziert, wenn
+
+\[
+    y_n\neq t_n.
+\]
+
+Das ist äquivalent zu:
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)\leq 0.
+\]
+
+\begin{definitionbox}
+Die Menge der falsch klassifizierten Punkte ist
+
+\[
+    \mathcal{M}
+    =
+    \left\{
+        n
+        \mid
+        t_n(\vec{w}^{\top}\vec{x}_n)\leq 0
+    \right\}.
+\]
+\end{definitionbox}
+
+\section{Perzeptron-Kriterium}
+
+Um ein Perzeptron zu trainieren, braucht man eine Fehlerfunktion.
+Eine Möglichkeit ist das Perzeptron-Kriterium (perceptron criterion).
+
+Für falsch klassifizierte Punkte ist
+
+\[
+    t_n(\vec{w}^{\top}\vec{x}_n)\leq 0.
+\]
+
+Wir definieren den Fehler:
+
+\[
+    E_P(\vec{w})
+    =
+    -\sum_{n\in\mathcal{M}}
+    t_n
+    \vec{w}^{\top}\vec{x}_n.
+\]
+
+\begin{definitionbox}
+Das Perzeptron-Kriterium (perceptron criterion) ist
+
+\[
+    E_P(\vec{w})
+    =
+    -\sum_{n\in\mathcal{M}}
+    t_n
+    \vec{w}^{\top}\vec{x}_n,
+\]
+
+wobei \(\mathcal{M}\) die Menge der falsch klassifizierten Punkte ist.
+\end{definitionbox}
+
+Für einen falsch klassifizierten Punkt gilt:
+
+\[
+    t_n\vec{w}^{\top}\vec{x}_n\leq 0.
+\]
+
+Daher ist
+
+\[
+    -t_n\vec{w}^{\top}\vec{x}_n\geq 0.
+\]
+
+Das Perzeptron-Kriterium ist also nichtnegativ:
+
+\[
+    E_P(\vec{w})\geq 0.
+\]
+
+Wenn alle Punkte korrekt klassifiziert sind, ist
+
+\[
+    \mathcal{M}=\emptyset
+\]
+
+und damit
+
+\[
+    E_P(\vec{w})=0.
+\]
+
+\begin{conceptbox}
+Das Perzeptron-Kriterium bestraft nur falsch klassifizierte Punkte.
+
+Korrekt klassifizierte Punkte tragen nicht zum Fehler bei.
+\end{conceptbox}
+
+\section{Gradient des Perzeptron-Kriteriums}
+
+Für einen falsch klassifizierten Datenpunkt ist der Beitrag zum Fehler:
+
+\[
+    E_n(\vec{w})
+    =
+    -t_n\vec{w}^{\top}\vec{x}_n.
+\]
+
+Der Gradient nach \(\vec{w}\) ist:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    -t_n\vec{x}_n.
+\]
+
+Für alle falsch klassifizierten Punkte:
+
+\[
+    \nabla_{\vec{w}}E_P(\vec{w})
+    =
+    -\sum_{n\in\mathcal{M}}
+    t_n\vec{x}_n.
+\]
+
+\begin{definitionbox}
+Der Gradient des Perzeptron-Kriteriums ist
+
+\[
+    \nabla_{\vec{w}}E_P(\vec{w})
+    =
+    -\sum_{n\in\mathcal{M}}
+    t_n\vec{x}_n.
+\]
+\end{definitionbox}
+
+\section{Perzeptron-Lernregel}
+
+Gradientenabstieg verwendet:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    \nabla_{\vec{w}}E(\vec{w}^{(\tau)}).
+\]
+
+Für einen einzelnen falsch klassifizierten Punkt gilt:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    -t_n\vec{x}_n.
+\]
+
+Also:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta(-t_n\vec{x}_n).
+\]
+
+Damit:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    +
+    \eta t_n\vec{x}_n.
+\]
+
+\begin{definitionbox}
+Die Perzeptron-Lernregel (perceptron learning rule) lautet für einen falsch klassifizierten Punkt:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    +
+    \eta t_n\vec{x}_n.
+\]
+
+Für korrekt klassifizierte Punkte wird \(\vec{w}\) nicht geändert.
+\end{definitionbox}
+
+Dabei ist
+
+\[
+    \eta>0
+\]
+
+die Lernrate (learning rate).
+
+\section{Intuition der Lernregel}
+
+Die Lernregel ist sehr intuitiv.
+
+\subsection{Fall \(t_n=+1\)}
+
+Wenn der wahre Zielwert
+
+\[
+    t_n=+1
+\]
+
+ist, aber der Punkt falsch klassifiziert wird, dann ist
+
+\[
+    \vec{w}^{\top}\vec{x}_n\leq 0.
+\]
+
+Das Modell gibt also zu kleinen oder negativen Score aus.
+Die Lernregel ist:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    +
+    \eta \vec{x}_n.
+\]
+
+Dadurch wird der Score für diesen Punkt größer, denn:
+
+\[
+    (\vec{w}^{(\tau)}+\eta\vec{x}_n)^{\top}\vec{x}_n
+    =
+    (\vec{w}^{(\tau)})^{\top}\vec{x}_n
+    +
+    \eta\vec{x}_n^{\top}\vec{x}_n.
+\]
+
+Da
+
+\[
+    \vec{x}_n^{\top}\vec{x}_n
+    =
+    \|\vec{x}_n\|^2
+    \geq 0,
+\]
+
+wird der Score erhöht.
+
+\subsection{Fall \(t_n=-1\)}
+
+Wenn der wahre Zielwert
+
+\[
+    t_n=-1
+\]
+
+ist, aber der Punkt falsch klassifiziert wird, dann ist
+
+\[
+    \vec{w}^{\top}\vec{x}_n\geq 0.
+\]
+
+Das Modell gibt also einen zu großen Score aus.
+Die Lernregel ist:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta \vec{x}_n.
+\]
+
+Dadurch wird der Score für diesen Punkt kleiner.
+
+\begin{conceptbox}
+Die Perzeptron-Lernregel verschiebt \(\vec{w}\) so, dass der falsch klassifizierte Punkt beim nächsten Mal eher auf der richtigen Seite der Entscheidungsgrenze liegt.
+\end{conceptbox}
+
+\section{Algorithmus des Perzeptrons}
+
+Der Trainingsalgorithmus läuft iterativ über die Trainingsdaten.
+
+\begin{definitionbox}
+Perzeptron-Algorithmus:
+
+\begin{enumerate}
+    \item Initialisiere \(\vec{w}\), zum Beispiel mit \(\vec{w}=\vec{0}\).
+    \item Wähle einen Datenpunkt \((\vec{x}_n,t_n)\).
+    \item Berechne den Score:
+    \[
+        a_n=\vec{w}^{\top}\vec{x}_n.
+    \]
+    \item Prüfe, ob der Punkt falsch klassifiziert ist:
+    \[
+        t_na_n\leq 0.
+    \]
+    \item Falls ja, aktualisiere:
+    \[
+        \vec{w}
+        \leftarrow
+        \vec{w}
+        +
+        \eta t_n\vec{x}_n.
+    \]
+    \item Wiederhole, bis keine Fehler mehr auftreten oder eine maximale Anzahl an Iterationen erreicht ist.
+\end{enumerate}
+\end{definitionbox}
+
+\begin{notebox}
+Die Reihenfolge der Datenpunkte kann das Training beeinflussen.
+
+In praktischen Varianten werden die Datenpunkte oft in zufälliger Reihenfolge durchlaufen.
+\end{notebox}
+
+\section{Perzeptron-Konvergenz}
+
+Ein klassisches Resultat ist der Perzeptron-Konvergenzsatz.
+
+\begin{conceptbox}
+Wenn die Daten linear separierbar sind, dann findet der Perzeptron-Algorithmus nach endlich vielen Updates eine trennende Hyperebene.
+
+Wenn die Daten nicht linear separierbar sind, muss der Algorithmus nicht konvergieren.
+\end{conceptbox}
+
+Der genaue Konvergenzbeweis benötigt Annahmen über den Abstand der Daten zur trennenden Hyperebene.
+Die wichtige Intuition ist:
+
+\[
+    \text{linear separierbar}
+    \quad
+    \Rightarrow
+    \quad
+    \text{Perzeptron kann eine perfekte lineare Trennung finden}.
+\]
+
+Wenn die Daten aber nicht linear separierbar sind, gibt es keine Hyperebene, die alle Punkte korrekt trennt.
+Dann kann das Perzeptron immer wieder Updates durchführen, ohne jemals alle Punkte korrekt zu klassifizieren.
+
+\begin{examtipbox}
+Wichtig für Prüfungen:
+
+\begin{itemize}
+    \item Das Perzeptron konvergiert bei linear separierbaren Daten.
+    \item Das Perzeptron konvergiert nicht garantiert bei nicht separierbaren Daten.
+    \item Ein einzelnes Perzeptron kann nur lineare Entscheidungsgrenzen darstellen.
+\end{itemize}
+\end{examtipbox}
+
+\section{Beispiel für ein Update}
+
+Wir betrachten einen Datenpunkt
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix},
+\]
+
+mit Zielwert
+
+\[
+    t=+1.
+\]
+
+Der aktuelle Gewichtsvektor sei
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        -1 \\
+        0
+    \end{pmatrix}.
+\]
+
+Der Score ist:
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}
+    =
+    (-1)\cdot 1 + 0\cdot 2
+    =
+    -1.
+\]
+
+Da
+
+\[
+    t a
+    =
+    (+1)(-1)
+    =
+    -1
+    \leq 0,
+\]
+
+ist der Punkt falsch klassifiziert.
+
+Mit Lernrate
+
+\[
+    \eta=1
+\]
+
+ist das Update:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \vec{w}
+    +
+    \eta t\vec{x}.
+\]
+
+Einsetzen:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \begin{pmatrix}
+        -1 \\
+        0
+    \end{pmatrix}
+    +
+    1\cdot(+1)
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}.
+\]
+
+Also:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \begin{pmatrix}
+        0 \\
+        2
+    \end{pmatrix}.
+\]
+
+\begin{examplebox}
+Nach dem Update ist der neue Score:
+
+\[
+    a_{\mathrm{neu}}
+    =
+    \vec{w}_{\mathrm{neu}}^{\top}\vec{x}
+    =
+    0\cdot 1+2\cdot 2
+    =
+    4.
+\]
+
+Damit ist
+
+\[
+    t a_{\mathrm{neu}}
+    =
+    (+1)4
+    =
+    4
+    >
+    0.
+\]
+
+Der Punkt ist nun korrekt klassifiziert.
+\end{examplebox}
+
+\section{Vergleich mit logistischer Regression}
+
+Perzeptron und logistische Regression sind eng verwandt.
+Beide berechnen zuerst einen linearen Score:
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Der Unterschied liegt in der Ausgabefunktion und im Trainingsziel.
+
+Beim Perzeptron:
+
+\[
+    y
+    =
+    \operatorname{sign}(a).
+\]
+
+Bei logistischer Regression:
+
+\[
+    y
+    =
+    \sigma(a).
+\]
+
+\begin{definitionbox}
+Perzeptron:
+
+\[
+    y
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+
+Logistische Regression:
+
+\[
+    p(t=1\mid\vec{x},\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+\end{definitionbox}
+
+\section{Harte und weiche Entscheidung}
+
+Das Perzeptron trifft eine harte Entscheidung:
+
+\[
+    y \in \{-1,+1\}.
+\]
+
+Logistische Regression gibt eine weiche Wahrscheinlichkeit aus:
+
+\[
+    y \in (0,1).
+\]
+
+\begin{conceptbox}
+Das Perzeptron sagt nur, welche Klasse vorhergesagt wird.
+
+Logistische Regression sagt zusätzlich, wie sicher das Modell in Form einer Wahrscheinlichkeit ist.
+\end{conceptbox}
+
+Die Sigmoid-Funktion ist glatt und differenzierbar:
+
+\[
+    \sigma'(a)
+    =
+    \sigma(a)(1-\sigma(a)).
+\]
+
+Die Vorzeichenfunktion ist nicht glatt und an
+
+\[
+    a=0
+\]
+
+nicht differenzierbar.
+
+Das macht logistische Regression für gradientenbasierte Optimierung angenehmer.
+
+\section{Perzeptron-Verlust und Kreuzentropie}
+
+Beim Perzeptron werden falsch klassifizierte Punkte bestraft:
+
+\[
+    E_P(\vec{w})
+    =
+    -\sum_{n\in\mathcal{M}}
+    t_n\vec{w}^{\top}\vec{x}_n.
+\]
+
+Bei logistischer Regression wird die negative Log-Likelihood minimiert:
+
+\[
+    E_{\mathrm{CE}}(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{notebox}
+Die beiden Modelle können ähnliche lineare Entscheidungsgrenzen lernen, aber die Optimierungsprobleme sind unterschiedlich.
+
+Logistische Regression ist probabilistisch motiviert.
+Das klassische Perzeptron ist eher algorithmisch und geometrisch motiviert.
+\end{notebox}
+
+\section{Mehrere Ausgabekonventionen}
+
+Es gibt zwei häufige Kodierungen für binäre Klassen.
+
+\subsection{Kodierung mit \(\{-1,+1\}\)}
+
+Beim Perzeptron ist üblich:
+
+\[
+    t \in \{-1,+1\}.
+\]
+
+Dann ist die Vorhersage:
+
+\[
+    y
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+
+Die Korrektheitsbedingung ist:
+
+\[
+    t\vec{w}^{\top}\vec{x}>0.
+\]
+
+\subsection{Kodierung mit \(\{0,1\}\)}
+
+Bei logistischer Regression ist üblich:
+
+\[
+    t \in \{0,1\}.
+\]
+
+Dann ist:
+
+\[
+    p(t=1\mid\vec{x})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+
+\begin{notebox}
+Beide Kodierungen beschreiben binäre Klassifikation.
+Man muss aber bei Formeln konsequent bleiben.
+
+Für Perzeptron-Updates ist \(\{-1,+1\}\) oft einfacher.
+Für Bernoulli-Likelihood und Kreuzentropie ist \(\{0,1\}\) oft einfacher.
+\end{notebox}
+
+\section{Limitierung: XOR-Problem}
+
+Ein einzelnes Perzeptron kann nur linear separierbare Daten klassifizieren.
+Das klassische Gegenbeispiel ist XOR.
+
+Wir betrachten Eingaben
+
+\[
+    x_1,x_2 \in \{0,1\}.
+\]
+
+Die XOR-Funktion ist:
+
+\[
+\begin{array}{cc|c}
+x_1 & x_2 & t \\
+\hline
+0 & 0 & 0 \\
+0 & 1 & 1 \\
+1 & 0 & 1 \\
+1 & 1 & 0
+\end{array}
+\]
+
+Die positiven Punkte sind:
+
+\[
+    (0,1)
+    \quad
+    \text{und}
+    \quad
+    (1,0).
+\]
+
+Die negativen Punkte sind:
+
+\[
+    (0,0)
+    \quad
+    \text{und}
+    \quad
+    (1,1).
+\]
+
+Diese Punkte können in der Ebene nicht durch eine einzige Gerade getrennt werden.
+
+\begin{conceptbox}
+Das XOR-Problem ist nicht linear separierbar.
+
+Ein einzelnes Perzeptron kann XOR daher nicht lösen.
+\end{conceptbox}
+
+\section{Warum mehrschichtige Netze helfen}
+
+Obwohl ein einzelnes Perzeptron nur lineare Entscheidungsgrenzen darstellen kann, können mehrere Perzeptrons kombiniert werden.
+
+Ein mehrschichtiges neuronales Netz (multilayer neural network) verwendet versteckte Einheiten (hidden units).
+Diese berechnen Zwischenrepräsentationen:
+
+\[
+    h_j
+    =
+    g(\vec{w}_j^{\top}\vec{x}),
+\]
+
+wobei \(g\) eine Aktivierungsfunktion ist.
+
+Die Ausgabe kann dann aus diesen versteckten Einheiten berechnet werden:
+
+\[
+    y
+    =
+    f\left(
+        \sum_j
+        v_j h_j
+    \right).
+\]
+
+\begin{conceptbox}
+Mehrschichtige neuronale Netze können nichtlineare Entscheidungsgrenzen darstellen.
+
+Die erste Schicht transformiert die Eingabe.
+Die nächste Schicht kann im transformierten Raum linear trennen.
+\end{conceptbox}
+
+\section{Perzeptron als Baustein neuronaler Netze}
+
+Ein künstliches neuronales Netz besteht aus vielen Einheiten, die ähnlich wie Perzeptrons aufgebaut sind:
+
+\[
+    a_j
+    =
+    \sum_i
+    w_{ji}x_i
+    +
+    b_j,
+\]
+
+und
+
+\[
+    z_j
+    =
+    g(a_j).
+\]
+
+Dabei ist:
+
+\begin{itemize}
+    \item \(a_j\) die Aktivierung vor der Nichtlinearität,
+    \item \(z_j\) die Ausgabe der Einheit,
+    \item \(w_{ji}\) das Gewicht von Eingabe \(i\) zu Einheit \(j\),
+    \item \(b_j\) der Bias,
+    \item \(g\) die Aktivierungsfunktion.
+\end{itemize}
+
+\begin{definitionbox}
+Eine neuronale Einheit (neural unit) berechnet
+
+\[
+    z_j
+    =
+    g
+    \left(
+        \sum_i
+        w_{ji}x_i
+        +
+        b_j
+    \right).
+\]
+\end{definitionbox}
+
+Beim klassischen Perzeptron ist
+
+\[
+    g(a)=\operatorname{sign}(a).
+\]
+
+In modernen neuronalen Netzen verwendet man meistens glatte oder stückweise lineare Aktivierungsfunktionen, zum Beispiel Sigmoid, Tanh oder ReLU.
+
+\section{Aktivierungsfunktionen}
+
+Aktivierungsfunktionen (activation functions) machen neuronale Netze nichtlinear.
+Ohne nichtlineare Aktivierungsfunktionen wäre die Verkettung mehrerer linearer Schichten wieder nur eine lineare Abbildung.
+
+\subsection{Sigmoid}
+
+Die Sigmoid-Funktion ist:
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+Sie gibt Werte in
+
+\[
+    (0,1)
+\]
+
+aus.
+
+\subsection{Tanh}
+
+Die Hyperbolic-Tangent-Funktion ist:
+
+\[
+    \tanh(a)
+    =
+    \frac{\exp(a)-\exp(-a)}
+    {\exp(a)+\exp(-a)}.
+\]
+
+Sie gibt Werte in
+
+\[
+    (-1,1)
+\]
+
+aus.
+
+\subsection{ReLU}
+
+Die ReLU-Funktion (rectified linear unit) ist:
+
+\[
+    \operatorname{ReLU}(a)
+    =
+    \max(0,a).
+\]
+
+Also:
+
+\[
+    \operatorname{ReLU}(a)
+    =
+    \begin{cases}
+        a, & a>0, \\
+        0, & a\leq 0.
+    \end{cases}
+\]
+
+\begin{conceptbox}
+Nichtlineare Aktivierungsfunktionen sind entscheidend.
+
+Ohne sie kann ein mehrschichtiges Netz keine komplexeren Funktionen darstellen als ein einzelnes lineares Modell.
+\end{conceptbox}
+
+\section{Warum lineare Schichten allein nicht reichen}
+
+Angenommen, wir haben zwei lineare Schichten ohne Aktivierungsfunktion:
+
+\[
+    \vec{h}
+    =
+    W_1\vec{x},
+\]
+
+und
+
+\[
+    \vec{y}
+    =
+    W_2\vec{h}.
+\]
+
+Dann gilt:
+
+\[
+    \vec{y}
+    =
+    W_2W_1\vec{x}.
+\]
+
+Setze
+
+\[
+    W
+    =
+    W_2W_1.
+\]
+
+Dann:
+
+\[
+    \vec{y}
+    =
+    W\vec{x}.
+\]
+
+Das ist wieder nur eine lineare Abbildung.
+
+\begin{examtipbox}
+Mehrere lineare Schichten ohne Nichtlinearität sind äquivalent zu einer einzigen linearen Schicht.
+
+Deshalb braucht ein neuronales Netz nichtlineare Aktivierungsfunktionen.
+\end{examtipbox}
+
+\section{Perzeptron und Feature-Transformation}
+
+Wie bei logistischer Regression kann auch ein Perzeptron mit Basisfunktionen verwendet werden.
+Statt direkt \(\vec{x}\) zu klassifizieren, verwendet man eine transformierte Darstellung:
+
+\[
+    \vec{\phi}(\vec{x}).
+\]
+
+Dann ist:
+
+\[
+    y
+    =
+    \operatorname{sign}
+    \left(
+        \vec{w}^{\top}\vec{\phi}(\vec{x})
+    \right).
+\]
+
+Die Entscheidungsgrenze im transformierten Raum ist linear:
+
+\[
+    \vec{w}^{\top}\vec{\phi}(\vec{x})=0.
+\]
+
+Im ursprünglichen Eingaberaum kann sie nichtlinear sein.
+
+\begin{examplebox}
+Für eine zweidimensionale Eingabe
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        x_2
+    \end{pmatrix}
+\]
+
+kann man quadratische Features verwenden:
+
+\[
+    \vec{\phi}(\vec{x})
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        x_2 \\
+        x_1^2 \\
+        x_2^2 \\
+        x_1x_2
+    \end{pmatrix}.
+\]
+
+Dann kann das Perzeptron nichtlineare Grenzen wie Ellipsen oder Parabeln darstellen.
+\end{examplebox}
+
+\section{Online-Lernen}
+
+Das klassische Perzeptron ist ein Online-Lernalgorithmus (online learning algorithm).
+Das bedeutet:
+Die Gewichte werden nach einzelnen Datenpunkten aktualisiert.
+
+\[
+    \vec{w}
+    \leftarrow
+    \vec{w}
+    +
+    \eta t_n\vec{x}_n.
+\]
+
+Diese Aktualisierung wird nur durchgeführt, wenn der aktuelle Datenpunkt falsch klassifiziert ist.
+
+\begin{definitionbox}
+Online-Lernen (online learning) bedeutet, dass das Modell schrittweise mit einzelnen Datenpunkten aktualisiert wird, statt immer den gesamten Datensatz gleichzeitig zu verwenden.
+\end{definitionbox}
+
+\begin{notebox}
+Online-Lernen ist nützlich, wenn Daten nacheinander eintreffen oder wenn der Datensatz zu groß ist, um ihn vollständig auf einmal zu verarbeiten.
+\end{notebox}
+
+\section{Lernrate}
+
+Die Lernrate (learning rate) \(\eta\) bestimmt die Schrittweite der Updates:
+
+\[
+    \vec{w}
+    \leftarrow
+    \vec{w}
+    +
+    \eta t_n\vec{x}_n.
+\]
+
+Wenn \(\eta\) groß ist, sind die Updates groß.
+Wenn \(\eta\) klein ist, sind die Updates klein.
+
+Beim klassischen Perzeptron ist die genaue Wahl von \(\eta\) weniger kritisch als bei vielen anderen Gradientenverfahren, weil nur das Vorzeichen von \(\vec{w}^{\top}\vec{x}\) zählt.
+Für \(\eta>0\) ändert eine konstante Skalierung der Gewichte die Entscheidungsgrenze im Wesentlichen nicht.
+
+\begin{notebox}
+Trotzdem kann \(\eta\) den Trainingsverlauf beeinflussen, insbesondere bei Varianten des Perzeptrons oder bei nicht separierbaren Daten.
+\end{notebox}
+
+\section{Pocket-Algorithmus}
+
+Wenn Daten nicht linear separierbar sind, konvergiert das klassische Perzeptron nicht garantiert.
+Eine praktische Erweiterung ist der Pocket-Algorithmus (pocket algorithm).
+
+Die Idee ist:
+Man speichert während des Trainings den bisher besten Gewichtsvektor.
+
+\begin{conceptbox}
+Der Pocket-Algorithmus behält den besten bisher gefundenen Gewichtsvektor in der Tasche.
+
+Auch wenn spätere Updates schlechter werden, kann man am Ende den besten gespeicherten Gewichtsvektor verwenden.
+\end{conceptbox}
+
+Formal:
+
+\begin{enumerate}
+    \item Trainiere wie beim Perzeptron.
+    \item Nach bestimmten Schritten berechne die Anzahl der Fehlklassifikationen.
+    \item Wenn der aktuelle Gewichtsvektor besser ist als der bisher beste, speichere ihn.
+    \item Gib am Ende den besten gespeicherten Gewichtsvektor aus.
+\end{enumerate}
+
+\begin{notebox}
+Der Pocket-Algorithmus löst das Problem nicht perfekt, aber er macht das Perzeptron bei nicht separierbaren Daten praktischer.
+\end{notebox}
+
+\section{Vergleich: Perzeptron, logistische Regression und lineare Regression}
+
+\[
+\begin{array}{c|c|c|c}
+\text{Modell}
+&
+\text{Ausgabe}
+&
+\text{Zieltyp}
+&
+\text{Training}
+\\
+\hline
+\text{Lineare Regression}
+&
+\vec{w}^{\top}\vec{x}
+&
+t\in\mathbb{R}
+&
+\text{Least Squares}
+\\
+\hline
+\text{Logistische Regression}
+&
+\sigma(\vec{w}^{\top}\vec{x})
+&
+t\in\{0,1\}
+&
+\text{Kreuzentropie}
+\\
+\hline
+\text{Perzeptron}
+&
+\operatorname{sign}(\vec{w}^{\top}\vec{x})
+&
+t\in\{-1,+1\}
+&
+\text{Perzeptron-Regel}
+\end{array}
+\]
+
+\begin{conceptbox}
+Alle drei Modelle verwenden einen linearen Score.
+
+Der Unterschied liegt darin, wie der Score interpretiert wird und welche Fehlerfunktion optimiert wird.
+\end{conceptbox}
+
+\section{Mehrklassen-Perzeptron}
+
+Das Perzeptron kann auch auf mehrere Klassen erweitert werden.
+Sei
+
+\[
+    t \in \{1,2,\dots,K\}.
+\]
+
+Für jede Klasse \(k\) gibt es einen Gewichtsvektor \(\vec{w}_k\).
+Der Score für Klasse \(k\) ist:
+
+\[
+    a_k
+    =
+    \vec{w}_k^{\top}\vec{x}.
+\]
+
+Die vorhergesagte Klasse ist:
+
+\[
+    \hat{t}
+    =
+    \arg\max_{k}
+    a_k.
+\]
+
+\begin{definitionbox}
+Beim Mehrklassen-Perzeptron (multiclass perceptron) gilt:
+
+\[
+    \hat{t}
+    =
+    \arg\max_{k}
+    \vec{w}_k^{\top}\vec{x}.
+\]
+\end{definitionbox}
+
+Wenn die wahre Klasse \(t\) ist und die vorhergesagte Klasse \(\hat{t}\) falsch ist, kann man aktualisieren:
+
+\[
+    \vec{w}_t
+    \leftarrow
+    \vec{w}_t+\eta\vec{x},
+\]
+
+und
+
+\[
+    \vec{w}_{\hat{t}}
+    \leftarrow
+    \vec{w}_{\hat{t}}-\eta\vec{x}.
+\]
+
+\begin{conceptbox}
+Beim Mehrklassen-Perzeptron wird der Gewichtsvektor der richtigen Klasse in Richtung des Datenpunkts verschoben.
+
+Der Gewichtsvektor der fälschlich vorhergesagten Klasse wird vom Datenpunkt weggeschoben.
+\end{conceptbox}
+
+\section{Perzeptron mit Margin}
+
+Beim klassischen Perzeptron reicht es, wenn
+
+\[
+    t_n\vec{w}^{\top}\vec{x}_n>0.
+\]
+
+Man kann aber eine Sicherheitsmarge (margin) verlangen.
+Zum Beispiel:
+
+\[
+    t_n\vec{w}^{\top}\vec{x}_n \geq \gamma,
+\]
+
+wobei
+
+\[
+    \gamma>0
+\]
+
+eine gewünschte Margin ist.
+
+\begin{definitionbox}
+Die Margin eines Datenpunkts bezüglich \(\vec{w}\) ist
+
+\[
+    t_n\vec{w}^{\top}\vec{x}_n.
+\]
+
+Eine positive Margin bedeutet korrekte Klassifikation.
+Eine große positive Margin bedeutet, dass der Punkt mit Sicherheitsabstand korrekt klassifiziert wird.
+\end{definitionbox}
+
+Margin-Ideen führen später zu Modellen wie Support Vector Machines.
+
+\begin{notebox}
+Das klassische Perzeptron versucht nur, die Punkte korrekt zu klassifizieren.
+Es maximiert nicht explizit die Margin.
+\end{notebox}
+
+\section{Zusammenhang zu Support Vector Machines}
+
+Support Vector Machines (SVMs) sind ebenfalls lineare Klassifikatoren, haben aber ein anderes Trainingsziel.
+Während das Perzeptron irgendeine trennende Hyperebene finden kann, sucht eine SVM eine Hyperebene mit möglichst großer Margin.
+
+\[
+    \text{Perzeptron}
+    \quad
+    \Rightarrow
+    \quad
+    \text{irgendeine trennende Hyperebene}.
+\]
+
+\[
+    \text{SVM}
+    \quad
+    \Rightarrow
+    \quad
+    \text{trennende Hyperebene mit großer Margin}.
+\]
+
+\begin{conceptbox}
+Das Perzeptron ist ein wichtiger Vorläufer vieler linearer Klassifikationsmethoden.
+
+Margin-basierte Methoden wie Support Vector Machines verbessern die Idee, indem sie nicht nur korrekte Klassifikation, sondern auch robuste Trennung verlangen.
+\end{conceptbox}
+
+\section{Zusammenhang zu Backpropagation}
+
+Das klassische Perzeptron verwendet eine nicht differenzierbare Schwellenfunktion:
+
+\[
+    \operatorname{sign}(a).
+\]
+
+Für moderne neuronale Netze braucht man aber meistens differenzierbare Aktivierungsfunktionen, damit Gradienten mit Backpropagation berechnet werden können.
+
+Deshalb verwendet man in neuronalen Netzen Funktionen wie:
+
+\[
+    \sigma(a),
+    \qquad
+    \tanh(a),
+    \qquad
+    \operatorname{ReLU}(a).
+\]
+
+\begin{notebox}
+ReLU ist bei \(a=0\) nicht differenzierbar, aber sie ist stückweise linear und funktioniert praktisch sehr gut.
+In Implementierungen verwendet man an \(a=0\) einfach eine geeignete Subgradienten-Konvention.
+\end{notebox}
+
+\section{Praktische Aspekte}
+
+\subsection{Feature-Skalierung}
+
+Wie bei logistischer Regression kann Feature-Skalierung wichtig sein.
+Wenn Merkmale sehr unterschiedliche Größenordnungen haben, dominieren Merkmale mit großen Zahlenwerten die Updates.
+
+Eine typische Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei werden \(\mu_j\) und \(\sigma_j\) auf den Trainingsdaten berechnet.
+
+\subsection{Datenreihenfolge}
+
+Da das Perzeptron online aktualisiert wird, kann die Reihenfolge der Datenpunkte den Trainingsverlauf beeinflussen.
+Oft mischt man die Daten zufällig.
+
+\subsection{Nicht separierbare Daten}
+
+Bei nicht separierbaren Daten sollte man nicht erwarten, dass das klassische Perzeptron perfekt konvergiert.
+Dann sind logistische Regression, regularisierte Modelle oder neuronale Netze oft stabiler.
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Perzeptrons:
+
+\begin{enumerate}
+    \item Perzeptron mit logistischer Regression verwechseln.
+    \item Die Vorzeichenkodierung \(t\in\{-1,+1\}\) mit \(t\in\{0,1\}\) mischen.
+    \item Den Bias-Term vergessen.
+    \item Denken, ein einzelnes Perzeptron könne nichtlinear separierbare Probleme lösen.
+    \item Die Entscheidungsgrenze mit der Aktivierungsfunktion verwechseln.
+    \item Die Perzeptron-Lernregel mit dem Gradienten der Kreuzentropie verwechseln.
+    \item Vergessen, dass das Perzeptron nur bei linear separierbaren Daten garantiert konvergiert.
+    \item Das XOR-Problem als linear separierbar ansehen.
+    \item Mehrere lineare Schichten ohne Aktivierungsfunktion für ein echtes tiefes Netz halten.
+    \item Nichtlineare Aktivierungsfunktionen in neuronalen Netzen unterschätzen.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Perzeptron-Vorhersage}
+
+Gegeben sei
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        -1 \\
+        2
+    \end{pmatrix},
+    \qquad
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}.
+\]
+
+Berechne die Perzeptron-Vorhersage
+
+\[
+    y
+    =
+    \operatorname{sign}(\vec{w}^{\top}\vec{x}).
+\]
+
+\begin{examplebox}
+Zuerst:
+
+\[
+    \vec{w}^{\top}\vec{x}
+    =
+    (-1)\cdot 1 + 2\cdot 1
+    =
+    1.
+\]
+
+Da
+
+\[
+    1>0,
+\]
+
+gilt:
+
+\[
+    y=+1.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Falsch klassifiziert oder korrekt?}
+
+Gegeben sei
+
+\[
+    t=-1
+\]
+
+und
+
+\[
+    \vec{w}^{\top}\vec{x}=2.
+\]
+
+Ist der Punkt korrekt klassifiziert?
+
+\begin{examplebox}
+Ein Punkt ist korrekt klassifiziert, wenn
+
+\[
+    t\vec{w}^{\top}\vec{x}>0.
+\]
+
+Hier:
+
+\[
+    t\vec{w}^{\top}\vec{x}
+    =
+    (-1)\cdot 2
+    =
+    -2.
+\]
+
+Da
+
+\[
+    -2 \leq 0,
+\]
+
+ist der Punkt falsch klassifiziert.
+\end{examplebox}
+
+\subsection{Aufgabe 3: Perzeptron-Update}
+
+Gegeben sei
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        0 \\
+        1
+    \end{pmatrix},
+    \qquad
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix},
+    \qquad
+    t=-1,
+\]
+
+und
+
+\[
+    \eta=1.
+\]
+
+Angenommen, der Punkt ist falsch klassifiziert.
+Berechne das Update.
+
+\begin{examplebox}
+Die Lernregel ist:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \vec{w}
+    +
+    \eta t\vec{x}.
+\]
+
+Einsetzen:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \begin{pmatrix}
+        0 \\
+        1
+    \end{pmatrix}
+    +
+    1\cdot(-1)
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}.
+\]
+
+Also:
+
+\[
+    \vec{w}_{\mathrm{neu}}
+    =
+    \begin{pmatrix}
+        0 \\
+        1
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        -1 \\
+        -1
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Entscheidungsgrenze}
+
+Gegeben sei ein Perzeptron mit
+
+\[
+    a
+    =
+    w_0+w_1x_1+w_2x_2.
+\]
+
+Die Gewichte seien
+
+\[
+    w_0=-2,
+    \qquad
+    w_1=1,
+    \qquad
+    w_2=1.
+\]
+
+Bestimme die Entscheidungsgrenze.
+
+\begin{examplebox}
+Die Entscheidungsgrenze ist:
+
+\[
+    a=0.
+\]
+
+Also:
+
+\[
+    -2+x_1+x_2=0.
+\]
+
+Damit:
+
+\[
+    x_2
+    =
+    2-x_1.
+\]
+
+Das ist eine Gerade.
+\end{examplebox}
+
+\subsection{Aufgabe 5: XOR}
+
+Warum kann ein einzelnes Perzeptron XOR nicht lösen?
+
+\begin{examplebox}
+Ein einzelnes Perzeptron hat eine lineare Entscheidungsgrenze:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+
+Für \(D=2\) ist das eine Gerade.
+
+Die XOR-Datenpunkte sind aber nicht durch eine einzige Gerade trennbar.
+Daher kann ein einzelnes Perzeptron XOR nicht lösen.
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Ein Perzeptron (perceptron) ist ein linearer Klassifikator.
+    \item Es berechnet einen Score:
+    \[
+        a
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+    \item Die Ausgabe ist:
+    \[
+        y
+        =
+        \operatorname{sign}(a).
+    \]
+    \item Mit Klassen \(t\in\{-1,+1\}\) ist ein Punkt korrekt klassifiziert, wenn:
+    \[
+        t\vec{w}^{\top}\vec{x}>0.
+    \]
+    \item Die Entscheidungsgrenze ist:
+    \[
+        \vec{w}^{\top}\vec{x}=0.
+    \]
+    \item Ein einzelnes Perzeptron kann nur linear separierbare Daten perfekt trennen.
+    \item Das Perzeptron-Kriterium ist:
+    \[
+        E_P(\vec{w})
+        =
+        -\sum_{n\in\mathcal{M}}
+        t_n\vec{w}^{\top}\vec{x}_n.
+    \]
+    \item Die Perzeptron-Lernregel ist:
+    \[
+        \vec{w}
+        \leftarrow
+        \vec{w}
+        +
+        \eta t_n\vec{x}_n.
+    \]
+    \item Das Perzeptron konvergiert garantiert, wenn die Daten linear separierbar sind.
+    \item Das XOR-Problem ist nicht linear separierbar und kann daher nicht von einem einzelnen Perzeptron gelöst werden.
+    \item Mehrschichtige neuronale Netze verwenden Perzeptron-ähnliche Einheiten mit nichtlinearen Aktivierungsfunktionen.
+    \item Nichtlineare Aktivierungsfunktionen sind notwendig, weil mehrere lineare Schichten ohne Nichtlinearität wieder nur eine lineare Abbildung ergeben.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Definiere ein Perzeptron.
+    \item Was ist der Unterschied zwischen Perzeptron und logistischer Regression?
+    \item Welche Rolle spielt der Bias-Term?
+    \item Was ist die Entscheidungsgrenze eines Perzeptrons?
+    \item Warum ist ein einzelnes Perzeptron ein linearer Klassifikator?
+    \item Was bedeutet lineare Separierbarkeit?
+    \item Zeige, warum \(t_n\vec{w}^{\top}\vec{x}_n>0\) korrekte Klassifikation bedeutet.
+    \item Definiere das Perzeptron-Kriterium.
+    \item Leite den Gradienten des Perzeptron-Kriteriums für einen falsch klassifizierten Punkt her.
+    \item Leite die Perzeptron-Lernregel her.
+    \item Erkläre intuitiv, warum die Perzeptron-Lernregel sinnvoll ist.
+    \item Wann konvergiert der Perzeptron-Algorithmus?
+    \item Warum konvergiert er bei nicht separierbaren Daten nicht garantiert?
+    \item Warum kann ein einzelnes Perzeptron XOR nicht lösen?
+    \item Wie können Basisfunktionen einem Perzeptron nichtlineare Grenzen ermöglichen?
+    \item Warum brauchen mehrschichtige neuronale Netze nichtlineare Aktivierungsfunktionen?
+    \item Was ist der Unterschied zwischen Online-Lernen und Batch-Lernen?
+    \item Was ist der Pocket-Algorithmus?
+    \item Wie funktioniert das Mehrklassen-Perzeptron?
+    \item Wie hängt das Perzeptron historisch und mathematisch mit neuronalen Netzen zusammen?
+\end{enumerate}
+\end{examtipbox}

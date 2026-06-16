@@ -1,0 +1,1594 @@
+\chapter{Generalisierung und Validierung}
+
+\section{Ziel dieses Kapitels}
+
+In den bisherigen Kapiteln haben wir verschiedene Modelle und Trainingsmethoden betrachtet:
+lineare Regression (linear regression), logistische Regression (logistic regression), Perzeptrons (perceptrons) und mehrschichtige Perzeptrons (multilayer perceptrons).
+Dabei ging es oft darum, eine Fehlerfunktion auf den Trainingsdaten zu minimieren.
+
+Das eigentliche Ziel im maschinellen Lernen ist aber nicht, auf den Trainingsdaten möglichst gut zu sein.
+Das eigentliche Ziel ist Generalisierung (generalization).
+
+\begin{conceptbox}
+Generalisierung (generalization) bedeutet, dass ein Modell auf neuen, bisher nicht gesehenen Daten gut funktioniert.
+
+Ein Modell soll also nicht nur die Trainingsdaten erklären, sondern die zugrunde liegende Struktur lernen.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist Generalisierung (generalization)?
+    \item Was ist der Unterschied zwischen Trainingsfehler (training error), Validierungsfehler (validation error) und Testfehler (test error)?
+    \item Was ist Überanpassung (overfitting)?
+    \item Was ist Unteranpassung (underfitting)?
+    \item Was ist Modellkomplexität (model complexity)?
+    \item Was ist der Bias-Varianz-Trade-off (bias-variance trade-off)?
+    \item Warum braucht man Validierungsdaten (validation data)?
+    \item Was ist Kreuzvalidierung (cross-validation)?
+    \item Was sind Hyperparameter (hyperparameters)?
+    \item Wie funktioniert Modellselektion (model selection)?
+    \item Was ist Regularisierung (regularization)?
+    \item Was ist Early Stopping?
+    \item Warum darf man Testdaten nicht zum Modellauswählen verwenden?
+\end{itemize}
+
+\section{Trainingsfehler und Generalisierung}
+
+Beim Training minimieren wir meistens eine Fehlerfunktion auf den Trainingsdaten:
+
+\[
+    E_{\mathrm{train}}(\theta)
+    =
+    \frac{1}{N_{\mathrm{train}}}
+    \sum_{n=1}^{N_{\mathrm{train}}}
+    E_n(\theta).
+\]
+
+Dabei bezeichnet \(\theta\) allgemein alle Parameter des Modells.
+Bei linearer Regression kann \(\theta=\vec{w}\) sein.
+Bei neuronalen Netzen enthält \(\theta\) alle Gewichte und Biases.
+
+\begin{definitionbox}
+Der Trainingsfehler (training error) ist der Fehler eines Modells auf den Daten, die zum Lernen der Parameter verwendet wurden.
+\end{definitionbox}
+
+Ein kleiner Trainingsfehler ist notwendig, aber nicht ausreichend.
+Ein Modell kann auf den Trainingsdaten sehr gut sein und trotzdem auf neuen Daten schlecht funktionieren.
+
+\begin{conceptbox}
+Das Ziel ist nicht:
+
+\[
+    \text{minimiere nur den Trainingsfehler}.
+\]
+
+Das Ziel ist:
+
+\[
+    \text{minimiere den erwarteten Fehler auf neuen Daten}.
+\]
+\end{conceptbox}
+
+\section{Daten erzeugende Verteilung}
+
+In vielen theoretischen Betrachtungen nehmen wir an, dass Daten aus einer unbekannten Verteilung stammen.
+Ein Datenpunkt besteht aus Eingabe und Zielwert:
+
+\[
+    (\vec{x},t).
+\]
+
+Diese Paare werden aus einer gemeinsamen Verteilung gezogen:
+
+\[
+    (\vec{x},t)
+    \sim
+    p(\vec{x},t).
+\]
+
+Die Trainingsdaten sind dann Stichproben:
+
+\[
+    \mathcal{D}_{\mathrm{train}}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}.
+\]
+
+Meistens nimmt man an:
+
+\[
+    (\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)
+    \overset{\mathrm{i.i.d.}}{\sim}
+    p(\vec{x},t).
+\]
+
+\begin{notebox}
+Die wahre Verteilung \(p(\vec{x},t)\) kennen wir normalerweise nicht.
+Wir sehen nur endlich viele Beispiele aus dieser Verteilung.
+Genau deshalb ist Generalisierung schwierig.
+\end{notebox}
+
+\section{Erwarteter Fehler}
+
+Der ideale Fehler eines Modells wäre der erwartete Fehler über die wahre Datenverteilung.
+Für eine Verlustfunktion \(L(y(\vec{x}),t)\) ist der erwartete Fehler:
+
+\[
+    E_{\mathrm{true}}(\theta)
+    =
+    \mathbb{E}_{(\vec{x},t)\sim p(\vec{x},t)}
+    \left[
+        L(y(\vec{x},\theta),t)
+    \right].
+\]
+
+Als Integral:
+
+\[
+    E_{\mathrm{true}}(\theta)
+    =
+    \int
+    L(y(\vec{x},\theta),t)
+    p(\vec{x},t)
+    \,d\vec{x}\,dt.
+\]
+
+\begin{definitionbox}
+Der wahre Generalisierungsfehler (true generalization error) ist der erwartete Fehler eines Modells auf neuen Daten aus der gleichen Datenverteilung:
+
+\[
+    E_{\mathrm{true}}(\theta)
+    =
+    \mathbb{E}
+    \left[
+        L(y(\vec{x},\theta),t)
+    \right].
+\]
+\end{definitionbox}
+
+Da \(p(\vec{x},t)\) unbekannt ist, können wir \(E_{\mathrm{true}}(\theta)\) nicht exakt berechnen.
+Wir müssen ihn mit Daten schätzen.
+
+\section{Trainingsfehler als Schätzer}
+
+Der Trainingsfehler ist ein empirischer Durchschnitt:
+
+\[
+    E_{\mathrm{train}}(\theta)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    L(y(\vec{x}_n,\theta),t_n).
+\]
+
+Wenn \(\theta\) fest wäre und nicht aus denselben Daten gelernt würde, wäre dieser Durchschnitt ein natürlicher Schätzer des erwarteten Fehlers.
+
+Das Problem ist aber:
+\(\theta\) wird genau so gewählt, dass \(E_{\mathrm{train}}(\theta)\) klein wird.
+
+\begin{conceptbox}
+Der Trainingsfehler ist normalerweise optimistisch verzerrt.
+
+Er unterschätzt häufig den Fehler auf neuen Daten, weil das Modell direkt auf diese Trainingsdaten angepasst wurde.
+\end{conceptbox}
+
+Deshalb brauchen wir getrennte Daten zur Bewertung.
+
+\section{Trainings-, Validierungs- und Testdaten}
+
+Typischerweise teilt man die verfügbaren Daten in drei Mengen:
+
+\[
+    \mathcal{D}
+    =
+    \mathcal{D}_{\mathrm{train}}
+    \cup
+    \mathcal{D}_{\mathrm{val}}
+    \cup
+    \mathcal{D}_{\mathrm{test}}.
+\]
+
+\begin{definitionbox}
+Trainingsdaten (training data) werden verwendet, um die Modellparameter zu lernen.
+
+Validierungsdaten (validation data) werden verwendet, um Hyperparameter zu wählen und Modelle zu vergleichen.
+
+Testdaten (test data) werden erst ganz am Ende verwendet, um die endgültige Modellleistung zu schätzen.
+\end{definitionbox}
+
+\subsection{Trainingsfehler}
+
+\[
+    E_{\mathrm{train}}
+    =
+    \frac{1}{N_{\mathrm{train}}}
+    \sum_{n\in\mathcal{D}_{\mathrm{train}}}
+    L(y(\vec{x}_n,\theta),t_n).
+\]
+
+\subsection{Validierungsfehler}
+
+\[
+    E_{\mathrm{val}}
+    =
+    \frac{1}{N_{\mathrm{val}}}
+    \sum_{n\in\mathcal{D}_{\mathrm{val}}}
+    L(y(\vec{x}_n,\theta),t_n).
+\]
+
+\subsection{Testfehler}
+
+\[
+    E_{\mathrm{test}}
+    =
+    \frac{1}{N_{\mathrm{test}}}
+    \sum_{n\in\mathcal{D}_{\mathrm{test}}}
+    L(y(\vec{x}_n,\theta),t_n).
+\]
+
+\begin{examtipbox}
+Die Testdaten dürfen nicht zur Modellselektion verwendet werden.
+
+Wenn man wiederholt Modelle auf dem Testdatensatz bewertet und danach Entscheidungen trifft, wird der Testdatensatz indirekt zum Validierungsdatensatz.
+Dann ist der Testfehler keine ehrliche Schätzung der Generalisierung mehr.
+\end{examtipbox}
+
+\section{Überanpassung}
+
+Überanpassung (overfitting) tritt auf, wenn ein Modell die Trainingsdaten sehr gut beschreibt, aber auf neuen Daten schlecht ist.
+
+Typisches Verhalten:
+
+\[
+    E_{\mathrm{train}}
+    \text{ ist klein},
+\]
+
+aber
+
+\[
+    E_{\mathrm{test}}
+    \text{ ist groß}.
+\]
+
+\begin{definitionbox}
+Überanpassung (overfitting) bedeutet, dass ein Modell zu stark an die Trainingsdaten angepasst ist und dabei auch Rauschen oder zufällige Besonderheiten der Trainingsdaten lernt.
+\end{definitionbox}
+
+\begin{examplebox}
+Ein hochgradiges Polynom kann durch viele Trainingspunkte fast exakt verlaufen.
+Zwischen den Trainingspunkten kann es aber stark oszillieren.
+Dann ist der Trainingsfehler klein, aber der Fehler auf neuen Punkten groß.
+\end{examplebox}
+
+\begin{conceptbox}
+Überanpassung bedeutet:
+
+\[
+    \text{Modell lernt nicht nur Signal, sondern auch Rauschen}.
+\]
+\end{conceptbox}
+
+\section{Unteranpassung}
+
+Unteranpassung (underfitting) ist das Gegenteil.
+Das Modell ist zu einfach, um die Struktur der Daten zu erfassen.
+
+Typisches Verhalten:
+
+\[
+    E_{\mathrm{train}}
+    \text{ ist groß}
+\]
+
+und
+
+\[
+    E_{\mathrm{test}}
+    \text{ ist ebenfalls groß}.
+\]
+
+\begin{definitionbox}
+Unteranpassung (underfitting) bedeutet, dass ein Modell zu wenig flexibel ist, um die relevante Struktur in den Daten zu lernen.
+\end{definitionbox}
+
+\begin{examplebox}
+Wenn die wahre Beziehung gekrümmt ist, aber wir nur eine Gerade verwenden, kann das Modell die Daten nicht gut beschreiben.
+Dann liegt Unteranpassung vor.
+\end{examplebox}
+
+\section{Modellkomplexität}
+
+Modellkomplexität (model complexity) beschreibt, wie flexibel ein Modell ist.
+
+Beispiele für Komplexität:
+
+\begin{itemize}
+    \item Grad eines Polynoms,
+    \item Anzahl der Basisfunktionen,
+    \item Anzahl der Parameter,
+    \item Tiefe eines neuronalen Netzes,
+    \item Anzahl der Neuronen,
+    \item Stärke der Regularisierung.
+\end{itemize}
+
+\begin{conceptbox}
+Mit steigender Modellkomplexität sinkt typischerweise der Trainingsfehler.
+
+Der Testfehler sinkt aber nur bis zu einem gewissen Punkt.
+Danach kann er wieder steigen, weil das Modell überanpasst.
+\end{conceptbox}
+
+Typisches Verhalten:
+
+\[
+    \text{zu einfach}
+    \quad
+    \Rightarrow
+    \quad
+    \text{Unteranpassung}.
+\]
+
+\[
+    \text{passend komplex}
+    \quad
+    \Rightarrow
+    \quad
+    \text{gute Generalisierung}.
+\]
+
+\[
+    \text{zu komplex}
+    \quad
+    \Rightarrow
+    \quad
+    \text{Überanpassung}.
+\]
+
+\section{Beispiel: Polynomiale Regression}
+
+Wir betrachten polynomiale Regression mit Basisfunktionen
+
+\[
+    \phi_j(x)=x^j.
+\]
+
+Das Modell ist:
+
+\[
+    y(x,\vec{w})
+    =
+    \sum_{j=0}^{M}
+    w_jx^j.
+\]
+
+Der Polynomgrad \(M\) steuert die Modellkomplexität.
+
+\subsection{Kleines \(M\)}
+
+Wenn \(M=1\), ist das Modell eine Gerade:
+
+\[
+    y(x,\vec{w})
+    =
+    w_0+w_1x.
+\]
+
+Das kann für gekrümmte Daten zu einfach sein.
+
+\subsection{Mittleres \(M\)}
+
+Ein mittlerer Polynomgrad kann die Struktur gut erfassen, ohne zu stark zu oszillieren.
+
+\subsection{Großes \(M\)}
+
+Ein sehr großer Polynomgrad kann viele Trainingspunkte exakt treffen, aber zwischen den Punkten stark schwanken.
+
+\begin{conceptbox}
+Der Polynomgrad \(M\) ist ein Hyperparameter.
+
+Er wird nicht direkt durch Gradientenabstieg gelernt, sondern muss durch Modellselektion gewählt werden.
+\end{conceptbox}
+
+\section{Hyperparameter}
+
+Parameter und Hyperparameter sind unterschiedliche Dinge.
+
+\begin{definitionbox}
+Parameter (parameters) werden während des Trainings aus den Trainingsdaten gelernt.
+
+Hyperparameter (hyperparameters) werden vor oder außerhalb des eigentlichen Trainings festgelegt.
+\end{definitionbox}
+
+Beispiele für Parameter:
+
+\[
+    \vec{w}
+\]
+
+bei linearer Regression,
+
+\[
+    W^{(l)},\vec{b}^{(l)}
+\]
+
+bei neuronalen Netzen.
+
+Beispiele für Hyperparameter:
+
+\begin{itemize}
+    \item Polynomgrad \(M\),
+    \item Regularisierungsstärke \(\lambda\),
+    \item Lernrate \(\eta\),
+    \item Anzahl der versteckten Schichten,
+    \item Anzahl der Neuronen pro Schicht,
+    \item Batch-Größe,
+    \item Anzahl der Trainings-Epochen,
+    \item Wahl der Aktivierungsfunktion.
+\end{itemize}
+
+\begin{notebox}
+Hyperparameter werden typischerweise mit Validierungsdaten gewählt.
+Wenn man sie mit Testdaten wählt, ist der Testfehler nicht mehr unabhängig.
+\end{notebox}
+
+\section{Validierung}
+
+Validierung (validation) bedeutet, Modelle oder Hyperparameter auf Daten zu bewerten, die nicht für das Fitten der Parameter verwendet wurden.
+
+Vorgehen:
+
+\begin{enumerate}
+    \item Teile die Daten in Trainings-, Validierungs- und Testdaten.
+    \item Trainiere verschiedene Modelle auf den Trainingsdaten.
+    \item Berechne den Validierungsfehler.
+    \item Wähle das Modell mit dem besten Validierungsfehler.
+    \item Bewerte das gewählte Modell einmal auf den Testdaten.
+\end{enumerate}
+
+\begin{definitionbox}
+Modellselektion (model selection) ist die Auswahl eines Modells oder von Hyperparametern anhand von Validierungsleistung.
+\end{definitionbox}
+
+\begin{conceptbox}
+Trainingsdaten beantworten:
+
+\[
+    \text{Welche Parameter soll das Modell haben?}
+\]
+
+Validierungsdaten beantworten:
+
+\[
+    \text{Welches Modell oder welche Hyperparameter sollen gewählt werden?}
+\]
+
+Testdaten beantworten:
+
+\[
+    \text{Wie gut ist das endgültige Modell auf neuen Daten?}
+\]
+\end{conceptbox}
+
+\section{Typische Datenaufteilung}
+
+Eine einfache Aufteilung ist zum Beispiel:
+
+\[
+    60\% \text{ Training},
+    \qquad
+    20\% \text{ Validierung},
+    \qquad
+    20\% \text{ Test}.
+\]
+
+Oder:
+
+\[
+    80\% \text{ Training},
+    \qquad
+    10\% \text{ Validierung},
+    \qquad
+    10\% \text{ Test}.
+\]
+
+Die genaue Aufteilung hängt von der Datenmenge ab.
+
+\begin{notebox}
+Bei sehr großen Datensätzen reicht oft ein kleiner Testanteil.
+Bei kleinen Datensätzen möchte man möglichst viele Daten fürs Training nutzen.
+Dann kann Kreuzvalidierung hilfreich sein.
+\end{notebox}
+
+\section{Kreuzvalidierung}
+
+Bei kleinen Datensätzen ist eine einzelne Validierungsaufteilung oft instabil.
+Das Ergebnis kann stark davon abhängen, welche Datenpunkte zufällig in Training oder Validierung landen.
+Eine Lösung ist Kreuzvalidierung (cross-validation).
+
+\begin{definitionbox}
+Bei \(K\)-facher Kreuzvalidierung (\(K\)-fold cross-validation) wird der Datensatz in \(K\) Teile, sogenannte Folds, aufgeteilt.
+
+Das Modell wird \(K\)-mal trainiert.
+Jedes Mal wird ein anderer Fold zur Validierung verwendet und die übrigen \(K-1\) Folds zum Training.
+\end{definitionbox}
+
+Der Kreuzvalidierungsfehler ist der Durchschnitt der Validierungsfehler:
+
+\[
+    E_{\mathrm{CV}}
+    =
+    \frac{1}{K}
+    \sum_{k=1}^{K}
+    E_{\mathrm{val}}^{(k)}.
+\]
+
+Dabei ist \(E_{\mathrm{val}}^{(k)}\) der Validierungsfehler im \(k\)-ten Durchlauf.
+
+\begin{conceptbox}
+Kreuzvalidierung nutzt die Daten effizienter als eine einzelne Validierungsaufteilung.
+
+Jeder Datenpunkt wird einmal zur Validierung und \(K-1\)-mal zum Training verwendet.
+\end{conceptbox}
+
+\section{Leave-One-Out-Kreuzvalidierung}
+
+Ein Spezialfall ist Leave-One-Out-Kreuzvalidierung (leave-one-out cross-validation).
+
+Dabei ist
+
+\[
+    K=N.
+\]
+
+Das bedeutet:
+Jeder Fold enthält genau einen Datenpunkt.
+
+Für jeden Durchlauf wird auf \(N-1\) Datenpunkten trainiert und auf dem übrig gebliebenen Datenpunkt validiert.
+
+\begin{definitionbox}
+Leave-One-Out-Kreuzvalidierung ist \(K\)-fold cross-validation mit
+
+\[
+    K=N.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Leave-One-Out nutzt die Daten sehr effizient, kann aber rechnerisch teuer sein, weil das Modell \(N\)-mal trainiert werden muss.
+\end{notebox}
+
+\section{Stratifizierte Aufteilung}
+
+Bei Klassifikationsproblemen mit unausgeglichenen Klassen ist es wichtig, dass Training, Validierung und Test ähnliche Klassenanteile haben.
+
+\begin{definitionbox}
+Stratifizierte Aufteilung (stratified split) bedeutet, dass die Klassenverteilung in Training, Validierung und Test ungefähr gleich bleibt.
+\end{definitionbox}
+
+Beispiel:
+Wenn im gesamten Datensatz
+
+\[
+    90\%
+\]
+
+der Datenpunkte Klasse \(0\) und
+
+\[
+    10\%
+\]
+
+Klasse \(1\) sind, sollten Training, Validierung und Test ungefähr dieselben Anteile haben.
+
+\begin{examtipbox}
+Bei unausgeglichenen Klassen sollte man nicht rein zufällig ohne Kontrolle splitten.
+Sonst kann es passieren, dass eine seltene Klasse im Validierungs- oder Testdatensatz kaum vertreten ist.
+\end{examtipbox}
+
+\section{Data Leakage}
+
+Data Leakage ist ein häufiger und gefährlicher Fehler.
+Es bedeutet, dass Information aus Validierungs- oder Testdaten indirekt ins Training gelangt.
+
+\begin{definitionbox}
+Data Leakage bedeutet, dass ein Modell während des Trainings oder der Modellselektion Information verwendet, die eigentlich erst in Validierungs- oder Testdaten verfügbar sein sollte.
+\end{definitionbox}
+
+Beispiele:
+
+\begin{itemize}
+    \item Normalisierung mit Mittelwert und Standardabweichung des gesamten Datensatzes statt nur der Trainingsdaten.
+    \item Feature-Auswahl auf allen Daten vor dem Split.
+    \item Hyperparameterwahl anhand des Testfehlers.
+    \item Duplikate desselben Falls in Training und Test.
+    \item Zeitreihendaten zufällig mischen, obwohl zukünftige Daten nicht zur Vergangenheit verfügbar sein sollten.
+\end{itemize}
+
+\begin{conceptbox}
+Data Leakage führt zu zu optimistischen Ergebnissen.
+
+Das Modell wirkt besser, als es auf wirklich neuen Daten wäre.
+\end{conceptbox}
+
+\section{Vorverarbeitung und Splits}
+
+Viele Vorverarbeitungsschritte müssen nur auf den Trainingsdaten gefittet werden.
+
+Beispiel Standardisierung:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei müssen \(\mu_j\) und \(\sigma_j\) nur aus den Trainingsdaten berechnet werden:
+
+\[
+    \mu_j
+    =
+    \frac{1}{N_{\mathrm{train}}}
+    \sum_{n\in\mathcal{D}_{\mathrm{train}}}
+    x_{nj},
+\]
+
+\[
+    \sigma_j^2
+    =
+    \frac{1}{N_{\mathrm{train}}}
+    \sum_{n\in\mathcal{D}_{\mathrm{train}}}
+    (x_{nj}-\mu_j)^2.
+\]
+
+Dann werden dieselben Werte auf Validierungs- und Testdaten angewendet.
+
+\begin{examtipbox}
+Regel:
+
+\[
+    \text{Fit preprocessing on training data only.}
+\]
+
+Dann:
+
+\[
+    \text{Apply same transformation to validation and test data.}
+\]
+\end{examtipbox}
+
+\section{Bias-Varianz-Trade-off}
+
+Der Bias-Varianz-Trade-off wurde bereits bei Schätzern eingeführt.
+Bei Generalisierung ist er besonders wichtig.
+
+Informell:
+
+\[
+    \text{Bias}
+    =
+    \text{Fehler durch zu einfache Modellannahmen}.
+\]
+
+\[
+    \text{Varianz}
+    =
+    \text{Empfindlichkeit gegenüber Trainingsdaten}.
+\]
+
+\begin{conceptbox}
+Hoher Bias führt häufig zu Unteranpassung.
+
+Hohe Varianz führt häufig zu Überanpassung.
+\end{conceptbox}
+
+\subsection{Hoher Bias}
+
+Ein Modell mit hohem Bias ist zu starr.
+Es kann die wahre Struktur nicht gut approximieren.
+
+Typisch:
+
+\[
+    E_{\mathrm{train}}
+    \text{ hoch},
+    \qquad
+    E_{\mathrm{test}}
+    \text{ hoch}.
+\]
+
+\subsection{Hohe Varianz}
+
+Ein Modell mit hoher Varianz reagiert stark auf die konkrete Trainingsmenge.
+Es passt sich zufälligen Details an.
+
+Typisch:
+
+\[
+    E_{\mathrm{train}}
+    \text{ niedrig},
+    \qquad
+    E_{\mathrm{test}}
+    \text{ hoch}.
+\]
+
+\section{Bias-Varianz-Zerlegung für Regression}
+
+Für quadratischen Fehler kann man den erwarteten Vorhersagefehler in Bias, Varianz und Rauschen zerlegen.
+
+Sei die wahre Beziehung:
+
+\[
+    t
+    =
+    f(\vec{x})
+    +
+    \epsilon,
+\]
+
+mit
+
+\[
+    \mathbb{E}[\epsilon]=0
+\]
+
+und
+
+\[
+    \mathrm{Var}(\epsilon)=\sigma^2.
+\]
+
+Ein Lernalgorithmus trainiert auf einem zufälligen Datensatz \(\mathcal{D}\) ein Modell
+
+\[
+    y(\vec{x};\mathcal{D}).
+\]
+
+Der erwartete quadratische Fehler an einem festen Punkt \(\vec{x}\) kann geschrieben werden als:
+
+\[
+    \mathbb{E}_{\mathcal{D},t}
+    \left[
+        (y(\vec{x};\mathcal{D})-t)^2
+    \right]
+    =
+    \underbrace{
+        \left(
+            \mathbb{E}_{\mathcal{D}}[y(\vec{x};\mathcal{D})]
+            -
+            f(\vec{x})
+        \right)^2
+    }_{\text{Bias}^2}
+    +
+    \underbrace{
+        \mathbb{E}_{\mathcal{D}}
+        \left[
+            \left(
+                y(\vec{x};\mathcal{D})
+                -
+                \mathbb{E}_{\mathcal{D}}[y(\vec{x};\mathcal{D})]
+            \right)^2
+        \right]
+    }_{\text{Varianz}}
+    +
+    \underbrace{\sigma^2}_{\text{Rauschen}}.
+\]
+
+\begin{definitionbox}
+Für quadratischen Fehler zerfällt der erwartete Fehler in:
+
+\[
+    \text{erwarteter Fehler}
+    =
+    \text{Bias}^2
+    +
+    \text{Varianz}
+    +
+    \text{Rauschen}.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Das Rauschen \(\sigma^2\) ist irreduzibel.
+Auch das beste Modell kann zufälliges Messrauschen nicht vorhersagen.
+\end{notebox}
+
+\section{Regularisierung}
+
+Regularisierung (regularization) ist eine zentrale Methode gegen Overfitting.
+Man bestraft zu komplexe Modelle oder große Parameterwerte.
+
+Ein typischer regularisierter Verlust ist:
+
+\[
+    E_{\mathrm{reg}}(\theta)
+    =
+    E_{\mathrm{data}}(\theta)
+    +
+    \lambda E_{\mathrm{regterm}}(\theta).
+\]
+
+Dabei steuert \(\lambda\) die Stärke der Regularisierung.
+
+\begin{definitionbox}
+Regularisierung (regularization) fügt dem Trainingsziel einen Zusatzterm hinzu, der unerwünschte Modellkomplexität bestraft.
+\end{definitionbox}
+
+\subsection{\(L_2\)-Regularisierung}
+
+Bei \(L_2\)-Regularisierung verwendet man:
+
+\[
+    E_{\mathrm{regterm}}(\vec{w})
+    =
+    \frac{1}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Der Verlust ist:
+
+\[
+    E_{\mathrm{reg}}(\vec{w})
+    =
+    E_{\mathrm{data}}(\vec{w})
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+\begin{conceptbox}
+\(L_2\)-Regularisierung bestraft große Gewichte.
+
+Sie führt oft zu glatteren, stabileren Modellen.
+\end{conceptbox}
+
+\subsection{\(L_1\)-Regularisierung}
+
+Bei \(L_1\)-Regularisierung verwendet man:
+
+\[
+    E_{\mathrm{regterm}}(\vec{w})
+    =
+    \sum_{j}
+    |w_j|.
+\]
+
+Der Verlust ist:
+
+\[
+    E_{\mathrm{reg}}(\vec{w})
+    =
+    E_{\mathrm{data}}(\vec{w})
+    +
+    \lambda
+    \sum_{j}
+    |w_j|.
+\]
+
+\begin{conceptbox}
+\(L_1\)-Regularisierung fördert sparse Lösungen.
+
+Das bedeutet:
+Viele Gewichte werden exakt oder ungefähr \(0\).
+\end{conceptbox}
+
+\section{Regularisierung als MAP}
+
+Regularisierung kann probabilistisch als Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation) interpretiert werden.
+
+Bei MAP maximieren wir:
+
+\[
+    p(\theta\mid\mathcal{D})
+    \propto
+    p(\mathcal{D}\mid\theta)p(\theta).
+\]
+
+Äquivalent minimieren wir den negativen Log-Posterior:
+
+\[
+    -\log p(\theta\mid\mathcal{D})
+    =
+    -\log p(\mathcal{D}\mid\theta)
+    -
+    \log p(\theta)
+    +
+    \text{const}.
+\]
+
+Der Datenfehler ist:
+
+\[
+    E_{\mathrm{data}}(\theta)
+    =
+    -\log p(\mathcal{D}\mid\theta).
+\]
+
+Der Regularisierungsterm kommt aus dem Prior:
+
+\[
+    E_{\mathrm{regterm}}(\theta)
+    =
+    -\log p(\theta).
+\]
+
+\begin{conceptbox}
+Regularisierung entspricht einem Prior auf Parameter.
+
+\[
+    \text{Regularisierung}
+    \quad
+    \Longleftrightarrow
+    \quad
+    \text{Prior}.
+\]
+\end{conceptbox}
+
+Ein Gauß-Prior führt zu \(L_2\)-Regularisierung.
+Ein Laplace-Prior führt zu \(L_1\)-Regularisierung.
+
+\section{Early Stopping}
+
+Early Stopping ist eine Regularisierungsmethode für iterative Trainingsverfahren.
+
+Beim Training sinkt der Trainingsfehler meistens weiter.
+Der Validierungsfehler sinkt zunächst ebenfalls, kann aber später wieder steigen.
+
+\[
+    E_{\mathrm{train}}
+    \downarrow
+\]
+
+während
+
+\[
+    E_{\mathrm{val}}
+\]
+
+nach einer gewissen Zeit wieder steigen kann.
+
+\begin{definitionbox}
+Early Stopping bedeutet, das Training zu stoppen, wenn der Validierungsfehler nicht mehr besser wird.
+\end{definitionbox}
+
+\begin{conceptbox}
+Early Stopping verhindert, dass das Modell zu lange an die Trainingsdaten angepasst wird.
+
+Es wirkt daher als Regularisierung.
+\end{conceptbox}
+
+Typisches Vorgehen:
+
+\begin{enumerate}
+    \item Trainiere iterativ.
+    \item Berechne nach jeder Epoche den Validierungsfehler.
+    \item Speichere das Modell mit dem besten Validierungsfehler.
+    \item Stoppe, wenn sich der Validierungsfehler über mehrere Epochen nicht verbessert.
+\end{enumerate}
+
+\section{Lernkurven}
+
+Lernkurven (learning curves) zeigen Trainings- und Validierungsfehler als Funktion der Trainingsmenge oder der Trainingszeit.
+
+\subsection{Fehler über Trainingszeit}
+
+Man zeichnet:
+
+\[
+    E_{\mathrm{train}}(\tau)
+\]
+
+und
+
+\[
+    E_{\mathrm{val}}(\tau)
+\]
+
+gegen die Epoche \(\tau\).
+
+Typisches Overfitting-Muster:
+
+\[
+    E_{\mathrm{train}}(\tau)
+    \text{ sinkt weiter},
+\]
+
+aber
+
+\[
+    E_{\mathrm{val}}(\tau)
+    \text{ steigt wieder}.
+\]
+
+\subsection{Fehler über Datenmenge}
+
+Man trainiert mit verschiedenen Trainingsgrößen \(N\) und zeichnet:
+
+\[
+    E_{\mathrm{train}}(N)
+\]
+
+und
+
+\[
+    E_{\mathrm{val}}(N).
+\]
+
+\begin{conceptbox}
+Lernkurven helfen zu diagnostizieren, ob ein Modell eher unteranpasst oder überanpasst.
+\end{conceptbox}
+
+\section{Diagnose: Underfitting oder Overfitting}
+
+\subsection{Fall 1: Beide Fehler hoch}
+
+Wenn
+
+\[
+    E_{\mathrm{train}}
+    \text{ hoch}
+\]
+
+und
+
+\[
+    E_{\mathrm{val}}
+    \text{ hoch}
+\]
+
+sind, liegt wahrscheinlich Unteranpassung vor.
+
+Mögliche Maßnahmen:
+
+\begin{itemize}
+    \item komplexeres Modell wählen,
+    \item mehr Features verwenden,
+    \item schwächere Regularisierung verwenden,
+    \item länger trainieren,
+    \item bessere Optimierung verwenden.
+\end{itemize}
+
+\subsection{Fall 2: Trainingsfehler niedrig, Validierungsfehler hoch}
+
+Wenn
+
+\[
+    E_{\mathrm{train}}
+    \text{ niedrig}
+\]
+
+aber
+
+\[
+    E_{\mathrm{val}}
+    \text{ hoch}
+\]
+
+ist, liegt wahrscheinlich Überanpassung vor.
+
+Mögliche Maßnahmen:
+
+\begin{itemize}
+    \item einfacheres Modell wählen,
+    \item stärkere Regularisierung verwenden,
+    \item mehr Trainingsdaten sammeln,
+    \item Datenaugmentation verwenden,
+    \item Early Stopping verwenden.
+\end{itemize}
+
+\subsection{Fall 3: Beide Fehler niedrig}
+
+Wenn beide Fehler niedrig sind, generalisiert das Modell wahrscheinlich gut.
+Trotzdem sollte am Ende ein unabhängiger Testdatensatz verwendet werden.
+
+\section{Datenaugmentation}
+
+Datenaugmentation (data augmentation) erzeugt zusätzliche Trainingsbeispiele durch transformationsbasierte Varianten vorhandener Daten.
+
+Bei Bildern zum Beispiel:
+
+\begin{itemize}
+    \item kleine Rotationen,
+    \item Spiegelungen,
+    \item leichte Verschiebungen,
+    \item zufällige Ausschnitte,
+    \item Farbänderungen.
+\end{itemize}
+
+\begin{definitionbox}
+Datenaugmentation (data augmentation) erweitert die Trainingsdaten durch sinnvolle Transformationen, die das Label erhalten.
+\end{definitionbox}
+
+\begin{conceptbox}
+Datenaugmentation kann Overfitting reduzieren, weil das Modell mehr Variation sieht.
+\end{conceptbox}
+
+Wichtig:
+Die Transformationen müssen label-erhaltend sein.
+Wenn eine Transformation das Label verändert, erzeugt man falsche Trainingsdaten.
+
+\section{Ensembles}
+
+Ein Ensemble kombiniert mehrere Modelle.
+Die Idee ist, dass verschiedene Modelle unterschiedliche Fehler machen.
+Durch Mittelung oder Mehrheitsentscheidung kann die Gesamtleistung besser werden.
+
+Für Regression kann man Vorhersagen mitteln:
+
+\[
+    y_{\mathrm{ens}}(\vec{x})
+    =
+    \frac{1}{M}
+    \sum_{m=1}^{M}
+    y_m(\vec{x}).
+\]
+
+Für Klassifikation kann man Wahrscheinlichkeiten mitteln:
+
+\[
+    p_{\mathrm{ens}}(c\mid\vec{x})
+    =
+    \frac{1}{M}
+    \sum_{m=1}^{M}
+    p_m(c\mid\vec{x}).
+\]
+
+\begin{definitionbox}
+Ein Ensemble ist eine Kombination mehrerer Modelle zur Verbesserung von Stabilität und Generalisierung.
+\end{definitionbox}
+
+\begin{notebox}
+Ensembles reduzieren oft Varianz, sind aber rechnerisch teurer und schwerer zu interpretieren.
+\end{notebox}
+
+\section{Modellselektion}
+
+Modellselektion bedeutet, aus mehreren Kandidaten ein Modell auszuwählen.
+
+Beispiele:
+
+\begin{itemize}
+    \item Polynomgrad \(M\) wählen,
+    \item Regularisierung \(\lambda\) wählen,
+    \item Lernrate \(\eta\) wählen,
+    \item Netzwerkarchitektur wählen,
+    \item Aktivierungsfunktion wählen.
+\end{itemize}
+
+Für jeden Kandidaten trainiert man auf den Trainingsdaten und bewertet auf den Validierungsdaten.
+
+\[
+    \lambda^*
+    =
+    \arg\min_{\lambda}
+    E_{\mathrm{val}}(\lambda).
+\]
+
+\begin{definitionbox}
+Hyperparameteroptimierung (hyperparameter optimization) ist die Suche nach Hyperparametern, die den Validierungsfehler minimieren.
+\end{definitionbox}
+
+\section{Grid Search und Random Search}
+
+\subsection{Grid Search}
+
+Bei Grid Search definiert man eine Menge möglicher Werte.
+Zum Beispiel:
+
+\[
+    \lambda \in \{10^{-4},10^{-3},10^{-2},10^{-1},1\}.
+\]
+
+Dann trainiert man für jeden Wert ein Modell und wählt den besten Validierungsfehler.
+
+\subsection{Random Search}
+
+Bei Random Search werden Hyperparameter zufällig aus vorgegebenen Bereichen gezogen.
+Das kann effizienter sein, wenn nur wenige Hyperparameter wirklich wichtig sind.
+
+\begin{notebox}
+Für Hyperparameter wie \(\lambda\) sucht man oft auf logarithmischer Skala, weil Unterschiede über Größenordnungen wichtig sind.
+\end{notebox}
+
+\section{Nested Cross-Validation}
+
+Wenn sowohl Modellselektion als auch Leistungsbewertung mit Kreuzvalidierung gemacht werden sollen, verwendet man verschachtelte Kreuzvalidierung (nested cross-validation).
+
+Es gibt:
+
+\begin{itemize}
+    \item eine äußere Kreuzvalidierung zur Bewertung,
+    \item eine innere Kreuzvalidierung zur Hyperparameterwahl.
+\end{itemize}
+
+\begin{definitionbox}
+Nested Cross-Validation trennt Modellselektion und Leistungsbewertung sauber durch zwei verschachtelte Validierungsschleifen.
+\end{definitionbox}
+
+\begin{conceptbox}
+Nested Cross-Validation verhindert, dass die Leistungsbewertung durch Hyperparameterwahl zu optimistisch wird.
+\end{conceptbox}
+
+\section{Verteilungsshift}
+
+Alle bisherigen Aussagen setzen voraus, dass Trainings- und Testdaten aus derselben Verteilung stammen:
+
+\[
+    p_{\mathrm{train}}(\vec{x},t)
+    =
+    p_{\mathrm{test}}(\vec{x},t).
+\]
+
+In der Praxis kann das verletzt sein.
+
+\begin{definitionbox}
+Verteilungsshift (distribution shift) bedeutet, dass sich die Datenverteilung zwischen Training und Anwendung unterscheidet.
+\end{definitionbox}
+
+Beispiele:
+
+\begin{itemize}
+    \item Ein medizinisches Modell wird in einem anderen Krankenhaus verwendet.
+    \item Ein Spamfilter wird nach mehreren Jahren verwendet, obwohl sich Spam verändert hat.
+    \item Ein Bildmodell wird auf Bildern mit anderer Kameraqualität getestet.
+    \item Trainingsdaten stammen aus Simulation, Testdaten aus der realen Welt.
+\end{itemize}
+
+\begin{notebox}
+Ein niedriger Testfehler ist nur aussagekräftig, wenn die Testdaten die spätere Anwendung gut repräsentieren.
+\end{notebox}
+
+\section{Metriken für Regression}
+
+Bei Regression sind typische Metriken:
+
+\subsection{Mean Squared Error}
+
+\[
+    \mathrm{MSE}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (y_n-t_n)^2.
+\]
+
+\subsection{Root Mean Squared Error}
+
+\[
+    \mathrm{RMSE}
+    =
+    \sqrt{
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        (y_n-t_n)^2
+    }.
+\]
+
+\subsection{Mean Absolute Error}
+
+\[
+    \mathrm{MAE}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    |y_n-t_n|.
+\]
+
+\begin{conceptbox}
+MSE bestraft große Fehler stärker als MAE, weil Fehler quadriert werden.
+
+MAE ist robuster gegenüber Ausreißern.
+\end{conceptbox}
+
+\section{Metriken für Klassifikation}
+
+Bei Klassifikation sind typische Metriken:
+
+\subsection{Accuracy}
+
+\[
+    \mathrm{accuracy}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mathbb{1}(\hat{t}_n=t_n).
+\]
+
+\subsection{Precision}
+
+\[
+    \mathrm{precision}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}.
+\]
+
+\subsection{Recall}
+
+\[
+    \mathrm{recall}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}.
+\]
+
+\subsection{F1-Score}
+
+\[
+    F_1
+    =
+    2
+    \frac{
+        \mathrm{precision}\cdot\mathrm{recall}
+    }{
+        \mathrm{precision}+\mathrm{recall}
+    }.
+\]
+
+\begin{examtipbox}
+Bei unausgeglichenen Klassen ist Accuracy oft nicht ausreichend.
+Dann sind Precision, Recall, F1-Score oder ROC-AUC oft aussagekräftiger.
+\end{examtipbox}
+
+\section{Unsicherheit der Testschätzung}
+
+Der Testfehler ist selbst nur ein Schätzer des wahren Generalisierungsfehlers.
+Wenn der Testdatensatz klein ist, kann diese Schätzung stark schwanken.
+
+Für Accuracy kann man grob modellieren:
+
+\[
+    \hat{p}
+    =
+    \frac{k}{N},
+\]
+
+wobei \(k\) die Anzahl korrekter Vorhersagen ist.
+Die Standardabweichung dieses Anteils ist ungefähr:
+
+\[
+    \sqrt{
+        \frac{\hat{p}(1-\hat{p})}{N}
+    }.
+\]
+
+\begin{conceptbox}
+Ein Testfehler auf wenigen Testpunkten ist unsicher.
+
+Mehr Testdaten liefern eine stabilere Schätzung der echten Generalisierung.
+\end{conceptbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Generalisierung und Validierung:
+
+\begin{enumerate}
+    \item Trainingsfehler mit Generalisierungsfehler verwechseln.
+    \item Testdaten zur Hyperparameterwahl verwenden.
+    \item Vorverarbeitung auf dem gesamten Datensatz fitten.
+    \item Overfitting nur an großem Trainingsfehler erkennen wollen.
+    \item Underfitting und Overfitting verwechseln.
+    \item Bei unausgeglichenen Klassen nur Accuracy betrachten.
+    \item Kreuzvalidierung falsch durchführen, sodass Datenleckage entsteht.
+    \item Bei Zeitreihen zufällig splitten, obwohl die zeitliche Reihenfolge wichtig ist.
+    \item Den Validierungsfehler mehrfach optimieren und danach so tun, als wäre er ein unabhängiger Testfehler.
+    \item Ein Modell auf einem Testdatensatz bewerten, der die spätere Anwendung nicht repräsentiert.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Trainings- und Testfehler interpretieren}
+
+Ein Modell hat:
+
+\[
+    E_{\mathrm{train}} = 0{,}01
+\]
+
+und
+
+\[
+    E_{\mathrm{test}} = 0{,}50.
+\]
+
+Was ist wahrscheinlich passiert?
+
+\begin{examplebox}
+Der Trainingsfehler ist sehr klein, aber der Testfehler ist groß.
+Das spricht für Überanpassung (overfitting).
+
+Das Modell hat die Trainingsdaten sehr gut gelernt, generalisiert aber schlecht auf neue Daten.
+\end{examplebox}
+
+\subsection{Aufgabe 2: Underfitting erkennen}
+
+Ein Modell hat:
+
+\[
+    E_{\mathrm{train}} = 0{,}45
+\]
+
+und
+
+\[
+    E_{\mathrm{val}} = 0{,}48.
+\]
+
+Was ist wahrscheinlich passiert?
+
+\begin{examplebox}
+Beide Fehler sind hoch.
+Das spricht für Unteranpassung (underfitting).
+
+Das Modell ist vermutlich zu einfach oder wurde nicht ausreichend trainiert.
+\end{examplebox}
+
+\subsection{Aufgabe 3: Kreuzvalidierung}
+
+Ein \(5\)-fold cross-validation Verfahren liefert Validierungsfehler:
+
+\[
+    0{,}20,
+    \quad
+    0{,}25,
+    \quad
+    0{,}22,
+    \quad
+    0{,}23,
+    \quad
+    0{,}30.
+\]
+
+Berechne den Kreuzvalidierungsfehler.
+
+\begin{examplebox}
+Der Kreuzvalidierungsfehler ist der Durchschnitt:
+
+\[
+    E_{\mathrm{CV}}
+    =
+    \frac{1}{5}
+    (0{,}20+0{,}25+0{,}22+0{,}23+0{,}30).
+\]
+
+Die Summe ist:
+
+\[
+    0{,}20+0{,}25+0{,}22+0{,}23+0{,}30
+    =
+    1{,}20.
+\]
+
+Also:
+
+\[
+    E_{\mathrm{CV}}
+    =
+    \frac{1{,}20}{5}
+    =
+    0{,}24.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Accuracy}
+
+Ein Klassifikator macht auf \(100\) Testpunkten \(87\) korrekte Vorhersagen.
+Berechne die Accuracy.
+
+\begin{examplebox}
+Die Accuracy ist:
+
+\[
+    \mathrm{accuracy}
+    =
+    \frac{87}{100}
+    =
+    0{,}87.
+\]
+
+Also:
+
+\[
+    \mathrm{accuracy}
+    =
+    87\%.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Precision und Recall}
+
+Gegeben seien:
+
+\[
+    \mathrm{TP}=30,
+    \qquad
+    \mathrm{FP}=10,
+    \qquad
+    \mathrm{FN}=20.
+\]
+
+Berechne Precision und Recall.
+
+\begin{examplebox}
+Precision:
+
+\[
+    \mathrm{precision}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}
+    =
+    \frac{30}{30+10}
+    =
+    \frac{30}{40}
+    =
+    0{,}75.
+\]
+
+Recall:
+
+\[
+    \mathrm{recall}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}
+    =
+    \frac{30}{30+20}
+    =
+    \frac{30}{50}
+    =
+    0{,}60.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Generalisierung (generalization) bedeutet gute Leistung auf neuen Daten.
+    \item Der Trainingsfehler misst Leistung auf Trainingsdaten.
+    \item Der Validierungsfehler dient zur Modell- und Hyperparameterwahl.
+    \item Der Testfehler dient zur finalen Leistungsabschätzung.
+    \item Überanpassung (overfitting) bedeutet niedriger Trainingsfehler, aber hoher Fehler auf neuen Daten.
+    \item Unteranpassung (underfitting) bedeutet, dass das Modell zu einfach ist und selbst die Trainingsdaten schlecht beschreibt.
+    \item Modellkomplexität beeinflusst den Bias-Varianz-Trade-off.
+    \item Hyperparameter werden nicht direkt durch Training gelernt.
+    \item Kreuzvalidierung nutzt Daten effizienter für Modellselektion.
+    \item Testdaten dürfen nicht zur Hyperparameterwahl verwendet werden.
+    \item Data Leakage führt zu zu optimistischen Ergebnissen.
+    \item Regularisierung reduziert Overfitting durch Bestrafung zu komplexer Modelle.
+    \item Early Stopping ist eine Regularisierungsmethode für iterative Trainingsverfahren.
+    \item Lernkurven helfen, Underfitting und Overfitting zu diagnostizieren.
+    \item Die passende Metrik hängt vom Problem ab.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was bedeutet Generalisierung?
+    \item Warum reicht ein kleiner Trainingsfehler nicht aus?
+    \item Was ist der Unterschied zwischen Trainings-, Validierungs- und Testdaten?
+    \item Warum darf man Testdaten nicht zur Hyperparameterwahl verwenden?
+    \item Was ist Overfitting?
+    \item Was ist Underfitting?
+    \item Wie erkennt man Overfitting an Trainings- und Validierungsfehler?
+    \item Was ist Modellkomplexität?
+    \item Was ist ein Hyperparameter?
+    \item Was ist Modellselektion?
+    \item Erkläre \(K\)-fold cross-validation.
+    \item Was ist Leave-One-Out-Kreuzvalidierung?
+    \item Was ist Data Leakage?
+    \item Warum muss Standardisierung nur auf Trainingsdaten gefittet werden?
+    \item Erkläre den Bias-Varianz-Trade-off.
+    \item Was ist der irreduzible Fehler?
+    \item Wie hilft Regularisierung gegen Overfitting?
+    \item Wie hängt Regularisierung mit MAP zusammen?
+    \item Was ist Early Stopping?
+    \item Was zeigen Lernkurven?
+    \item Wann ist Accuracy eine schlechte Metrik?
+    \item Was ist der Unterschied zwischen Precision und Recall?
+    \item Was ist Verteilungsshift?
+    \item Warum ist ein Testfehler auf wenigen Daten unsicher?
+\end{enumerate}
+\end{examtipbox}

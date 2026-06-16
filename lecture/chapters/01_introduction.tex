@@ -1,0 +1,919 @@
+```latex
+\chapter{Einführung in maschinelles Lernen}
+
+\section{Ziel dieses Kapitels}
+
+Dieses Kapitel führt die Grundbegriffe des maschinellen Lernens (machine learning) ein.
+Es geht noch nicht darum, einen bestimmten Algorithmus vollständig zu beherrschen.
+Stattdessen soll klar werden, was maschinelles Lernen überhaupt leisten soll, welche Arten von Lernproblemen es gibt und warum Wahrscheinlichkeitstheorie (probability theory) im maschinellen Lernen eine zentrale Rolle spielt.
+
+\begin{conceptbox}
+Maschinelles Lernen (machine learning) beschäftigt sich mit Systemen, die aus Daten Muster lernen und dieses gelernte Wissen auf neue, noch nicht gesehene Daten anwenden sollen.
+
+Das zentrale Ziel ist also nicht bloß, vorhandene Daten auswendig zu lernen, sondern Generalisierung (generalization).
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist der Unterschied zwischen künstlicher Intelligenz (artificial intelligence) und maschinellem Lernen (machine learning)?
+    \item Was ist ein Datensatz (data set) und was ist ein Modell (model)?
+    \item Was bedeutet Lernen in einem mathematischen Sinn?
+    \item Was ist der Unterschied zwischen überwachtem Lernen (supervised learning), halbüberwachtem Lernen (semi-supervised learning), unüberwachtem Lernen (unsupervised learning) und bestärkendem Lernen (reinforcement learning)?
+    \item Was ist der Unterschied zwischen Klassifikation (classification) und Regression (regression)?
+    \item Warum liefern viele moderne Modelle keine festen Antworten, sondern Wahrscheinlichkeiten?
+    \item Was bedeutet Training (training), Testen (testing) und Generalisierung (generalization)?
+\end{itemize}
+
+\section{Was soll ein KI-System leisten?}
+
+Ein System der künstlichen Intelligenz (artificial intelligence) soll Aufgaben lösen, die typischerweise als intelligent wahrgenommen werden.
+Beispiele sind:
+
+\begin{itemize}
+    \item ein Bild einer Ziffer erkennen,
+    \item eine E-Mail als Spam oder Nicht-Spam klassifizieren,
+    \item den zukünftigen Verkaufspreis einer Wohnung vorhersagen,
+    \item ähnliche Patientinnen und Patienten gruppieren,
+    \item einem Roboter beibringen, sich in einer Umgebung sinnvoll zu bewegen.
+\end{itemize}
+
+Maschinelles Lernen (machine learning) ist ein Teilgebiet davon.
+Die Grundidee ist:
+Wir schreiben nicht für jede mögliche Situation eine feste Regel.
+Stattdessen geben wir dem System Daten und lassen es aus diesen Daten eine Regel, Funktion oder Verteilung lernen.
+
+\begin{definitionbox}
+Ein Modell (model) ist im maschinellen Lernen eine mathematische Vorschrift, die Eingaben in Ausgaben umwandelt oder die Struktur der Daten beschreibt.
+
+Typisch schreibt man:
+\[
+    y = f(x).
+\]
+
+Dabei ist \(x\) die Eingabe (input), \(f\) das gelernte Modell und \(y\) die Ausgabe (output).
+\end{definitionbox}
+
+Die Eingabe \(x\) kann sehr unterschiedlich aussehen:
+
+\begin{itemize}
+    \item ein einzelner Messwert, zum Beispiel Temperatur,
+    \item ein Vektor von Messwerten, zum Beispiel Blutdruck, Alter und Puls,
+    \item ein Bild, das als sehr großer Vektor von Pixelwerten dargestellt wird,
+    \item ein Text, der zuerst in eine numerische Darstellung umgewandelt wird.
+\end{itemize}
+
+In den meisten ML-Modellen werden Eingaben als Vektoren geschrieben:
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        x_2 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+    \in \mathbb{R}^D.
+\]
+
+Hier ist \(D\) die Dimension (dimension) der Eingabe.
+Bei einem Bild mit vielen Pixeln kann \(D\) sehr groß sein.
+
+\section{Daten, Merkmale und Zielwerte}
+
+Ein Datensatz (data set) besteht aus Beobachtungen.
+Eine einzelne Beobachtung wird oft als Datenpunkt (data point) bezeichnet.
+
+\begin{definitionbox}
+Ein Datenpunkt (data point) ist eine einzelne Beobachtung.
+Er besteht meistens aus einem Eingabevektor \(\vec{x}\) und, falls vorhanden, einem Zielwert \(t\).
+
+Ein überwachter Trainingsdatensatz hat typischerweise die Form
+\[
+    \mathcal{D}
+    =
+    \left\{
+        (\vec{x}_1,t_1),
+        (\vec{x}_2,t_2),
+        \dots,
+        (\vec{x}_N,t_N)
+    \right\}.
+\]
+Dabei ist \(N\) die Anzahl der Datenpunkte.
+\end{definitionbox}
+
+Die Komponenten eines Eingabevektors nennt man Merkmale (features).
+Ein Beispiel:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        \text{Größe} \\
+        \text{Gewicht} \\
+        \text{Alter}
+    \end{pmatrix}.
+\]
+
+In einem echten ML-System würden diese Einträge natürlich als Zahlen dargestellt werden, also zum Beispiel:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        178 \\
+        72 \\
+        23
+    \end{pmatrix}.
+\]
+
+\begin{notebox}
+In mathematischen Herleitungen wird oft einfach \(x\) geschrieben, obwohl eigentlich ein Vektor \(\vec{x}\) gemeint ist.
+Das ist eine übliche Abkürzung.
+In diesem Skript wird möglichst klar unterschieden, aber in späteren Kapiteln kann \(x\) je nach Kontext auch für einen Vektor stehen.
+\end{notebox}
+
+\section{Lernen als Funktionsanpassung}
+
+Eine einfache Sichtweise auf maschinelles Lernen ist:
+
+\begin{center}
+\textbf{Wir suchen eine Funktion, die zu den Daten passt und für neue Daten gute Vorhersagen macht.}
+\end{center}
+
+Angenommen, wir haben Eingaben \(\vec{x}_n\) und Zielwerte \(t_n\).
+Dann suchen wir ein Modell \(f\), sodass
+
+\[
+    f(\vec{x}_n) \approx t_n.
+\]
+
+Das Zeichen \(\approx\) ist wichtig:
+In echten Daten gibt es fast immer Rauschen (noise), Messfehler oder unvollständige Information.
+Deshalb erwarten wir meistens nicht, dass das Modell alle Daten perfekt trifft.
+
+\begin{examplebox}
+Angenommen, wir wollen die Miete einer Wohnung vorhersagen.
+Die Eingabe könnte sein:
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        \text{Wohnfläche} \\
+        \text{Anzahl Zimmer} \\
+        \text{Entfernung zum Zentrum}
+    \end{pmatrix}.
+\]
+Der Zielwert \(t\) wäre dann die tatsächliche Miete.
+
+Ein Modell \(f\) soll aus diesen Eingaben eine vorhergesagte Miete berechnen:
+\[
+    \hat{t} = f(\vec{x}).
+\]
+Der Wert \(\hat{t}\) ist die Vorhersage (prediction).
+\end{examplebox}
+
+\section{Parameter eines Modells}
+
+Viele Modelle enthalten Parameter (parameters).
+Diese Parameter bestimmen, wie genau das Modell rechnet.
+
+Ein sehr einfaches Modell für eine eindimensionale Eingabe ist eine Gerade:
+
+\[
+    y(x,w_0,w_1) = w_0 + w_1x.
+\]
+
+Dabei sind \(w_0\) und \(w_1\) Parameter.
+Man kann sie zusammen als Vektor schreiben:
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        w_0 \\
+        w_1
+    \end{pmatrix}.
+\]
+
+Dann schreibt man das Modell oft als
+
+\[
+    y(x,\vec{w}).
+\]
+
+\begin{definitionbox}
+Lernen (learning) bedeutet in vielen ML-Modellen, geeignete Parameter \(\vec{w}\) aus den Daten zu bestimmen.
+
+Informell:
+\[
+    \text{Daten}
+    \longrightarrow
+    \text{Lernalgorithmus}
+    \longrightarrow
+    \text{gelernte Parameter}.
+\]
+\end{definitionbox}
+
+In späteren Kapiteln wird diese Idee präziser.
+Bei der linearen Regression (linear regression) werden die Parameter zum Beispiel so gewählt, dass ein Fehlermaß (error function) möglichst klein wird.
+Bei probabilistischen Modellen werden die Parameter oft über Maximum-Likelihood-Schätzung (maximum likelihood estimation) oder Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation) bestimmt.
+
+\section{Trainingsdaten, Testdaten und Generalisierung}
+
+Ein Modell soll nicht nur die Daten erklären, die es schon gesehen hat.
+Es soll auch bei neuen Daten funktionieren.
+Deshalb unterscheidet man zwischen Trainingsdaten (training data) und Testdaten (test data).
+
+\begin{definitionbox}
+Trainingsdaten (training data) sind Daten, mit denen das Modell gelernt wird.
+
+Testdaten (test data) sind Daten, die beim Lernen nicht verwendet werden und danach zur Bewertung des Modells dienen.
+
+Generalisierung (generalization) bedeutet, dass ein Modell auch auf neuen, bisher unbekannten Daten gute Vorhersagen macht.
+\end{definitionbox}
+
+Die zentrale Herausforderung ist:
+
+\[
+    \text{gute Leistung auf Trainingsdaten}
+    \;\not\Rightarrow\;
+    \text{gute Leistung auf neuen Daten}.
+\]
+
+Ein Modell kann die Trainingsdaten sehr gut treffen und trotzdem schlecht generalisieren.
+Dieses Problem nennt man Überanpassung (overfitting).
+
+\begin{conceptbox}
+Ein Modell soll die Struktur in den Daten lernen, nicht bloß die Trainingsdaten auswendig.
+Wenn ein Modell auch zufälliges Rauschen (noise) lernt, spricht man von Überanpassung (overfitting).
+\end{conceptbox}
+
+\section{Klassifikation und Regression}
+
+Zwei grundlegende Problemtypen im überwachten Lernen sind Klassifikation (classification) und Regression (regression).
+
+\subsection{Klassifikation}
+
+Bei einer Klassifikation (classification) soll das Modell eine Eingabe einer von mehreren Klassen (classes) zuordnen.
+
+\begin{definitionbox}
+Bei einer Klassifikation (classification) ist der Zielwert diskret.
+Das heißt, er stammt aus einer endlichen oder abzählbaren Menge von Klassen:
+
+\[
+    t \in \{1,2,\dots,C\}.
+\]
+
+Dabei ist \(C\) die Anzahl der Klassen.
+\end{definitionbox}
+
+Beispiele:
+
+\begin{itemize}
+    \item Bild einer Ziffer \(\rightarrow\) Klasse \(0,1,\dots,9\),
+    \item E-Mail \(\rightarrow\) Spam oder Nicht-Spam,
+    \item medizinischer Befund \(\rightarrow\) krank oder gesund,
+    \item Foto \(\rightarrow\) Katze, Hund, Auto, Person.
+\end{itemize}
+
+Für eine Ziffernerkennung könnte das Modell eine Eingabe \(\vec{x}\) bekommen, die ein Bild beschreibt.
+Die Ausgabe ist dann zum Beispiel:
+
+\[
+    y(\vec{x}) = 7.
+\]
+
+Das bedeutet:
+Das Modell entscheidet, dass das Bild zur Klasse \(7\) gehört.
+
+\begin{notebox}
+In modernen probabilistischen Klassifikationsmodellen gibt das Modell oft nicht direkt eine Klasse aus, sondern Wahrscheinlichkeiten für alle Klassen:
+
+\[
+    p(c=0 \mid \vec{x}) = 0{,}01,
+    \quad
+    p(c=1 \mid \vec{x}) = 0{,}03,
+    \quad
+    p(c=2 \mid \vec{x}) = 0{,}91,
+    \quad
+    \dots
+\]
+
+Die endgültige Klasse kann dann als die wahrscheinlichste Klasse gewählt werden.
+\end{notebox}
+
+\subsection{Regression}
+
+Bei einer Regression (regression) soll das Modell einen kontinuierlichen Wert vorhersagen.
+
+\begin{definitionbox}
+Bei einer Regression (regression) ist der Zielwert kontinuierlich, also typischerweise eine reelle Zahl:
+
+\[
+    t \in \mathbb{R}.
+\]
+\end{definitionbox}
+
+Beispiele:
+
+\begin{itemize}
+    \item Wohnungsdaten \(\rightarrow\) Mietpreis,
+    \item Wetterdaten \(\rightarrow\) Temperatur morgen,
+    \item medizinische Daten \(\rightarrow\) erwarteter Laborwert,
+    \item technische Prozessdaten \(\rightarrow\) Produktionsausbeute.
+\end{itemize}
+
+Ein Regressionsmodell gibt also nicht eine Klasse wie Katze oder Hund aus, sondern zum Beispiel:
+
+\[
+    \hat{t} = 23{,}7.
+\]
+
+\begin{examtipbox}
+Prüfungsfragen unterscheiden oft zwischen Klassifikation (classification) und Regression (regression).
+
+\begin{itemize}
+    \item Diskrete Ausgabe? \(\Rightarrow\) Klassifikation (classification).
+    \item Kontinuierliche Ausgabe? \(\Rightarrow\) Regression (regression).
+\end{itemize}
+
+Wichtig ist die Art des Zielwerts, nicht die Art der Eingabe.
+Ein Bild kann zum Beispiel für Klassifikation verwendet werden, aber auch für Regression, wenn man daraus einen kontinuierlichen Wert vorhersagen will.
+\end{examtipbox}
+
+\section{Arten des Lernens}
+
+Maschinelles Lernen kann danach eingeteilt werden, welche Information beim Lernen verfügbar ist.
+
+\subsection{Überwachtes Lernen}
+
+\begin{definitionbox}
+Beim überwachten Lernen (supervised learning) bestehen die Trainingsdaten aus Eingaben und bekannten Zielwerten:
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}.
+\]
+
+Das Modell lernt, Eingaben \(\vec{x}\) auf Zielwerte \(t\) abzubilden.
+\end{definitionbox}
+
+Man kann sich das wie Lernen mit einer Lehrperson vorstellen:
+Für jeden Trainingsfall ist bekannt, was die richtige Antwort gewesen wäre.
+
+Typische Aufgaben:
+
+\begin{itemize}
+    \item Klassifikation (classification),
+    \item Regression (regression).
+\end{itemize}
+
+\begin{examplebox}
+Bei der Ziffernerkennung besteht ein Trainingsbeispiel aus einem Bild und dem zugehörigen Label:
+
+\[
+    (\text{Bild einer 7},\,7).
+\]
+
+Das Modell soll aus vielen solchen Beispielen lernen, neue Bilder korrekt zu klassifizieren.
+\end{examplebox}
+
+\subsection{Halbüberwachtes Lernen}
+
+\begin{definitionbox}
+Beim halbüberwachten Lernen (semi-supervised learning) gibt es einige Datenpunkte mit Labels und viele Datenpunkte ohne Labels.
+\end{definitionbox}
+
+Die Daten haben also ungefähr die Form:
+
+\[
+    \mathcal{D}
+    =
+    \underbrace{
+        \{(\vec{x}_1,t_1),\dots,(\vec{x}_M,t_M)\}
+    }_{\text{gelabelte Daten}}
+    \cup
+    \underbrace{
+        \{\vec{x}_{M+1},\dots,\vec{x}_N\}
+    }_{\text{ungelabelte Daten}}.
+\]
+
+Das ist praktisch wichtig, weil Labels oft teuer sind.
+Zum Beispiel kann man viele medizinische Bilder speichern, aber ihre korrekte Diagnose muss von Expertinnen oder Experten erstellt werden.
+
+\subsection{Unüberwachtes Lernen}
+
+\begin{definitionbox}
+Beim unüberwachten Lernen (unsupervised learning) gibt es keine Zielwerte.
+Die Daten bestehen nur aus Eingaben:
+
+\[
+    \mathcal{D}
+    =
+    \{\vec{x}_1,\dots,\vec{x}_N\}.
+\]
+
+Das Ziel ist, Struktur in den Daten zu finden.
+\end{definitionbox}
+
+Typische Aufgaben sind:
+
+\begin{itemize}
+    \item Cluster finden (clustering),
+    \item Wahrscheinlichkeitsdichten schätzen (density estimation),
+    \item Daten in niedrigere Dimensionen projizieren (dimensionality reduction),
+    \item Muster oder latente Faktoren finden (latent factors).
+\end{itemize}
+
+\begin{examplebox}
+Angenommen, wir haben Messwerte von vielen Patientinnen und Patienten, aber keine festen Diagnosen.
+Ein Clustering-Algorithmus könnte versuchen, Gruppen ähnlicher Patientinnen und Patienten zu finden.
+Diese Gruppen müssen nicht vorher bekannt sein.
+\end{examplebox}
+
+\subsection{Bestärkendes Lernen}
+
+\begin{definitionbox}
+Beim bestärkenden Lernen (reinforcement learning) lernt ein Agent (agent) durch Interaktion mit einer Umgebung (environment).
+Der Agent führt Aktionen (actions) aus und erhält Belohnungen (rewards).
+Ziel ist es, langfristig eine möglichst hohe Belohnung zu erreichen.
+\end{definitionbox}
+
+Die Grundelemente sind:
+
+\begin{itemize}
+    \item Zustand (state),
+    \item Aktion (action),
+    \item Belohnung (reward),
+    \item Strategie (policy),
+    \item Umgebung (environment).
+\end{itemize}
+
+Anders als beim überwachten Lernen bekommt der Agent nicht für jede Situation die perfekte Antwort gezeigt.
+Er muss durch Versuch und Irrtum (trial and error) lernen.
+
+\begin{examplebox}
+Ein Spielagent sieht eine Spielsituation, wählt einen Zug und bekommt später eine Belohnung, zum Beispiel \(+1\) für einen Sieg und \(-1\) für eine Niederlage.
+
+Das Schwierige ist:
+Ein Zug kann erst viele Schritte später wichtig werden.
+Man muss also lernen, welche früheren Aktionen zu späterem Erfolg beigetragen haben.
+\end{examplebox}
+
+\begin{notebox}
+Bestärkendes Lernen (reinforcement learning) ist wichtig, aber in diesem Skript liegt der Schwerpunkt zunächst auf probabilistischen Grundlagen, Regression, Klassifikation, neuronalen Netzen, Dimensionsreduktion, Clustering, Gaussian Mixture Models und dem EM-Algorithmus.
+\end{notebox}
+
+\section{Probabilistische Antworten als optimale Inferenz}
+
+Viele ML-Probleme haben keine absolut sichere Antwort.
+Ein Bild kann undeutlich sein, Messwerte können rauschen, Daten können unvollständig sein.
+Deshalb ist es oft sinnvoller, nicht nur eine feste Antwort zu geben, sondern Unsicherheit mitzuschätzen.
+
+\begin{conceptbox}
+Ein probabilistisches Modell (probabilistic model) gibt nicht nur eine Vorhersage aus, sondern beschreibt Unsicherheit mit Wahrscheinlichkeiten.
+\end{conceptbox}
+
+Bei einer Klassifikation könnte ein Modell zum Beispiel ausgeben:
+
+\[
+    p(c=0 \mid \vec{x}) = 0{,}01,
+    \quad
+    p(c=1 \mid \vec{x}) = 0{,}03,
+    \quad
+    p(c=2 \mid \vec{x}) = 0{,}91,
+    \quad
+    \dots
+\]
+
+Dann wäre Klasse \(2\) die wahrscheinlichste Klasse.
+Aber das Modell sagt zusätzlich:
+Es ist sich zu etwa \(91\%\) sicher.
+
+\subsection{Warum ist Unsicherheit nützlich?}
+
+Unsicherheit ist nützlich, weil sie bessere Entscheidungen erlaubt.
+
+\begin{itemize}
+    \item Bei hoher Sicherheit kann ein System automatisch entscheiden.
+    \item Bei niedriger Sicherheit kann ein Mensch nachprüfen.
+    \item Bei medizinischen oder sicherheitskritischen Aufgaben ist Unsicherheit besonders wichtig.
+    \item Wahrscheinlichkeiten erlauben es, mehrere Informationsquellen mathematisch sauber zu kombinieren.
+\end{itemize}
+
+\begin{examplebox}
+Ein medizinisches Modell klassifiziert ein Bild als unauffällig oder auffällig.
+
+Fall A:
+\[
+    p(\text{auffällig} \mid \vec{x}) = 0{,}99.
+\]
+
+Fall B:
+\[
+    p(\text{auffällig} \mid \vec{x}) = 0{,}51.
+\]
+
+In beiden Fällen wäre die wahrscheinlichste Klasse auffällig.
+Trotzdem sind die Situationen sehr verschieden:
+In Fall A ist das Modell sehr sicher, in Fall B fast unsicher.
+\end{examplebox}
+
+\section{Ein erstes Klassifikationsbeispiel}
+
+Wir betrachten ein einfaches Klassifikationsproblem.
+Ein System bekommt ein Bild einer handgeschriebenen Ziffer.
+Die möglichen Klassen sind:
+
+\[
+    c \in \{0,1,2,3,4,5,6,7,8,9\}.
+\]
+
+Das Bild wird als Eingabevektor \(\vec{x}\) dargestellt.
+Wenn das Bild zum Beispiel \(28 \times 28\) Pixel hat, dann enthält es
+
+\[
+    28 \cdot 28 = 784
+\]
+
+Pixelwerte.
+Das Bild kann also als Vektor in \(\mathbb{R}^{784}\) dargestellt werden:
+
+\[
+    \vec{x} \in \mathbb{R}^{784}.
+\]
+
+Das Modell soll aus \(\vec{x}\) die richtige Ziffer bestimmen.
+
+\begin{definitionbox}
+Bei der Ziffernklassifikation ist
+
+\[
+    \vec{x} = \text{Bild als Vektor},
+    \qquad
+    c = \text{Ziffernklasse}.
+\]
+
+Ein probabilistischer Klassifikator modelliert dann Wahrscheinlichkeiten der Form
+
+\[
+    p(c \mid \vec{x}).
+\]
+\end{definitionbox}
+
+Die endgültige Entscheidung könnte durch die wahrscheinlichste Klasse getroffen werden:
+
+\[
+    \hat{c}
+    =
+    \arg\max_{c \in \{0,\dots,9\}}
+    p(c \mid \vec{x}).
+\]
+
+Das bedeutet:
+Wir wählen die Klasse \(c\), für die die bedingte Wahrscheinlichkeit \(p(c \mid \vec{x})\) maximal ist.
+
+\begin{notebox}
+Das Symbol \(\arg\max\) liefert nicht den maximalen Wert selbst, sondern die Stelle, an der das Maximum erreicht wird.
+
+Wenn \(p(c=7 \mid \vec{x})\) am größten ist, dann ist
+
+\[
+    \arg\max_c p(c \mid \vec{x}) = 7.
+\]
+\end{notebox}
+
+\section{Merkmalsextraktion und Vorverarbeitung}
+
+Rohdaten sind oft nicht direkt ideal für ein ML-Modell.
+Deshalb werden Daten häufig vorverarbeitet (preprocessed).
+
+\begin{definitionbox}
+Vorverarbeitung (preprocessing) bezeichnet Transformationen der Rohdaten, bevor sie in das Modell eingegeben werden.
+
+Merkmalsextraktion (feature extraction) bedeutet, aus Rohdaten geeignete Merkmale (features) zu berechnen.
+\end{definitionbox}
+
+Beispiele:
+
+\begin{itemize}
+    \item Bilder werden skaliert oder zentriert.
+    \item Messwerte werden normalisiert.
+    \item Texte werden in numerische Vektoren umgewandelt.
+    \item Sehr hochdimensionale Daten werden auf wenige Dimensionen reduziert.
+\end{itemize}
+
+\begin{examtipbox}
+Wichtig:
+Die gleiche Vorverarbeitung muss auf Trainingsdaten und Testdaten angewendet werden.
+Wenn Trainingsdaten anders verarbeitet werden als Testdaten, misst man nicht mehr die echte Modellleistung.
+\end{examtipbox}
+
+\section{Modell, Verlustfunktion und Optimierung}
+
+Viele ML-Verfahren lassen sich in drei Bausteine zerlegen:
+
+\begin{enumerate}
+    \item Modell (model),
+    \item Verlustfunktion (loss function),
+    \item Optimierungsverfahren (optimization method).
+\end{enumerate}
+
+\subsection{Modell}
+
+Das Modell beschreibt, welche Funktionen überhaupt möglich sind.
+Zum Beispiel:
+
+\[
+    y(x,\vec{w}) = w_0 + w_1x
+\]
+
+für eine Gerade oder ein neuronales Netz (neural network) für eine komplexere Abbildung.
+
+\subsection{Verlustfunktion}
+
+Die Verlustfunktion (loss function) misst, wie schlecht das Modell auf den Trainingsdaten ist.
+Eine typische Idee ist:
+
+\[
+    \text{großer Fehler}
+    \quad\Rightarrow\quad
+    \text{großer Verlust}.
+\]
+
+Für Regression wird oft ein quadratischer Fehler verwendet:
+
+\[
+    E(\vec{w})
+    =
+    \frac{1}{2}
+    \sum_{n=1}^{N}
+    \left(
+        y(\vec{x}_n,\vec{w}) - t_n
+    \right)^2.
+\]
+
+Der Faktor \(\frac{1}{2}\) ist mathematisch praktisch, weil er sich beim Ableiten mit dem Faktor \(2\) aus dem Quadrat kürzt.
+
+\subsection{Optimierung}
+
+Beim Training sucht man Parameter, die den Verlust möglichst klein machen:
+
+\[
+    \vec{w}^{\,*}
+    =
+    \arg\min_{\vec{w}} E(\vec{w}).
+\]
+
+\begin{definitionbox}
+Training (training) bedeutet oft:
+
+\[
+    \text{Finde Parameter, die eine Verlustfunktion minimieren.}
+\]
+
+Mathematisch schreibt man:
+
+\[
+    \vec{w}^{\,*}
+    =
+    \arg\min_{\vec{w}} E(\vec{w}).
+\]
+\end{definitionbox}
+
+Später werden wir sehen, dass dieses Optimierungsproblem bei manchen Modellen direkt gelöst werden kann, während man bei anderen Modellen iterative Verfahren wie Gradientenabstieg (gradient descent) verwendet.
+
+\section{Überanpassung und Unteranpassung}
+
+Ein Modell kann auf verschiedene Arten schlecht sein.
+
+\subsection{Unteranpassung}
+
+Unteranpassung (underfitting) bedeutet, dass das Modell zu einfach ist, um die Struktur der Daten zu erfassen.
+
+\begin{examplebox}
+Wenn die Daten ungefähr einer gekrümmten Kurve folgen, aber man nur eine Gerade anpasst, kann die Gerade die Struktur nicht gut treffen.
+Das Modell ist dann zu unflexibel.
+\end{examplebox}
+
+\subsection{Überanpassung}
+
+Überanpassung (overfitting) bedeutet, dass das Modell zu stark an die Trainingsdaten angepasst ist und dabei auch Rauschen (noise) lernt.
+
+\begin{examplebox}
+Ein sehr komplexes Polynom kann durch jeden Trainingspunkt laufen.
+Das sieht auf den Trainingsdaten perfekt aus, kann aber zwischen den Datenpunkten stark oszillieren und auf neuen Daten schlecht sein.
+\end{examplebox}
+
+\begin{conceptbox}
+Gutes maschinelles Lernen bedeutet, die richtige Balance zu finden:
+
+\[
+    \text{Modell zu einfach}
+    \Rightarrow
+    \text{Unteranpassung (underfitting)}.
+\]
+
+\[
+    \text{Modell zu komplex}
+    \Rightarrow
+    \text{Überanpassung (overfitting)}.
+\]
+\end{conceptbox}
+
+\section{Parametrische und nichtparametrische Modelle}
+
+In diesem Kurs tauchen später auch parametrische und nichtparametrische Methoden auf.
+
+\begin{definitionbox}
+Ein parametrisches Modell (parametric model) hat eine feste Anzahl von Parametern.
+Die Modellform wird vorher festgelegt, und das Lernen besteht darin, diese Parameter aus den Daten zu bestimmen.
+\end{definitionbox}
+
+Beispiel:
+
+\[
+    y(x,w_0,w_1) = w_0 + w_1x.
+\]
+
+Dieses Modell hat zwei Parameter, egal ob wir \(10\), \(100\) oder \(10^6\) Datenpunkte haben.
+
+\begin{definitionbox}
+Ein nichtparametrisches Modell (nonparametric model) hat nicht unbedingt eine feste Parameterzahl.
+Die effektive Komplexität kann mit der Datenmenge wachsen.
+\end{definitionbox}
+
+Beispiele für nichtparametrische Methoden sind Histogramme (histograms), Kernel-Dichteschätzung (kernel density estimation) und \(k\)-nächste-Nachbarn (\(k\)-nearest neighbours).
+
+\begin{notebox}
+Nichtparametrisch bedeutet nicht, dass es gar keine Parameter gibt.
+Es bedeutet eher, dass die Modellkomplexität nicht durch eine feste, kleine Parameterzahl vorgegeben ist.
+\end{notebox}
+
+\section{Warum Wahrscheinlichkeitstheorie?}
+
+Wahrscheinlichkeitstheorie (probability theory) ist im maschinellen Lernen nicht nur ein Zusatz, sondern eine Grundlage.
+Sie beantwortet Fragen wie:
+
+\begin{itemize}
+    \item Wie beschreibt man Unsicherheit mathematisch?
+    \item Wie kombiniert man Vorwissen und neue Daten?
+    \item Wie lernt man Parameter aus Daten?
+    \item Wie entscheidet man zwischen mehreren möglichen Klassen?
+    \item Wie modelliert man Rauschen (noise)?
+\end{itemize}
+
+Viele zentrale Verfahren des Kurses werden probabilistisch motiviert:
+
+\begin{itemize}
+    \item Bayes-Regel (Bayes' rule),
+    \item Maximum-Likelihood-Schätzung (maximum likelihood estimation),
+    \item Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation),
+    \item logistische Regression (logistic regression),
+    \item Gaussian Mixture Models,
+    \item Expectation-Maximization-Algorithmus (expectation maximization algorithm).
+\end{itemize}
+
+\begin{conceptbox}
+Die probabilistische Sichtweise lautet:
+
+\[
+    \text{Lernen}
+    \approx
+    \text{Schließen aus unsicheren Daten}.
+\]
+
+Englisch nennt man das inference under uncertainty.
+Ein Modell soll nicht nur eine Antwort geben, sondern begründen, wie plausibel verschiedene Antworten unter den Daten sind.
+\end{conceptbox}
+
+\section{Mini-Beispiel: Von Daten zu Wahrscheinlichkeiten}
+
+Angenommen, wir haben ein einfaches Experiment mit Früchten.
+Es gibt zwei Schüsseln:
+
+\[
+    s \in \{A,B\}.
+\]
+
+Aus einer Schüssel wird zufällig eine Frucht gezogen.
+Die Frucht kann eine Orange oder eine weiße Beere sein:
+
+\[
+    y \in \{O,W\}.
+\]
+
+Eine typische Frage wäre:
+
+\begin{center}
+Wenn ich eine Orange beobachtet habe, wie wahrscheinlich ist es, dass sie aus Schüssel \(B\) kam?
+\end{center}
+
+Mathematisch ist das:
+
+\[
+    p(s=B \mid y=O).
+\]
+
+Das ist eine bedingte Wahrscheinlichkeit (conditional probability).
+In späteren Kapiteln lernen wir, wie man solche Wahrscheinlichkeiten mit der Bayes-Regel (Bayes' rule) berechnet.
+
+\begin{notebox}
+Dieses Beispiel ist wichtig, weil es die typische ML-Situation vereinfacht zeigt:
+
+\begin{itemize}
+    \item Es gibt beobachtete Daten.
+    \item Es gibt unbekannte Ursachen oder Klassen.
+    \item Wir wollen aus Beobachtungen auf plausible Ursachen schließen.
+\end{itemize}
+
+Genau diese Idee steckt hinter vielen Klassifikationsmodellen.
+\end{notebox}
+
+\section{Typischer ML-Workflow}
+
+Ein praktischer ML-Workflow sieht oft so aus:
+
+\begin{enumerate}
+    \item \textbf{Problem definieren:}
+    Was soll vorhergesagt oder gelernt werden?
+
+    \item \textbf{Daten sammeln:}
+    Welche Eingaben und Zielwerte stehen zur Verfügung?
+
+    \item \textbf{Daten vorverarbeiten:}
+    Fehlende Werte, Skalierung, Kodierung, Merkmalsextraktion.
+
+    \item \textbf{Modellklasse wählen:}
+    Zum Beispiel lineare Regression, logistische Regression, neuronales Netz, PCA oder \(k\)-means.
+
+    \item \textbf{Verlustfunktion oder probabilistisches Ziel festlegen:}
+    Zum Beispiel quadratischer Fehler, negative Log-Likelihood oder ELBO.
+
+    \item \textbf{Training durchführen:}
+    Parameter aus den Trainingsdaten bestimmen.
+
+    \item \textbf{Validieren und testen:}
+    Modell auf neuen Daten bewerten.
+
+    \item \textbf{Interpretieren:}
+    Verstehen, was das Modell gut kann, wo es unsicher ist und wo es versagt.
+\end{enumerate}
+
+\begin{examtipbox}
+Für Prüfungsfragen ist oft wichtig, dass du die Begriffe sauber trennst:
+
+\begin{itemize}
+    \item Modell (model): Welche Funktionsklasse oder Verteilung wird verwendet?
+    \item Parameter (parameters): Welche Größen werden gelernt?
+    \item Training (training): Wie werden die Parameter angepasst?
+    \item Verlustfunktion (loss function): Was wird minimiert?
+    \item Generalisierung (generalization): Wie gut funktioniert das Modell auf neuen Daten?
+\end{itemize}
+\end{examtipbox}
+
+\section{Ausblick auf die nächsten Kapitel}
+
+Dieses Kapitel hat die Grundideen eingeführt.
+Die nächsten Kapitel machen diese Ideen mathematisch präzise.
+
+\begin{itemize}
+    \item In Kapitel 2 behandeln wir diskrete Wahrscheinlichkeiten, bedingte Wahrscheinlichkeiten, Summenregel, Produktregel und Bayes-Regel.
+    \item In Kapitel 3 betrachten wir kontinuierliche Zufallsvariablen, Wahrscheinlichkeitsdichten, Erwartungswerte, Varianz, Kovarianz und Korrelation.
+    \item Danach lernen wir Schätzer (estimators), Maximum-Likelihood (maximum likelihood), Maximum-a-posteriori (maximum a-posteriori) und konkrete Modelle wie lineare Regression und logistische Regression.
+    \item Später folgen neuronale Netze, Backpropagation, PCA, Clustering, Gaussian Mixture Models und der EM-Algorithmus.
+\end{itemize}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Maschinelles Lernen (machine learning) bedeutet, Muster aus Daten zu lernen.
+    \item Ein Modell (model) bildet Eingaben auf Ausgaben ab oder beschreibt die Struktur der Daten.
+    \item Beim überwachten Lernen (supervised learning) gibt es Eingaben und Zielwerte.
+    \item Beim unüberwachten Lernen (unsupervised learning) gibt es keine Zielwerte.
+    \item Beim bestärkenden Lernen (reinforcement learning) lernt ein Agent durch Belohnungen.
+    \item Klassifikation (classification) bedeutet Vorhersage diskreter Klassen.
+    \item Regression (regression) bedeutet Vorhersage kontinuierlicher Werte.
+    \item Generalisierung (generalization) ist das zentrale Ziel: Das Modell soll auf neuen Daten gut sein.
+    \item Probabilistische Modelle (probabilistic models) beschreiben Unsicherheit explizit.
+    \item Wahrscheinlichkeitstheorie (probability theory) ist deshalb eine zentrale Grundlage für maschinelles Lernen.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Fragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Erkläre den Unterschied zwischen Klassifikation (classification) und Regression (regression).
+    \item Was ist der Unterschied zwischen überwachtem Lernen (supervised learning) und unüberwachtem Lernen (unsupervised learning)?
+    \item Was bedeutet Generalisierung (generalization)?
+    \item Warum reicht es nicht, nur den Trainingsfehler zu minimieren?
+    \item Was ist Überanpassung (overfitting)?
+    \item Warum sind Wahrscheinlichkeiten im maschinellen Lernen nützlich?
+    \item Was ist der Unterschied zwischen Modell (model), Parameter (parameters) und Lernalgorithmus (learning algorithm)?
+\end{enumerate}
+\end{examtipbox}
+```

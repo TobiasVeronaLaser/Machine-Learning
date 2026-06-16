@@ -1,0 +1,2645 @@
+\chapter{Logistische Regression}
+
+\section{Ziel dieses Kapitels}
+
+In den vorherigen Kapiteln haben wir lineare Regression (linear regression), Maximum-Likelihood-Schätzung (maximum likelihood estimation), Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation) und negative Log-Likelihood kennengelernt.
+Lineare Regression eignet sich für kontinuierliche Zielwerte.
+In diesem Kapitel betrachten wir nun Klassifikation (classification), also Probleme mit diskreten Zielwerten.
+
+Die logistische Regression (logistic regression) ist eines der wichtigsten Grundmodelle für binäre Klassifikation (binary classification).
+Trotz des Namens ist sie ein Klassifikationsmodell und kein Regressionsmodell im üblichen Sinn.
+
+\begin{conceptbox}
+Logistische Regression (logistic regression) ist ein probabilistisches Klassifikationsmodell.
+
+Für eine Eingabe \(\vec{x}\) berechnet das Modell eine Wahrscheinlichkeit
+
+\[
+    p(t=1 \mid \vec{x}).
+\]
+
+Diese Wahrscheinlichkeit wird dann verwendet, um zwischen zwei Klassen zu entscheiden.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist binäre Klassifikation (binary classification)?
+    \item Warum ist lineare Regression für Klassifikation ungeeignet?
+    \item Was ist die Sigmoid-Funktion (sigmoid function)?
+    \item Was ist der Zusammenhang zwischen Sigmoid, Odds und Logit?
+    \item Wie modelliert logistische Regression \(p(t=1\mid\vec{x})\)?
+    \item Wie entsteht die Bernoulli-Likelihood?
+    \item Warum führt Maximum-Likelihood zu Kreuzentropie (cross-entropy)?
+    \item Wie leitet man den Gradienten der logistischen Regression her?
+    \item Warum gibt es keine geschlossene Lösung wie bei linearer Regression?
+    \item Wie trainiert man logistische Regression mit Gradientenabstieg (gradient descent)?
+    \item Was ist eine Entscheidungsgrenze (decision boundary)?
+    \item Wie erweitert man logistische Regression auf mehrere Klassen?
+    \item Wie hängt Regularisierung mit MAP zusammen?
+\end{itemize}
+
+\section{Von Regression zu Klassifikation}
+
+Bei Regression (regression) ist der Zielwert kontinuierlich:
+
+\[
+    t \in \mathbb{R}.
+\]
+
+Bei Klassifikation (classification) ist der Zielwert diskret.
+Bei binärer Klassifikation gibt es genau zwei Klassen:
+
+\[
+    t \in \{0,1\}.
+\]
+
+\begin{definitionbox}
+Binäre Klassifikation (binary classification) ist ein überwachtes Lernproblem, bei dem jeder Datenpunkt zu einer von zwei Klassen gehört.
+
+Der Trainingsdatensatz hat die Form
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\},
+\]
+
+wobei
+
+\[
+    \vec{x}_n \in \mathbb{R}^D
+\]
+
+und
+
+\[
+    t_n \in \{0,1\}.
+\]
+\end{definitionbox}
+
+Beispiele für binäre Klassifikation:
+
+\begin{itemize}
+    \item E-Mail: Spam oder Nicht-Spam,
+    \item medizinischer Test: krank oder gesund,
+    \item Bild: Katze oder keine Katze,
+    \item Kreditentscheidung: Ausfall oder kein Ausfall,
+    \item Wohnungspreis-Beispiel: teuer oder nicht teuer.
+\end{itemize}
+
+\section{Warum nicht einfach lineare Regression?}
+
+Man könnte versuchen, ein lineares Regressionsmodell zu verwenden:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Dann könnte man sagen:
+
+\[
+    y(\vec{x},\vec{w}) \geq 0{,}5
+    \quad
+    \Rightarrow
+    \quad
+    \hat{t}=1,
+\]
+
+und
+
+\[
+    y(\vec{x},\vec{w}) < 0{,}5
+    \quad
+    \Rightarrow
+    \quad
+    \hat{t}=0.
+\]
+
+Das ist aber problematisch.
+
+\begin{conceptbox}
+Lineare Regression ist für Klassifikation ungeeignet, weil die Ausgabe
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \vec{w}^{\top}\vec{x}
+\]
+
+beliebige reelle Werte annehmen kann.
+
+Für eine Wahrscheinlichkeit brauchen wir aber Werte im Intervall
+
+\[
+    [0,1].
+\]
+\end{conceptbox}
+
+Eine Wahrscheinlichkeit muss erfüllen:
+
+\[
+    0 \leq p(t=1\mid\vec{x}) \leq 1.
+\]
+
+Ein lineares Modell garantiert das nicht.
+Zum Beispiel könnte gelten:
+
+\[
+    \vec{w}^{\top}\vec{x}
+    =
+    -3
+\]
+
+oder
+
+\[
+    \vec{w}^{\top}\vec{x}
+    =
+    4{,}7.
+\]
+
+Beides kann keine Wahrscheinlichkeit sein.
+
+\section{Die Grundidee der logistischen Regression}
+
+Die Idee der logistischen Regression ist:
+
+\begin{enumerate}
+    \item Berechne zuerst einen linearen Score:
+    \[
+        a
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+
+    \item Wandle diesen Score mit einer Sigmoid-Funktion in eine Wahrscheinlichkeit um:
+    \[
+        y
+        =
+        \sigma(a).
+    \]
+\end{enumerate}
+
+\begin{definitionbox}
+Das Modell der binären logistischen Regression lautet:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}),
+\]
+
+wobei
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    p(t=1\mid\vec{x},\vec{w}).
+\]
+\end{definitionbox}
+
+Der Wert
+
+\[
+    a
+    =
+    \vec{w}^{\top}\vec{x}
+\]
+
+heißt Aktivierung (activation), Score oder Logit.
+
+Die Ausgabe
+
+\[
+    y
+    =
+    \sigma(a)
+\]
+
+ist eine Wahrscheinlichkeit.
+
+\section{Die Sigmoid-Funktion}
+
+Die Sigmoid-Funktion (sigmoid function) ist definiert als
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+\begin{definitionbox}
+Die Sigmoid-Funktion ist
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+Sie bildet reelle Zahlen auf das Intervall \((0,1)\) ab:
+
+\[
+    \sigma:\mathbb{R}\to(0,1).
+\]
+\end{definitionbox}
+
+Wichtige Eigenschaften:
+
+\[
+    \lim_{a\to\infty}\sigma(a)=1,
+\]
+
+\[
+    \lim_{a\to-\infty}\sigma(a)=0,
+\]
+
+und
+
+\[
+    \sigma(0)=\frac{1}{2}.
+\]
+
+\begin{conceptbox}
+Die Sigmoid-Funktion macht aus einem beliebigen linearen Score \(a\in\mathbb{R}\) eine gültige Wahrscheinlichkeit.
+
+\[
+    a \in \mathbb{R}
+    \quad
+    \longrightarrow
+    \quad
+    \sigma(a)\in(0,1).
+\]
+\end{conceptbox}
+
+\section{Interpretation der Sigmoid-Ausgabe}
+
+Bei logistischer Regression setzen wir:
+
+\[
+    p(t=1\mid\vec{x},\vec{w})
+    =
+    y(\vec{x},\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+
+Da es nur zwei Klassen gibt, muss gelten:
+
+\[
+    p(t=0\mid\vec{x},\vec{w})
+    =
+    1-p(t=1\mid\vec{x},\vec{w}).
+\]
+
+Also:
+
+\[
+    p(t=0\mid\vec{x},\vec{w})
+    =
+    1-y(\vec{x},\vec{w}).
+\]
+
+\begin{definitionbox}
+Für binäre logistische Regression gilt:
+
+\[
+    p(t=1\mid\vec{x},\vec{w})
+    =
+    y,
+\]
+
+und
+
+\[
+    p(t=0\mid\vec{x},\vec{w})
+    =
+    1-y,
+\]
+
+wobei
+
+\[
+    y
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+\end{definitionbox}
+
+\section{Entscheidungsregel}
+
+Aus der Wahrscheinlichkeit kann eine Klassenentscheidung gemacht werden.
+Die Standardregel ist:
+
+\[
+    \hat{t}
+    =
+    \begin{cases}
+        1, & y \geq 0{,}5, \\
+        0, & y < 0{,}5.
+    \end{cases}
+\]
+
+Da
+
+\[
+    \sigma(0)=0{,}5
+\]
+
+und die Sigmoid-Funktion monoton wachsend ist, gilt:
+
+\[
+    y \geq 0{,}5
+    \quad
+    \Longleftrightarrow
+    \quad
+    \vec{w}^{\top}\vec{x} \geq 0.
+\]
+
+\begin{conceptbox}
+Die Entscheidungsgrenze (decision boundary) der logistischen Regression ist
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+
+Auf der einen Seite entscheidet das Modell Klasse \(1\), auf der anderen Seite Klasse \(0\).
+\end{conceptbox}
+
+\section{Bias-Term}
+
+Wie bei linearer Regression verwenden wir meistens einen Bias-Term.
+Für eine Eingabe
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+\]
+
+erweitern wir:
+
+\[
+    \tilde{\vec{x}}
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}.
+\]
+
+Der Gewichtsvektor ist:
+
+\[
+    \vec{w}
+    =
+    \begin{pmatrix}
+        w_0 \\
+        w_1 \\
+        \vdots \\
+        w_D
+    \end{pmatrix}.
+\]
+
+Dann gilt:
+
+\[
+    a
+    =
+    \vec{w}^{\top}\tilde{\vec{x}}
+    =
+    w_0+\sum_{j=1}^{D}w_jx_j.
+\]
+
+\begin{notebox}
+Der Bias-Term \(w_0\) verschiebt die Entscheidungsgrenze.
+
+Ohne Bias müsste die Entscheidungsgrenze durch den Ursprung gehen.
+\end{notebox}
+
+Im Folgenden schreiben wir oft einfach \(\vec{x}\) statt \(\tilde{\vec{x}}\), wenn der Bias-Eintrag bereits enthalten ist.
+
+\section{Odds und Logit}
+
+Die logistische Regression hat eine wichtige Interpretation über Odds und Logit.
+
+Sei
+
+\[
+    y
+    =
+    p(t=1\mid\vec{x}).
+\]
+
+Dann ist
+
+\[
+    1-y
+    =
+    p(t=0\mid\vec{x}).
+\]
+
+Die Odds sind definiert als:
+
+\[
+    \frac{y}{1-y}.
+\]
+
+\begin{definitionbox}
+Die Odds (odds) sind das Verhältnis der Wahrscheinlichkeit für Klasse \(1\) zur Wahrscheinlichkeit für Klasse \(0\):
+
+\[
+    \mathrm{odds}
+    =
+    \frac{p(t=1\mid\vec{x})}{p(t=0\mid\vec{x})}
+    =
+    \frac{y}{1-y}.
+\]
+\end{definitionbox}
+
+Der Logit ist der Logarithmus der Odds:
+
+\[
+    \operatorname{logit}(y)
+    =
+    \log
+    \left(
+        \frac{y}{1-y}
+    \right).
+\]
+
+Bei logistischer Regression gilt:
+
+\[
+    y
+    =
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+Dann ist:
+
+\[
+    1-y
+    =
+    1-
+    \frac{1}{1+\exp(-a)}
+    =
+    \frac{\exp(-a)}{1+\exp(-a)}.
+\]
+
+Also:
+
+\[
+    \frac{y}{1-y}
+    =
+    \frac{
+        \frac{1}{1+\exp(-a)}
+    }{
+        \frac{\exp(-a)}{1+\exp(-a)}
+    }
+    =
+    \frac{1}{\exp(-a)}
+    =
+    \exp(a).
+\]
+
+Damit:
+
+\[
+    \log
+    \left(
+        \frac{y}{1-y}
+    \right)
+    =
+    \log(\exp(a))
+    =
+    a.
+\]
+
+Da \(a=\vec{w}^{\top}\vec{x}\), folgt:
+
+\[
+    \operatorname{logit}(y)
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+\begin{conceptbox}
+Logistische Regression modelliert den Logit linear:
+
+\[
+    \log
+    \left(
+        \frac{p(t=1\mid\vec{x})}{p(t=0\mid\vec{x})}
+    \right)
+    =
+    \vec{w}^{\top}\vec{x}.
+\]
+
+Die Wahrscheinlichkeit selbst ist nicht linear in \(\vec{x}\), aber die Log-Odds sind linear.
+\end{conceptbox}
+
+\section{Bernoulli-Modell für die Zielwerte}
+
+Da
+
+\[
+    t_n \in \{0,1\}
+\]
+
+ist, modellieren wir \(t_n\) mit einer Bernoulli-Verteilung (Bernoulli distribution).
+
+Für einen Datenpunkt gilt:
+
+\[
+    p(t_n\mid\vec{x}_n,\vec{w})
+    =
+    y_n^{t_n}
+    (1-y_n)^{1-t_n},
+\]
+
+wobei
+
+\[
+    y_n
+    =
+    y(\vec{x}_n,\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}_n).
+\]
+
+\begin{definitionbox}
+Das probabilistische Modell der logistischen Regression ist:
+
+\[
+    p(t\mid\vec{x},\vec{w})
+    =
+    y^t(1-y)^{1-t},
+\]
+
+mit
+
+\[
+    y
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+\end{definitionbox}
+
+Prüfen wir die beiden Fälle:
+
+Falls
+
+\[
+    t=1,
+\]
+
+dann:
+
+\[
+    p(t=1\mid\vec{x},\vec{w})
+    =
+    y^1(1-y)^0
+    =
+    y.
+\]
+
+Falls
+
+\[
+    t=0,
+\]
+
+dann:
+
+\[
+    p(t=0\mid\vec{x},\vec{w})
+    =
+    y^0(1-y)^1
+    =
+    1-y.
+\]
+
+\section{Likelihood der logistischen Regression}
+
+Für einen Datensatz
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}
+\]
+
+nehmen wir i.i.d. Daten an.
+Dann ist die Likelihood:
+
+\[
+    p(\vec{t}\mid X,\vec{w})
+    =
+    \prod_{n=1}^{N}
+    p(t_n\mid\vec{x}_n,\vec{w}).
+\]
+
+Einsetzen des Bernoulli-Modells ergibt:
+
+\[
+    p(\vec{t}\mid X,\vec{w})
+    =
+    \prod_{n=1}^{N}
+    y_n^{t_n}
+    (1-y_n)^{1-t_n}.
+\]
+
+\begin{definitionbox}
+Die Likelihood der logistischen Regression lautet:
+
+\[
+    L(\vec{w})
+    =
+    \prod_{n=1}^{N}
+    y_n^{t_n}
+    (1-y_n)^{1-t_n},
+\]
+
+wobei
+
+\[
+    y_n
+    =
+    \sigma(\vec{w}^{\top}\vec{x}_n).
+\]
+\end{definitionbox}
+
+\section{Log-Likelihood}
+
+Die Log-Likelihood ist:
+
+\[
+    \ell(\vec{w})
+    =
+    \log L(\vec{w}).
+\]
+
+Also:
+
+\[
+    \ell(\vec{w})
+    =
+    \log
+    \prod_{n=1}^{N}
+    y_n^{t_n}
+    (1-y_n)^{1-t_n}.
+\]
+
+Der Logarithmus macht aus dem Produkt eine Summe:
+
+\[
+    \ell(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    \log
+    \left[
+        y_n^{t_n}
+        (1-y_n)^{1-t_n}
+    \right].
+\]
+
+Mit Logarithmusregeln:
+
+\[
+    \ell(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{definitionbox}
+Die Log-Likelihood der logistischen Regression ist:
+
+\[
+    \ell(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+\end{definitionbox}
+
+\section{Negative Log-Likelihood und Kreuzentropie}
+
+In maschinellem Lernen minimieren wir meistens eine Verlustfunktion.
+Daher betrachten wir die negative Log-Likelihood:
+
+\[
+    E(\vec{w})
+    =
+    -\ell(\vec{w}).
+\]
+
+Damit:
+
+\[
+    E(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{definitionbox}
+Die Fehlerfunktion der logistischen Regression ist die binäre Kreuzentropie (binary cross-entropy):
+
+\[
+    E(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+\end{definitionbox}
+
+Für einen einzelnen Datenpunkt ist der Verlust:
+
+\[
+    E_n(\vec{w})
+    =
+    -\left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{conceptbox}
+Kreuzentropie (cross-entropy) ist die negative Log-Likelihood eines Bernoulli-Modells.
+
+Sie ist also keine willkürlich gewählte Fehlerfunktion, sondern folgt aus Maximum-Likelihood.
+\end{conceptbox}
+
+\section{Intuition der Kreuzentropie}
+
+Betrachten wir einen einzelnen Datenpunkt.
+
+Falls
+
+\[
+    t=1,
+\]
+
+dann ist der Verlust:
+
+\[
+    E
+    =
+    -\log y.
+\]
+
+Wenn das Modell
+
+\[
+    y\approx 1
+\]
+
+vorhersagt, dann ist
+
+\[
+    -\log y \approx 0.
+\]
+
+Wenn das Modell aber
+
+\[
+    y\approx 0
+\]
+
+vorhersagt, dann wird
+
+\[
+    -\log y
+\]
+
+sehr groß.
+
+Falls
+
+\[
+    t=0,
+\]
+
+dann ist der Verlust:
+
+\[
+    E
+    =
+    -\log(1-y).
+\]
+
+Wenn das Modell
+
+\[
+    y\approx 0
+\]
+
+vorhersagt, ist der Verlust klein.
+Wenn das Modell
+
+\[
+    y\approx 1
+\]
+
+vorhersagt, ist der Verlust groß.
+
+\begin{conceptbox}
+Kreuzentropie bestraft sichere falsche Vorhersagen besonders stark.
+
+Das ist sinnvoll, weil ein Modell nicht nur falsch liegt, sondern auch sehr sicher falsch sein kann.
+\end{conceptbox}
+
+\section{Ableitung der Sigmoid-Funktion}
+
+Für den Gradienten der logistischen Regression brauchen wir die Ableitung der Sigmoid-Funktion.
+
+Die Sigmoid-Funktion ist:
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}.
+\]
+
+Wir schreiben:
+
+\[
+    \sigma(a)
+    =
+    (1+\exp(-a))^{-1}.
+\]
+
+Ableiten:
+
+\[
+    \frac{d\sigma}{da}
+    =
+    -(1+\exp(-a))^{-2}
+    \cdot
+    (-\exp(-a)).
+\]
+
+Also:
+
+\[
+    \frac{d\sigma}{da}
+    =
+    \frac{\exp(-a)}{(1+\exp(-a))^2}.
+\]
+
+Nun gilt:
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)},
+\]
+
+und
+
+\[
+    1-\sigma(a)
+    =
+    \frac{\exp(-a)}{1+\exp(-a)}.
+\]
+
+Daher:
+
+\[
+    \sigma(a)(1-\sigma(a))
+    =
+    \frac{1}{1+\exp(-a)}
+    \cdot
+    \frac{\exp(-a)}{1+\exp(-a)}
+    =
+    \frac{\exp(-a)}{(1+\exp(-a))^2}.
+\]
+
+Somit:
+
+\[
+    \frac{d\sigma}{da}
+    =
+    \sigma(a)(1-\sigma(a)).
+\]
+
+\begin{definitionbox}
+Die Ableitung der Sigmoid-Funktion ist:
+
+\[
+    \sigma'(a)
+    =
+    \sigma(a)(1-\sigma(a)).
+\]
+\end{definitionbox}
+
+Wenn
+
+\[
+    y=\sigma(a),
+\]
+
+dann gilt:
+
+\[
+    \frac{dy}{da}
+    =
+    y(1-y).
+\]
+
+\section{Gradient für einen Datenpunkt}
+
+Für einen einzelnen Datenpunkt ist der Verlust:
+
+\[
+    E_n(\vec{w})
+    =
+    -\left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right],
+\]
+
+wobei
+
+\[
+    y_n
+    =
+    \sigma(a_n)
+\]
+
+und
+
+\[
+    a_n
+    =
+    \vec{w}^{\top}\vec{x}_n.
+\]
+
+Wir möchten den Gradienten nach \(\vec{w}\) berechnen:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w}).
+\]
+
+Zuerst leiten wir nach \(y_n\) ab:
+
+\[
+    \frac{\partial E_n}{\partial y_n}
+    =
+    -\left[
+        \frac{t_n}{y_n}
+        -
+        \frac{1-t_n}{1-y_n}
+    \right].
+\]
+
+Also:
+
+\[
+    \frac{\partial E_n}{\partial y_n}
+    =
+    -\frac{t_n}{y_n}
+    +
+    \frac{1-t_n}{1-y_n}.
+\]
+
+Auf gemeinsamen Nenner gebracht:
+
+\[
+    \frac{\partial E_n}{\partial y_n}
+    =
+    \frac{
+        -t_n(1-y_n)
+        +
+        (1-t_n)y_n
+    }{
+        y_n(1-y_n)
+    }.
+\]
+
+Der Zähler ist:
+
+\[
+    -t_n+t_ny_n+y_n-t_ny_n
+    =
+    y_n-t_n.
+\]
+
+Also:
+
+\[
+    \frac{\partial E_n}{\partial y_n}
+    =
+    \frac{y_n-t_n}{y_n(1-y_n)}.
+\]
+
+Nun:
+
+\[
+    \frac{\partial y_n}{\partial a_n}
+    =
+    y_n(1-y_n).
+\]
+
+Mit der Kettenregel:
+
+\[
+    \frac{\partial E_n}{\partial a_n}
+    =
+    \frac{\partial E_n}{\partial y_n}
+    \frac{\partial y_n}{\partial a_n}.
+\]
+
+Einsetzen:
+
+\[
+    \frac{\partial E_n}{\partial a_n}
+    =
+    \frac{y_n-t_n}{y_n(1-y_n)}
+    y_n(1-y_n).
+\]
+
+Damit:
+
+\[
+    \frac{\partial E_n}{\partial a_n}
+    =
+    y_n-t_n.
+\]
+
+Schließlich gilt:
+
+\[
+    a_n
+    =
+    \vec{w}^{\top}\vec{x}_n.
+\]
+
+Also:
+
+\[
+    \frac{\partial a_n}{\partial \vec{w}}
+    =
+    \vec{x}_n.
+\]
+
+Damit:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    (y_n-t_n)\vec{x}_n.
+\]
+
+\begin{definitionbox}
+Für einen einzelnen Datenpunkt ist der Gradient der Kreuzentropie:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    (y_n-t_n)\vec{x}_n.
+\]
+
+Dabei ist
+
+\[
+    y_n
+    =
+    \sigma(\vec{w}^{\top}\vec{x}_n).
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Kombination aus Sigmoid und Kreuzentropie führt zu einem besonders einfachen Gradienten:
+
+\[
+    \text{Gradient}
+    =
+    \text{Vorhersagefehler}
+    \cdot
+    \text{Eingabe}.
+\]
+
+Also:
+
+\[
+    (y_n-t_n)\vec{x}_n.
+\]
+\end{conceptbox}
+
+\section{Gradient für den gesamten Datensatz}
+
+Die gesamte Fehlerfunktion ist:
+
+\[
+    E(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    E_n(\vec{w}).
+\]
+
+Daher ist der Gradient:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    \nabla_{\vec{w}}E_n(\vec{w}).
+\]
+
+Mit dem Einzeldatenpunkt-Gradienten:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    (y_n-t_n)\vec{x}_n.
+\]
+
+\begin{definitionbox}
+Der Gradient der logistischen Regression ist:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    \sum_{n=1}^{N}
+    (y_n-t_n)\vec{x}_n.
+\]
+\end{definitionbox}
+
+\section{Matrixform des Gradienten}
+
+Wir definieren die Designmatrix:
+
+\[
+    X
+    =
+    \begin{pmatrix}
+        \vec{x}_1^{\top} \\
+        \vec{x}_2^{\top} \\
+        \vdots \\
+        \vec{x}_N^{\top}
+    \end{pmatrix}
+    \in
+    \mathbb{R}^{N\times D}.
+\]
+
+Der Zielvektor ist:
+
+\[
+    \vec{t}
+    =
+    \begin{pmatrix}
+        t_1 \\
+        t_2 \\
+        \vdots \\
+        t_N
+    \end{pmatrix}.
+\]
+
+Die Aktivierungen sind:
+
+\[
+    \vec{a}
+    =
+    X\vec{w}.
+\]
+
+Die Vorhersagen sind:
+
+\[
+    \vec{y}
+    =
+    \sigma(\vec{a}),
+\]
+
+wobei \(\sigma\) komponentenweise angewendet wird:
+
+\[
+    y_n
+    =
+    \sigma(a_n).
+\]
+
+Dann lautet der Gradient:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    X^{\top}(\vec{y}-\vec{t}).
+\]
+
+\begin{definitionbox}
+In Matrixform ist der Gradient:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    X^{\top}(\vec{y}-\vec{t}).
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Die Dimensionen sind:
+
+\[
+    X \in \mathbb{R}^{N\times D},
+    \qquad
+    \vec{y}-\vec{t} \in \mathbb{R}^{N},
+    \qquad
+    X^{\top}(\vec{y}-\vec{t}) \in \mathbb{R}^{D}.
+\]
+\end{notebox}
+
+\section{Warum gibt es keine geschlossene Lösung?}
+
+Bei linearer Regression mit quadratischem Fehler konnten wir die Normalengleichung herleiten:
+
+\[
+    \Phi^{\top}\Phi\vec{w}
+    =
+    \Phi^{\top}\vec{t}.
+\]
+
+Daraus folgte eine geschlossene Lösung.
+
+Bei logistischer Regression ist die Situation anders.
+Die Fehlerfunktion enthält die Sigmoid-Funktion und Logarithmen:
+
+\[
+    E(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log \sigma(\vec{w}^{\top}\vec{x}_n)
+        +
+        (1-t_n)\log(1-\sigma(\vec{w}^{\top}\vec{x}_n))
+    \right].
+\]
+
+Der Gradient ist zwar einfach:
+
+\[
+    \nabla_{\vec{w}}E(\vec{w})
+    =
+    X^{\top}(\vec{y}-\vec{t}),
+\]
+
+aber \(\vec{y}\) hängt nichtlinear von \(\vec{w}\) ab:
+
+\[
+    \vec{y}
+    =
+    \sigma(X\vec{w}).
+\]
+
+Die Gleichung
+
+\[
+    X^{\top}(\vec{y}-\vec{t})
+    =
+    \vec{0}
+\]
+
+ist daher nichtlinear in \(\vec{w}\).
+
+\begin{conceptbox}
+Logistische Regression hat im Allgemeinen keine geschlossene Lösung wie lineare Regression.
+
+Man verwendet iterative Optimierungsverfahren, zum Beispiel Gradientenabstieg (gradient descent), Newton-Verfahren oder quasi-Newton-Verfahren.
+\end{conceptbox}
+
+\section{Gradientenabstieg}
+
+Gradientenabstieg (gradient descent) aktualisiert die Gewichte in Richtung des negativen Gradienten:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    \nabla_{\vec{w}}E(\vec{w}^{(\tau)}).
+\]
+
+Dabei ist
+
+\[
+    \eta>0
+\]
+
+die Lernrate (learning rate).
+
+Für logistische Regression:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    X^{\top}
+    (
+        \vec{y}^{(\tau)}-\vec{t}
+    ).
+\]
+
+Dabei ist:
+
+\[
+    \vec{y}^{(\tau)}
+    =
+    \sigma(X\vec{w}^{(\tau)}).
+\]
+
+\begin{definitionbox}
+Batch-Gradientenabstieg für logistische Regression:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    X^{\top}
+    (
+        \sigma(X\vec{w}^{(\tau)})-\vec{t}
+    ).
+\]
+\end{definitionbox}
+
+\section{Stochastischer Gradientenabstieg}
+
+Beim stochastischen Gradientenabstieg (stochastic gradient descent, SGD) wird nicht der ganze Datensatz verwendet.
+Stattdessen wird ein einzelner Datenpunkt oder ein Mini-Batch verwendet.
+
+Für einen einzelnen Datenpunkt lautet das Update:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    \eta
+    (y_n-t_n)\vec{x}_n.
+\]
+
+Dabei ist:
+
+\[
+    y_n
+    =
+    \sigma((\vec{w}^{(\tau)})^{\top}\vec{x}_n).
+\]
+
+\begin{conceptbox}
+SGD ist wichtig, weil es bei großen Datensätzen effizienter ist als Batch-Gradientenabstieg.
+
+Viele moderne Modelle werden mit Mini-Batch-Varianten von SGD trainiert.
+\end{conceptbox}
+
+\section{Hesse-Matrix und Konvexität}
+
+Die Fehlerfunktion der logistischen Regression ist konvex.
+Das bedeutet, dass jedes lokale Minimum auch ein globales Minimum ist.
+
+Die Hesse-Matrix (Hessian matrix) ist:
+
+\[
+    H
+    =
+    \nabla_{\vec{w}}^2E(\vec{w}).
+\]
+
+Für logistische Regression gilt:
+
+\[
+    H
+    =
+    X^{\top}RX,
+\]
+
+wobei \(R\) eine Diagonalmatrix ist:
+
+\[
+    R
+    =
+    \mathrm{diag}
+    \left(
+        y_1(1-y_1),
+        y_2(1-y_2),
+        \dots,
+        y_N(1-y_N)
+    \right).
+\]
+
+Da
+
+\[
+    0 < y_n(1-y_n) \leq \frac{1}{4},
+\]
+
+ist \(R\) positiv semidefinit.
+Damit ist auch
+
+\[
+    X^{\top}RX
+\]
+
+positiv semidefinit.
+
+\begin{definitionbox}
+Die Hesse-Matrix der logistischen Regression ist:
+
+\[
+    H
+    =
+    X^{\top}RX,
+\]
+
+mit
+
+\[
+    R_{nn}
+    =
+    y_n(1-y_n).
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Kreuzentropie der logistischen Regression ist konvex in \(\vec{w}\).
+
+Das bedeutet:
+Es gibt keine schlechten lokalen Minima.
+Trotzdem muss das Minimum numerisch gefunden werden.
+\end{conceptbox}
+
+\section{Newton-Verfahren und IRLS}
+
+Neben Gradientenabstieg kann man auch das Newton-Verfahren (Newton's method) verwenden.
+Das Update lautet:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    H^{-1}
+    \nabla_{\vec{w}}E(\vec{w}^{(\tau)}).
+\]
+
+Für logistische Regression:
+
+\[
+    \vec{w}^{(\tau+1)}
+    =
+    \vec{w}^{(\tau)}
+    -
+    (X^{\top}RX)^{-1}
+    X^{\top}(\vec{y}-\vec{t}).
+\]
+
+Dieses Verfahren kann auch als iterativ gewichtete kleinste Quadrate (iteratively reweighted least squares, IRLS) interpretiert werden.
+
+\begin{notebox}
+Newton-Verfahren kann schneller konvergieren als Gradientenabstieg, ist aber pro Iteration teurer, weil eine Matrix invertiert oder ein lineares Gleichungssystem gelöst werden muss.
+\end{notebox}
+
+\section{Entscheidungsgrenze}
+
+Die Entscheidung des Modells basiert auf:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+
+Mit Schwelle \(0{,}5\):
+
+\[
+    \hat{t}=1
+    \quad
+    \Longleftrightarrow
+    \quad
+    y(\vec{x},\vec{w})\geq 0{,}5.
+\]
+
+Da
+
+\[
+    \sigma(a)\geq 0{,}5
+    \quad
+    \Longleftrightarrow
+    \quad
+    a\geq 0,
+\]
+
+gilt:
+
+\[
+    \hat{t}=1
+    \quad
+    \Longleftrightarrow
+    \quad
+    \vec{w}^{\top}\vec{x}\geq 0.
+\]
+
+Die Entscheidungsgrenze ist daher:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+
+\begin{definitionbox}
+Die Entscheidungsgrenze (decision boundary) der logistischen Regression ist eine Hyperebene:
+
+\[
+    \vec{w}^{\top}\vec{x}=0.
+\]
+\end{definitionbox}
+
+Für zwei Eingabedimensionen mit Bias-Term:
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        1 \\
+        x_1 \\
+        x_2
+    \end{pmatrix},
+\]
+
+ist die Entscheidungsgrenze:
+
+\[
+    w_0+w_1x_1+w_2x_2=0.
+\]
+
+Falls
+
+\[
+    w_2 \neq 0,
+\]
+
+kann man nach \(x_2\) auflösen:
+
+\[
+    x_2
+    =
+    -\frac{w_0}{w_2}
+    -
+    \frac{w_1}{w_2}x_1.
+\]
+
+Das ist eine Gerade.
+
+\begin{conceptbox}
+Logistische Regression ist ein linearer Klassifikator.
+
+Die Wahrscheinlichkeiten sind nichtlinear, aber die Entscheidungsgrenze ist linear im Merkmalsraum.
+\end{conceptbox}
+
+\section{Nichtlineare Entscheidungsgrenzen mit Basisfunktionen}
+
+Wie bei linearer Regression kann man Basisfunktionen verwenden.
+Statt direkt \(\vec{x}\) zu verwenden, nutzt man
+
+\[
+    \vec{\phi}(\vec{x}).
+\]
+
+Das Modell lautet:
+
+\[
+    y(\vec{x},\vec{w})
+    =
+    \sigma(\vec{w}^{\top}\vec{\phi}(\vec{x})).
+\]
+
+Die Entscheidungsgrenze ist:
+
+\[
+    \vec{w}^{\top}\vec{\phi}(\vec{x})=0.
+\]
+
+Im transformierten Merkmalsraum ist die Grenze linear.
+Im ursprünglichen Eingaberaum kann sie nichtlinear sein.
+
+\begin{examplebox}
+Für eine eindimensionale Eingabe kann man polynomiale Basisfunktionen verwenden:
+
+\[
+    \vec{\phi}(x)
+    =
+    \begin{pmatrix}
+        1 \\
+        x \\
+        x^2
+    \end{pmatrix}.
+\]
+
+Dann ist:
+
+\[
+    y(x,\vec{w})
+    =
+    \sigma(w_0+w_1x+w_2x^2).
+\]
+
+Die Entscheidungsgrenze ist:
+
+\[
+    w_0+w_1x+w_2x^2=0.
+\]
+
+Diese Gleichung kann bis zu zwei Lösungen haben.
+\end{examplebox}
+
+\section{Regularisierte logistische Regression}
+
+Wie bei linearer Regression kann logistische Regression überanpassen.
+Daher verwendet man Regularisierung.
+
+Mit \(L_2\)-Regularisierung lautet die Fehlerfunktion:
+
+\[
+    E_{\mathrm{reg}}(\vec{w})
+    =
+    E(\vec{w})
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+
+Dabei ist:
+
+\[
+    E(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right].
+\]
+
+\begin{definitionbox}
+Regularisierte logistische Regression mit \(L_2\)-Regularisierung minimiert:
+
+\[
+    E_{\mathrm{reg}}(\vec{w})
+    =
+    -\sum_{n=1}^{N}
+    \left[
+        t_n\log y_n
+        +
+        (1-t_n)\log(1-y_n)
+    \right]
+    +
+    \frac{\lambda}{2}
+    \vec{w}^{\top}\vec{w}.
+\]
+\end{definitionbox}
+
+Der Gradient ist:
+
+\[
+    \nabla_{\vec{w}}E_{\mathrm{reg}}(\vec{w})
+    =
+    X^{\top}(\vec{y}-\vec{t})
+    +
+    \lambda\vec{w}.
+\]
+
+\begin{notebox}
+Oft wird der Bias-Term \(w_0\) nicht regularisiert.
+Dann verwendet man statt \(\vec{w}^{\top}\vec{w}\) nur die Summe über die Gewichte ohne Bias.
+\end{notebox}
+
+\section{MAP-Interpretation der Regularisierung}
+
+Regularisierung kann probabilistisch als Prior interpretiert werden.
+Wir verwenden einen Gauß-Prior auf die Gewichte:
+
+\[
+    p(\vec{w})
+    =
+    \mathcal{N}
+    \left(
+        \vec{w}
+        \mid
+        \vec{0},
+        \alpha^{-1}I
+    \right).
+\]
+
+Dieser Prior hat die Form:
+
+\[
+    p(\vec{w})
+    \propto
+    \exp
+    \left(
+        -\frac{\alpha}{2}
+        \vec{w}^{\top}\vec{w}
+    \right).
+\]
+
+Der negative Log-Prior ist bis auf Konstanten:
+
+\[
+    -\log p(\vec{w})
+    =
+    \frac{\alpha}{2}
+    \vec{w}^{\top}\vec{w}
+    +
+    \text{const}.
+\]
+
+Die MAP-Schätzung minimiert:
+
+\[
+    -\log p(\vec{t}\mid X,\vec{w})
+    -
+    \log p(\vec{w}).
+\]
+
+Das ergibt:
+
+\[
+    E_{\mathrm{MAP}}(\vec{w})
+    =
+    E(\vec{w})
+    +
+    \frac{\alpha}{2}
+    \vec{w}^{\top}\vec{w}
+    +
+    \text{const}.
+\]
+
+\begin{conceptbox}
+\(L_2\)-regularisierte logistische Regression ist MAP-Schätzung mit Bernoulli-Likelihood und Gauß-Prior auf die Gewichte.
+
+\[
+    \text{Bernoulli-Likelihood}
+    +
+    \text{Gauß-Prior}
+    \quad
+    \Longrightarrow
+    \quad
+    \text{Kreuzentropie}
+    +
+    L_2\text{-Regularisierung}.
+\]
+\end{conceptbox}
+
+\section{Numerische Stabilität}
+
+In Implementierungen muss man auf numerische Stabilität achten.
+Die Sigmoid-Funktion
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}
+\]
+
+kann für sehr große negative \(a\) numerisch problematisch sein, weil
+
+\[
+    \exp(-a)
+\]
+
+sehr groß wird.
+
+Auch die Kreuzentropie
+
+\[
+    -\left[
+        t\log y
+        +
+        (1-t)\log(1-y)
+    \right]
+\]
+
+ist problematisch, wenn \(y\) exakt \(0\) oder \(1\) wird, weil
+
+\[
+    \log(0)
+\]
+
+nicht definiert ist.
+
+\begin{notebox}
+In praktischen Implementierungen verwendet man oft numerisch stabile Varianten der Sigmoid- und Kreuzentropie-Berechnung.
+
+Außerdem werden Wahrscheinlichkeiten manchmal auf ein kleines Intervall beschränkt, zum Beispiel
+
+\[
+    y \in [\varepsilon,1-\varepsilon].
+\]
+\end{notebox}
+
+\section{Evaluation eines binären Klassifikators}
+
+Nach dem Training muss das Modell bewertet werden.
+Dazu verwendet man Testdaten:
+
+\[
+    \mathcal{D}_{\mathrm{test}}
+    =
+    \{(\vec{x}_1^{\,\mathrm{test}},t_1^{\mathrm{test}}),\dots,(\vec{x}_M^{\,\mathrm{test}},t_M^{\mathrm{test}})\}.
+\]
+
+Für jeden Testpunkt berechnet man:
+
+\[
+    y_m
+    =
+    p(t=1\mid\vec{x}_m^{\,\mathrm{test}},\vec{w}).
+\]
+
+Dann wählt man eine Schwelle, meistens:
+
+\[
+    \tau = 0{,}5.
+\]
+
+Die vorhergesagte Klasse ist:
+
+\[
+    \hat{t}_m
+    =
+    \begin{cases}
+        1, & y_m \geq \tau, \\
+        0, & y_m < \tau.
+    \end{cases}
+\]
+
+\section{Accuracy}
+
+Die Accuracy (accuracy) ist der Anteil korrekt klassifizierter Datenpunkte.
+
+\[
+    \mathrm{accuracy}
+    =
+    \frac{
+        \text{Anzahl korrekter Vorhersagen}
+    }{
+        \text{Anzahl aller Vorhersagen}
+    }.
+\]
+
+Mathematisch:
+
+\[
+    \mathrm{accuracy}
+    =
+    \frac{1}{M}
+    \sum_{m=1}^{M}
+    \mathbb{1}(\hat{t}_m=t_m).
+\]
+
+\begin{definitionbox}
+Die Accuracy ist:
+
+\[
+    \mathrm{accuracy}
+    =
+    \frac{1}{M}
+    \sum_{m=1}^{M}
+    \mathbb{1}(\hat{t}_m=t_m).
+\]
+
+Dabei ist \(\mathbb{1}(\hat{t}_m=t_m)\) gleich \(1\), wenn die Vorhersage korrekt ist, und sonst \(0\).
+\end{definitionbox}
+
+\begin{notebox}
+Accuracy kann irreführend sein, wenn die Klassen stark unausgeglichen sind.
+
+Wenn \(95\%\) der Daten Klasse \(0\) sind, erreicht ein Modell, das immer \(0\) vorhersagt, bereits \(95\%\) Accuracy.
+\end{notebox}
+
+\section{Konfusionsmatrix}
+
+Für binäre Klassifikation unterscheidet man:
+
+\begin{itemize}
+    \item True Positive (TP): \(t=1\) und \(\hat{t}=1\),
+    \item True Negative (TN): \(t=0\) und \(\hat{t}=0\),
+    \item False Positive (FP): \(t=0\), aber \(\hat{t}=1\),
+    \item False Negative (FN): \(t=1\), aber \(\hat{t}=0\).
+\end{itemize}
+
+Die Konfusionsmatrix (confusion matrix) ist:
+
+\[
+\begin{array}{c|cc}
+    & \hat{t}=1 & \hat{t}=0 \\
+    \hline
+    t=1 & \mathrm{TP} & \mathrm{FN} \\
+    t=0 & \mathrm{FP} & \mathrm{TN}
+\end{array}
+\]
+
+\begin{definitionbox}
+Die Konfusionsmatrix zeigt, welche Klassen korrekt oder falsch vorhergesagt wurden.
+Sie ist besonders hilfreich, wenn Accuracy allein nicht aussagekräftig ist.
+\end{definitionbox}
+
+\section{Precision, Recall und F1-Score}
+
+Aus der Konfusionsmatrix lassen sich weitere Maße berechnen.
+
+Precision (precision):
+
+\[
+    \mathrm{precision}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}.
+\]
+
+Recall (recall):
+
+\[
+    \mathrm{recall}
+    =
+    \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}.
+\]
+
+F1-Score:
+
+\[
+    F_1
+    =
+    2
+    \frac{
+        \mathrm{precision}\cdot\mathrm{recall}
+    }{
+        \mathrm{precision}+\mathrm{recall}
+    }.
+\]
+
+\begin{conceptbox}
+Precision fragt:
+
+\[
+    \text{Wie viele positive Vorhersagen waren wirklich positiv?}
+\]
+
+Recall fragt:
+
+\[
+    \text{Wie viele wirklich positive Fälle wurden gefunden?}
+\]
+\end{conceptbox}
+
+\section{Wahl der Entscheidungsschwelle}
+
+Die Standardschwelle ist:
+
+\[
+    \tau=0{,}5.
+\]
+
+Manchmal ist eine andere Schwelle sinnvoll.
+Die allgemeine Entscheidungsregel lautet:
+
+\[
+    \hat{t}
+    =
+    \begin{cases}
+        1, & y \geq \tau, \\
+        0, & y < \tau.
+    \end{cases}
+\]
+
+Wenn False Positives teuer sind, wählt man oft eine höhere Schwelle.
+Wenn False Negatives teuer sind, wählt man oft eine niedrigere Schwelle.
+
+\begin{examplebox}
+Bei einer medizinischen Voruntersuchung kann es schlimmer sein, eine kranke Person fälschlich als gesund einzustufen, als eine gesunde Person zur weiteren Untersuchung zu schicken.
+
+Dann möchte man False Negatives reduzieren und kann eine niedrigere Schwelle \(\tau\) wählen.
+\end{examplebox}
+
+\section{Mehrklassen-Klassifikation}
+
+Logistische Regression kann auf mehr als zwei Klassen erweitert werden.
+Für \(K\) Klassen gilt:
+
+\[
+    t \in \{1,2,\dots,K\}.
+\]
+
+Für jede Klasse \(k\) berechnet man einen Score:
+
+\[
+    a_k
+    =
+    \vec{w}_k^{\top}\vec{x}.
+\]
+
+Diese Scores werden mit der Softmax-Funktion in Wahrscheinlichkeiten umgewandelt.
+
+\begin{definitionbox}
+Die Softmax-Funktion (softmax function) ist:
+
+\[
+    y_k
+    =
+    p(t=k\mid\vec{x})
+    =
+    \frac{
+        \exp(a_k)
+    }{
+        \sum_{j=1}^{K}
+        \exp(a_j)
+    }.
+\]
+\end{definitionbox}
+
+Die Wahrscheinlichkeiten erfüllen:
+
+\[
+    y_k \geq 0
+\]
+
+und
+
+\[
+    \sum_{k=1}^{K} y_k = 1.
+\]
+
+\begin{conceptbox}
+Die Softmax-Funktion ist die Mehrklassen-Verallgemeinerung der Sigmoid-Funktion.
+
+Sie wandelt mehrere Scores in eine Wahrscheinlichkeitsverteilung über Klassen um.
+\end{conceptbox}
+
+\section{Mehrklassen-Kreuzentropie}
+
+Für Mehrklassen-Klassifikation verwendet man oft One-Hot-Kodierung (one-hot encoding).
+Der Zielvektor ist:
+
+\[
+    \vec{t}
+    =
+    \begin{pmatrix}
+        t_1 \\
+        \vdots \\
+        t_K
+    \end{pmatrix},
+\]
+
+wobei genau eine Komponente \(1\) ist und alle anderen \(0\) sind.
+
+Für einen Datenpunkt ist die Kreuzentropie:
+
+\[
+    E_n
+    =
+    -\sum_{k=1}^{K}
+    t_{nk}\log y_{nk}.
+\]
+
+Für den ganzen Datensatz:
+
+\[
+    E
+    =
+    -\sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    t_{nk}\log y_{nk}.
+\]
+
+\begin{definitionbox}
+Die Mehrklassen-Kreuzentropie (multiclass cross-entropy) ist:
+
+\[
+    E
+    =
+    -\sum_{n=1}^{N}
+    \sum_{k=1}^{K}
+    t_{nk}\log y_{nk}.
+\]
+\end{definitionbox}
+
+\section{Softmax als probabilistisches Modell}
+
+Die Softmax-Ausgabe wird interpretiert als:
+
+\[
+    y_k
+    =
+    p(t=k\mid\vec{x}).
+\]
+
+Die vorhergesagte Klasse ist:
+
+\[
+    \hat{t}
+    =
+    \arg\max_{k}
+    y_k.
+\]
+
+Da Softmax monoton in den Scores ist, gilt auch:
+
+\[
+    \hat{t}
+    =
+    \arg\max_{k}
+    a_k.
+\]
+
+\begin{notebox}
+Für die Entscheidung reicht der größte Score.
+Für Wahrscheinlichkeiten und Training braucht man aber die Softmax-normalisierten Werte.
+\end{notebox}
+
+\section{Zusammenhang zu neuronalen Netzen}
+
+Logistische Regression kann als einfachstes neuronales Netz betrachtet werden:
+
+\[
+    \vec{x}
+    \longrightarrow
+    \vec{w}^{\top}\vec{x}
+    \longrightarrow
+    \sigma(\vec{w}^{\top}\vec{x}).
+\]
+
+Es gibt keine versteckte Schicht (hidden layer).
+Das Modell ist daher ein linearer Klassifikator mit nichtlinearer Ausgabefunktion.
+
+\begin{conceptbox}
+Ein neuronales Netz für binäre Klassifikation verwendet am Ende oft genau dieselbe Kombination:
+
+\[
+    \text{Logit}
+    \longrightarrow
+    \text{Sigmoid}
+    \longrightarrow
+    \text{Kreuzentropie}.
+\]
+
+Logistische Regression ist daher ein wichtiger Spezialfall neuronaler Netze.
+\end{conceptbox}
+
+\section{Praktisches Beispiel: Binäre Zielvariable erzeugen}
+
+In vielen Datensätzen ist der ursprüngliche Zielwert kontinuierlich.
+Für binäre Klassifikation kann man daraus eine binäre Zielvariable erzeugen.
+
+Angenommen, ein Zielwert \(z_n\) ist kontinuierlich.
+Wir wählen eine Schwelle \(c\) und definieren:
+
+\[
+    t_n
+    =
+    \begin{cases}
+        1, & z_n \geq c, \\
+        0, & z_n < c.
+    \end{cases}
+\]
+
+\begin{examplebox}
+Wenn \(z_n\) ein Wohnungspreis ist, kann man definieren:
+
+\[
+    t_n
+    =
+    \begin{cases}
+        1, & \text{Preis ist hoch}, \\
+        0, & \text{Preis ist niedrig}.
+    \end{cases}
+\]
+
+Dann kann logistische Regression verwendet werden, um die Wahrscheinlichkeit für einen hohen Preis zu modellieren.
+\end{examplebox}
+
+\begin{notebox}
+Das Umwandeln eines kontinuierlichen Zielwerts in eine binäre Klasse kann nützlich sein, verliert aber Information.
+
+Ein Preis von \(101\) und ein Preis von \(1000\) können nach der Schwelle beide dieselbe Klasse bekommen.
+\end{notebox}
+
+\section{Feature-Skalierung}
+
+Wie bei linearer Regression ist Feature-Skalierung wichtig.
+Wenn Merkmale sehr unterschiedliche Größenordnungen haben, kann Gradientenabstieg schlecht funktionieren.
+
+Eine Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei sind \(\mu_j\) und \(\sigma_j\) Mittelwert und Standardabweichung des Merkmals im Trainingsdatensatz.
+
+\begin{examtipbox}
+Wichtig:
+Skalierungsparameter werden nur aus Trainingsdaten berechnet.
+
+Dieselben Parameter werden dann auf Validierungs- und Testdaten angewendet.
+\end{examtipbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei logistischer Regression:
+
+\begin{enumerate}
+    \item Denken, logistische Regression sei ein Regressionsmodell für kontinuierliche Zielwerte.
+    \item Die Ausgabe \(\vec{w}^{\top}\vec{x}\) direkt als Wahrscheinlichkeit interpretieren.
+    \item Vergessen, die Sigmoid-Funktion anzuwenden.
+    \item \(p(t=1\mid\vec{x})\) und \(p(t=0\mid\vec{x})\) verwechseln.
+    \item Kreuzentropie mit quadratischem Fehler ersetzen, ohne die probabilistische Bedeutung zu beachten.
+    \item Die Ableitung der Sigmoid-Funktion falsch berechnen.
+    \item Beim Gradienten das einfache Ergebnis \((y_n-t_n)\vec{x}_n\) nicht erkennen.
+    \item Die Entscheidungsgrenze mit der Sigmoid-Kurve verwechseln.
+    \item Accuracy verwenden, obwohl die Klassen stark unausgeglichen sind.
+    \item Bei MAP-Regularisierung den Prior vergessen.
+    \item Den Bias-Term versehentlich regularisieren, obwohl dies nicht gewünscht ist.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Sigmoid berechnen}
+
+Berechne
+
+\[
+    \sigma(0).
+\]
+
+\begin{examplebox}
+Mit
+
+\[
+    \sigma(a)
+    =
+    \frac{1}{1+\exp(-a)}
+\]
+
+folgt:
+
+\[
+    \sigma(0)
+    =
+    \frac{1}{1+\exp(0)}
+    =
+    \frac{1}{1+1}
+    =
+    \frac{1}{2}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Wahrscheinlichkeit und Gegenwahrscheinlichkeit}
+
+Ein logistisches Regressionsmodell gibt aus:
+
+\[
+    p(t=1\mid\vec{x})=0{,}8.
+\]
+
+Berechne
+
+\[
+    p(t=0\mid\vec{x}).
+\]
+
+\begin{examplebox}
+Da es nur zwei Klassen gibt:
+
+\[
+    p(t=0\mid\vec{x})
+    =
+    1-p(t=1\mid\vec{x}).
+\]
+
+Also:
+
+\[
+    p(t=0\mid\vec{x})
+    =
+    1-0{,}8
+    =
+    0{,}2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Binäre Kreuzentropie}
+
+Für einen Datenpunkt gilt:
+
+\[
+    t=1,
+    \qquad
+    y=0{,}9.
+\]
+
+Berechne den Kreuzentropie-Verlust.
+
+\begin{examplebox}
+Der Verlust ist:
+
+\[
+    E
+    =
+    -\left[
+        t\log y
+        +
+        (1-t)\log(1-y)
+    \right].
+\]
+
+Mit \(t=1\):
+
+\[
+    E
+    =
+    -\log y.
+\]
+
+Also:
+
+\[
+    E
+    =
+    -\log(0{,}9).
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Gradient für einen Datenpunkt}
+
+Gegeben seien
+
+\[
+    y_n=0{,}7,
+    \qquad
+    t_n=1,
+\]
+
+und
+
+\[
+    \vec{x}_n
+    =
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}.
+\]
+
+Berechne den Gradienten
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w}).
+\]
+
+\begin{examplebox}
+Der Gradient ist:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    (y_n-t_n)\vec{x}_n.
+\]
+
+Einsetzen:
+
+\[
+    y_n-t_n
+    =
+    0{,}7-1
+    =
+    -0{,}3.
+\]
+
+Also:
+
+\[
+    \nabla_{\vec{w}}E_n(\vec{w})
+    =
+    -0{,}3
+    \begin{pmatrix}
+        1 \\
+        2
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        -0{,}3 \\
+        -0{,}6
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Entscheidungsgrenze}
+
+Ein Modell hat
+
+\[
+    w_0=-1,
+    \qquad
+    w_1=2.
+\]
+
+Für eine eindimensionale Eingabe mit Bias gilt:
+
+\[
+    a
+    =
+    w_0+w_1x.
+\]
+
+Bestimme die Entscheidungsgrenze.
+
+\begin{examplebox}
+Die Entscheidungsgrenze ist:
+
+\[
+    a=0.
+\]
+
+Also:
+
+\[
+    -1+2x=0.
+\]
+
+Damit:
+
+\[
+    2x=1
+\]
+
+und
+
+\[
+    x=\frac{1}{2}.
+\]
+
+Für \(x\geq \frac{1}{2}\) sagt das Modell Klasse \(1\) voraus.
+Für \(x<\frac{1}{2}\) sagt es Klasse \(0\) voraus.
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Logistische Regression (logistic regression) ist ein Modell für binäre Klassifikation.
+    \item Das Modell berechnet zuerst einen linearen Score:
+    \[
+        a
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+    \item Die Sigmoid-Funktion wandelt den Score in eine Wahrscheinlichkeit um:
+    \[
+        y
+        =
+        \sigma(a)
+        =
+        \frac{1}{1+\exp(-a)}.
+    \]
+    \item Die Modellwahrscheinlichkeit ist:
+    \[
+        p(t=1\mid\vec{x},\vec{w})
+        =
+        \sigma(\vec{w}^{\top}\vec{x}).
+    \]
+    \item Für die Gegenklasse gilt:
+    \[
+        p(t=0\mid\vec{x},\vec{w})
+        =
+        1-y.
+    \]
+    \item Der Logit ist linear:
+    \[
+        \log
+        \left(
+            \frac{y}{1-y}
+        \right)
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+    \item Die Bernoulli-Likelihood ist:
+    \[
+        L(\vec{w})
+        =
+        \prod_{n=1}^{N}
+        y_n^{t_n}
+        (1-y_n)^{1-t_n}.
+    \]
+    \item Die negative Log-Likelihood ist die binäre Kreuzentropie:
+    \[
+        E(\vec{w})
+        =
+        -\sum_{n=1}^{N}
+        \left[
+            t_n\log y_n
+            +
+            (1-t_n)\log(1-y_n)
+        \right].
+    \]
+    \item Die Ableitung der Sigmoid-Funktion ist:
+    \[
+        \sigma'(a)
+        =
+        \sigma(a)(1-\sigma(a)).
+    \]
+    \item Der Gradient für einen Datenpunkt ist:
+    \[
+        \nabla_{\vec{w}}E_n(\vec{w})
+        =
+        (y_n-t_n)\vec{x}_n.
+    \]
+    \item Der Gradient für den Datensatz ist:
+    \[
+        \nabla_{\vec{w}}E(\vec{w})
+        =
+        X^{\top}(\vec{y}-\vec{t}).
+    \]
+    \item Die Entscheidungsgrenze ist:
+    \[
+        \vec{w}^{\top}\vec{x}=0.
+    \]
+    \item \(L_2\)-regularisierte logistische Regression entspricht MAP mit Gauß-Prior.
+    \item Für mehrere Klassen verwendet man die Softmax-Funktion:
+    \[
+        y_k
+        =
+        \frac{\exp(a_k)}
+        {\sum_{j=1}^{K}\exp(a_j)}.
+    \]
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Warum ist lineare Regression nicht direkt für Klassifikation geeignet?
+    \item Definiere die Sigmoid-Funktion.
+    \item Zeige, dass \(\sigma(0)=\frac{1}{2}\).
+    \item Zeige, dass \(\sigma'(a)=\sigma(a)(1-\sigma(a))\).
+    \item Wie modelliert logistische Regression \(p(t=1\mid\vec{x})\)?
+    \item Was ist der Logit?
+    \item Zeige, dass logistische Regression lineare Log-Odds modelliert.
+    \item Schreibe die Bernoulli-Likelihood für logistische Regression auf.
+    \item Leite die Log-Likelihood her.
+    \item Warum ist die Kreuzentropie die negative Log-Likelihood?
+    \item Leite den Gradienten für einen Datenpunkt her.
+    \item Leite den Gradienten in Matrixform her.
+    \item Warum gibt es keine geschlossene Lösung wie bei linearer Regression?
+    \item Wie lautet das Update des Batch-Gradientenabstiegs?
+    \item Was ist die Entscheidungsgrenze der logistischen Regression?
+    \item Warum ist logistische Regression ein linearer Klassifikator?
+    \item Wie kann man nichtlineare Entscheidungsgrenzen erzeugen?
+    \item Wie funktioniert \(L_2\)-Regularisierung bei logistischer Regression?
+    \item Wie hängt \(L_2\)-Regularisierung mit MAP zusammen?
+    \item Was ist der Unterschied zwischen Sigmoid und Softmax?
+    \item Wie lautet die Mehrklassen-Kreuzentropie?
+    \item Warum kann Accuracy bei unausgeglichenen Klassen irreführend sein?
+\end{enumerate}
+\end{examtipbox}

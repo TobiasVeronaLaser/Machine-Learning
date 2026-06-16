@@ -1,0 +1,1412 @@
+\chapter{Grundlagen der Wahrscheinlichkeit}
+
+\section{Ziel dieses Kapitels}
+
+Dieses Kapitel führt die wichtigsten Grundlagen der diskreten Wahrscheinlichkeitstheorie (probability theory) ein.
+Diese Grundlagen sind notwendig, um später probabilistische Modelle, Maximum-Likelihood-Schätzung (maximum likelihood estimation), Maximum-a-posteriori-Schätzung (maximum a-posteriori estimation), logistische Regression (logistic regression), Gaussian Mixture Models und den EM-Algorithmus zu verstehen.
+
+Im vorherigen Kapitel wurde motiviert, dass maschinelles Lernen häufig mit Unsicherheit umgehen muss.
+In diesem Kapitel wird diese Unsicherheit mathematisch beschrieben.
+
+\begin{conceptbox}
+Wahrscheinlichkeitstheorie (probability theory) ist die mathematische Sprache für Unsicherheit.
+
+Im maschinellen Lernen verwenden wir Wahrscheinlichkeiten, um auszudrücken, wie plausibel bestimmte Klassen, Ursachen, Parameter oder zukünftige Beobachtungen unter den gegebenen Daten sind.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was ist eine Zufallsvariable (random variable)?
+    \item Was ist eine Wahrscheinlichkeitsverteilung (probability distribution)?
+    \item Was ist der Unterschied zwischen einer gemeinsamen Wahrscheinlichkeit (joint probability), einer Randwahrscheinlichkeit (marginal probability) und einer bedingten Wahrscheinlichkeit (conditional probability)?
+    \item Was sagt die Summenregel (sum rule)?
+    \item Was sagt die Produktregel (product rule)?
+    \item Wie wird die Bayes-Regel (Bayes' rule) hergeleitet?
+    \item Was ist der Unterschied zwischen Prior, Likelihood und Posterior?
+    \item Warum ist Bayes' Regel für maschinelles Lernen so wichtig?
+\end{itemize}
+
+\section{Zufallsexperimente und Ergebnisse}
+
+Ein Zufallsexperiment (random experiment) ist ein Vorgang, dessen Ergebnis vor der Durchführung nicht sicher bekannt ist.
+Trotzdem kennt man meistens die Menge der möglichen Ergebnisse.
+
+\begin{examplebox}
+Beispiele für Zufallsexperimente:
+
+\begin{itemize}
+    \item Ein Würfel wird geworfen.
+    \item Eine Münze wird geworfen.
+    \item Aus einer Schüssel wird zufällig eine Frucht gezogen.
+    \item Ein zufälliges Bild aus einem Datensatz wird betrachtet.
+    \item Ein Messwert wird unter Rauschen (noise) aufgenommen.
+\end{itemize}
+\end{examplebox}
+
+Die Menge aller möglichen Ergebnisse nennt man Ergebnisraum (sample space).
+Oft wird er mit \(\Omega\) bezeichnet.
+
+\begin{definitionbox}
+Der Ergebnisraum (sample space) \(\Omega\) ist die Menge aller möglichen Ergebnisse eines Zufallsexperiments.
+
+Ein einzelnes mögliches Ergebnis nennt man Elementarereignis (elementary event).
+\end{definitionbox}
+
+Beim Würfeln ist der Ergebnisraum zum Beispiel
+
+\[
+    \Omega = \{1,2,3,4,5,6\}.
+\]
+
+Beim Ziehen einer Frucht könnte der Ergebnisraum sein
+
+\[
+    \Omega = \{\text{Orange},\text{weiße Beere}\}.
+\]
+
+Ein Ereignis (event) ist eine Teilmenge des Ergebnisraums.
+Zum Beispiel ist beim Würfeln das Ereignis, eine gerade Zahl zu würfeln,
+
+\[
+    A = \{2,4,6\}.
+\]
+
+\begin{notebox}
+In der Wahrscheinlichkeitstheorie unterscheidet man zwischen einem konkreten Ergebnis und einem Ereignis.
+
+Ein konkretes Ergebnis wäre zum Beispiel \(X=4\).
+Ein Ereignis kann mehrere Ergebnisse enthalten, zum Beispiel \(X \in \{2,4,6\}\).
+\end{notebox}
+
+\section{Zufallsvariablen}
+
+In der Mathematik arbeitet man selten direkt mit den rohen Ergebnissen eines Experiments.
+Stattdessen verwendet man Zufallsvariablen (random variables).
+
+\begin{definitionbox}
+Eine Zufallsvariable (random variable) ist eine Variable, deren Wert vom Ausgang eines Zufallsexperiments abhängt.
+
+Eine Zufallsvariable wird meistens mit einem Großbuchstaben geschrieben, zum Beispiel \(X\).
+Ein konkreter Wert der Zufallsvariable wird meistens mit einem Kleinbuchstaben geschrieben, zum Beispiel \(x\).
+\end{definitionbox}
+
+Beispiel:
+
+\[
+    X = \text{Augenzahl eines Würfels}.
+\]
+
+Dann kann \(X\) einen der Werte
+
+\[
+    x \in \{1,2,3,4,5,6\}
+\]
+
+annehmen.
+
+Die Menge aller möglichen Werte von \(X\) wird oft mit \(\Omega_x\) bezeichnet:
+
+\[
+    \Omega_x = \{1,2,3,4,5,6\}.
+\]
+
+\begin{notebox}
+Großbuchstaben wie \(X\), \(Y\), \(S\) bezeichnen Zufallsvariablen.
+Kleinbuchstaben wie \(x\), \(y\), \(s\) bezeichnen konkrete Werte dieser Zufallsvariablen.
+
+Streng wäre also:
+\[
+    p(X=x).
+\]
+
+In vielen ML-Texten schreibt man aber kürzer:
+\[
+    p(x).
+\]
+
+Das bedeutet dann: die Wahrscheinlichkeit, dass die Zufallsvariable \(X\) den Wert \(x\) annimmt.
+\end{notebox}
+
+\section{Diskrete Wahrscheinlichkeitsverteilungen}
+
+In diesem Kapitel betrachten wir zunächst diskrete Zufallsvariablen (discrete random variables).
+Eine diskrete Zufallsvariable kann nur endlich viele oder abzählbar viele Werte annehmen.
+
+\begin{definitionbox}
+Eine diskrete Wahrscheinlichkeitsverteilung (discrete probability distribution) ordnet jedem möglichen Wert \(x \in \Omega_x\) eine Wahrscheinlichkeit \(p(X=x)\) zu.
+\end{definitionbox}
+
+Für eine diskrete Wahrscheinlichkeitsverteilung müssen zwei Bedingungen gelten:
+
+\[
+    p(X=x) \geq 0
+    \quad
+    \text{für alle}
+    \quad
+    x \in \Omega_x,
+\]
+
+und
+
+\[
+    \sum_{x \in \Omega_x} p(X=x) = 1.
+\]
+
+Die erste Bedingung sagt:
+Wahrscheinlichkeiten können nicht negativ sein.
+
+Die zweite Bedingung sagt:
+Irgendein möglicher Wert muss eintreten.
+Die Gesamtwahrscheinlichkeit über alle Möglichkeiten ist daher \(1\).
+
+\begin{examplebox}
+Bei einem fairen Würfel gilt:
+
+\[
+    p(X=1)
+    =
+    p(X=2)
+    =
+    \dots
+    =
+    p(X=6)
+    =
+    \frac{1}{6}.
+\]
+
+Damit ist
+
+\[
+    \sum_{x=1}^{6} p(X=x)
+    =
+    6 \cdot \frac{1}{6}
+    =
+    1.
+\]
+\end{examplebox}
+
+\section{Wahrscheinlichkeit als relative Häufigkeit}
+
+In Datenanwendungen entsteht Wahrscheinlichkeit oft aus beobachteten Häufigkeiten.
+Wenn ein Ereignis \(A\) in \(N\) Experimenten insgesamt \(n(A)\)-mal beobachtet wird, dann kann man die Wahrscheinlichkeit durch die relative Häufigkeit schätzen:
+
+\[
+    p(A)
+    \approx
+    \frac{n(A)}{N}.
+\]
+
+\begin{conceptbox}
+In maschinellem Lernen sehen wir Wahrscheinlichkeiten oft aus zwei Perspektiven:
+
+\begin{itemize}
+    \item als theoretische Größen eines Modells,
+    \item als Größen, die aus Daten geschätzt werden.
+\end{itemize}
+
+Der Übergang von Daten zu Wahrscheinlichkeiten ist eine zentrale Idee statistischen Lernens.
+\end{conceptbox}
+
+\begin{examplebox}
+Wenn in einem Datensatz mit \(N=1000\) Bildern genau \(n(c=7)=93\) Bilder die Ziffer \(7\) zeigen, dann kann man schätzen:
+
+\[
+    p(c=7)
+    \approx
+    \frac{93}{1000}
+    =
+    0{,}093.
+\]
+\end{examplebox}
+
+\section{Das Schüssel-Frucht-Beispiel}
+
+Wir betrachten ein einfaches Beispiel, das die wichtigsten Regeln der Wahrscheinlichkeit motiviert.
+
+Es gibt zwei Schüsseln:
+
+\[
+    s \in \{A,B\}.
+\]
+
+Die Zufallsvariable \(S\) beschreibt, aus welcher Schüssel gezogen wurde.
+Außerdem gibt es zwei Fruchttypen:
+
+\[
+    y \in \{W,O\}.
+\]
+
+Dabei steht \(W\) für weiße Beere und \(O\) für Orange.
+Die Zufallsvariable \(Y\) beschreibt, welche Frucht gezogen wurde.
+
+Der Ablauf des Experiments ist:
+
+\begin{enumerate}
+    \item Zuerst wird zufällig eine Schüssel gewählt.
+    \item Danach wird zufällig eine Frucht aus dieser Schüssel gezogen.
+    \item Dann wird die Frucht beobachtet.
+\end{enumerate}
+
+\begin{notebox}
+Dieses Beispiel ist für maschinelles Lernen wichtig, weil es eine einfache Version eines typischen Inferenzproblems zeigt:
+
+\[
+    \text{Ursache}
+    \longrightarrow
+    \text{Beobachtung}.
+\]
+
+Die Schüssel \(S\) ist die unbekannte Ursache.
+Die Frucht \(Y\) ist die beobachtete Information.
+Oft interessiert uns aber die umgekehrte Richtung:
+
+\[
+    \text{Beobachtung}
+    \longrightarrow
+    \text{wahrscheinliche Ursache}.
+\]
+\end{notebox}
+
+\section{Gemeinsame Wahrscheinlichkeiten}
+
+Eine gemeinsame Wahrscheinlichkeit (joint probability) beschreibt die Wahrscheinlichkeit, dass mehrere Aussagen gleichzeitig eintreten.
+
+\begin{definitionbox}
+Die gemeinsame Wahrscheinlichkeit (joint probability)
+
+\[
+    p(S=s,Y=y)
+\]
+
+ist die Wahrscheinlichkeit, dass gleichzeitig \(S=s\) und \(Y=y\) gilt.
+\end{definitionbox}
+
+Im Schüssel-Frucht-Beispiel bedeutet
+
+\[
+    p(S=A,Y=W)
+\]
+
+die Wahrscheinlichkeit, dass aus Schüssel \(A\) gezogen wurde und die gezogene Frucht eine weiße Beere ist.
+
+Oft schreibt man kürzer:
+
+\[
+    p(s,y)
+\]
+
+statt
+
+\[
+    p(S=s,Y=y).
+\]
+
+\begin{notebox}
+Die Schreibweise \(p(s,y)\) ist eine Abkürzung.
+Sie bedeutet nicht, dass \(s\) und \(y\) selbst Zufallsvariablen sind.
+Eigentlich sind \(s\) und \(y\) konkrete Werte der Zufallsvariablen \(S\) und \(Y\).
+\end{notebox}
+
+\subsection{Gemeinsame Wahrscheinlichkeit als Tabelle}
+
+Für zwei diskrete Zufallsvariablen kann man die gemeinsame Verteilung als Tabelle darstellen.
+
+\[
+\begin{array}{c|cc|c}
+    & Y=W & Y=O & p(S=s) \\
+    \hline
+    S=A & p(A,W) & p(A,O) & p(A) \\
+    S=B & p(B,W) & p(B,O) & p(B) \\
+    \hline
+    p(Y=y) & p(W) & p(O) & 1
+\end{array}
+\]
+
+Die inneren Einträge sind gemeinsame Wahrscheinlichkeiten.
+Die Randwerte sind Randwahrscheinlichkeiten (marginal probabilities).
+
+\section{Randwahrscheinlichkeiten und Summenregel}
+
+Eine Randwahrscheinlichkeit (marginal probability) beschreibt die Wahrscheinlichkeit einer Variable, ohne die andere Variable festzulegen.
+
+Zum Beispiel fragt
+
+\[
+    p(S=A)
+\]
+
+nur:
+Wie wahrscheinlich ist es, dass Schüssel \(A\) gewählt wurde?
+
+Dabei ist egal, welche Frucht gezogen wurde.
+Die Frucht kann entweder \(W\) oder \(O\) sein.
+Daher gilt:
+
+\[
+    p(S=A)
+    =
+    p(S=A,Y=W)
+    +
+    p(S=A,Y=O).
+\]
+
+Das ist ein Spezialfall der Summenregel (sum rule).
+
+\begin{definitionbox}
+Für zwei diskrete Zufallsvariablen \(X\) und \(Y\) lautet die Summenregel (sum rule):
+
+\[
+    p(X=x)
+    =
+    \sum_{y \in \Omega_y}
+    p(X=x,Y=y).
+\]
+
+In Kurzschreibweise:
+
+\[
+    p(x)
+    =
+    \sum_y p(x,y).
+\]
+\end{definitionbox}
+
+Analog gilt:
+
+\[
+    p(Y=y)
+    =
+    \sum_{x \in \Omega_x}
+    p(X=x,Y=y).
+\]
+
+In Kurzschreibweise:
+
+\[
+    p(y)
+    =
+    \sum_x p(x,y).
+\]
+
+\begin{conceptbox}
+Die Summenregel (sum rule) bedeutet:
+Wenn eine Variable nicht interessiert, summiert man über alle ihre möglichen Werte.
+
+Dieses Heraussummieren nennt man Marginalisierung (marginalization).
+\end{conceptbox}
+
+\begin{examplebox}
+Im Schüssel-Frucht-Beispiel gilt:
+
+\[
+    p(Y=O)
+    =
+    p(S=A,Y=O)
+    +
+    p(S=B,Y=O).
+\]
+
+Die Wahrscheinlichkeit für eine Orange ist also die Summe der Wahrscheinlichkeiten aller Wege, die zu einer Orange führen.
+\end{examplebox}
+
+\section{Bedingte Wahrscheinlichkeiten}
+
+Eine bedingte Wahrscheinlichkeit (conditional probability) beschreibt, wie wahrscheinlich ein Ereignis ist, wenn eine bestimmte Information bereits bekannt ist.
+
+\begin{definitionbox}
+Die bedingte Wahrscheinlichkeit (conditional probability)
+
+\[
+    p(Y=y \mid X=x)
+\]
+
+ist die Wahrscheinlichkeit, dass \(Y=y\) gilt, unter der Bedingung, dass \(X=x\) bereits bekannt ist.
+\end{definitionbox}
+
+Man liest
+
+\[
+    p(Y=y \mid X=x)
+\]
+
+als:
+
+\begin{center}
+Wahrscheinlichkeit von \(Y=y\) gegeben \(X=x\).
+\end{center}
+
+Im Schüssel-Frucht-Beispiel bedeutet
+
+\[
+    p(Y=O \mid S=B)
+\]
+
+die Wahrscheinlichkeit, eine Orange zu ziehen, wenn bereits bekannt ist, dass aus Schüssel \(B\) gezogen wurde.
+
+\subsection{Definition der bedingten Wahrscheinlichkeit}
+
+Die bedingte Wahrscheinlichkeit wird über gemeinsame und marginale Wahrscheinlichkeiten definiert:
+
+\[
+    p(Y=y \mid X=x)
+    =
+    \frac{p(X=x,Y=y)}{p(X=x)}
+\]
+
+für \(p(X=x) > 0\).
+
+In Kurzschreibweise:
+
+\[
+    p(y \mid x)
+    =
+    \frac{p(x,y)}{p(x)}.
+\]
+
+\begin{notebox}
+Die Bedingung \(p(X=x)>0\) ist notwendig, weil man nicht durch \(0\) teilen darf.
+Außerdem kann man nicht sinnvoll auf ein Ereignis konditionieren, das unmöglich ist.
+\end{notebox}
+
+\section{Produktregel}
+
+Aus der Definition der bedingten Wahrscheinlichkeit folgt direkt die Produktregel (product rule).
+
+Aus
+
+\[
+    p(y \mid x)
+    =
+    \frac{p(x,y)}{p(x)}
+\]
+
+folgt durch Multiplikation mit \(p(x)\):
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x).
+\]
+
+Da die gemeinsame Wahrscheinlichkeit symmetrisch ist,
+
+\[
+    p(x,y)
+    =
+    p(y,x),
+\]
+
+gilt auch
+
+\[
+    p(x,y)
+    =
+    p(x \mid y)p(y).
+\]
+
+\begin{definitionbox}
+Für zwei diskrete Zufallsvariablen \(X\) und \(Y\) lautet die Produktregel (product rule):
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x)
+    =
+    p(x \mid y)p(y).
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+Die Produktregel (product rule) bedeutet:
+
+\[
+    \text{gemeinsame Wahrscheinlichkeit}
+    =
+    \text{bedingte Wahrscheinlichkeit}
+    \cdot
+    \text{Randwahrscheinlichkeit}.
+\]
+
+Sie beschreibt also, wie man eine Wahrscheinlichkeit für zwei gemeinsam eintretende Ereignisse zerlegen kann.
+\end{conceptbox}
+
+\begin{examplebox}
+Im Schüssel-Frucht-Beispiel gilt:
+
+\[
+    p(S=A,Y=W)
+    =
+    p(Y=W \mid S=A)p(S=A).
+\]
+
+Man liest das als:
+
+\begin{center}
+Die Wahrscheinlichkeit, Schüssel \(A\) zu wählen und eine weiße Beere zu ziehen, ist die Wahrscheinlichkeit für Schüssel \(A\), multipliziert mit der Wahrscheinlichkeit für eine weiße Beere unter der Bedingung Schüssel \(A\).
+\end{center}
+\end{examplebox}
+
+\section{Summenregel und Produktregel zusammen}
+
+Die Summenregel und die Produktregel sind zwei der wichtigsten Regeln im gesamten maschinellen Lernen.
+
+\[
+    p(x)
+    =
+    \sum_y p(x,y)
+\]
+
+und
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x).
+\]
+
+Setzt man die Produktregel in die Summenregel ein, erhält man:
+
+\[
+    p(x)
+    =
+    \sum_y p(x \mid y)p(y).
+\]
+
+Diese Gleichung ist sehr wichtig.
+Sie sagt:
+Die Wahrscheinlichkeit von \(x\) kann berechnet werden, indem man über alle möglichen Ursachen \(y\) summiert.
+
+\begin{conceptbox}
+Die Gleichung
+
+\[
+    p(x)
+    =
+    \sum_y p(x \mid y)p(y)
+\]
+
+heißt oft totale Wahrscheinlichkeit (law of total probability).
+Sie ist eine Kombination aus Summenregel und Produktregel.
+\end{conceptbox}
+
+\section{Bayes-Regel}
+
+Die Bayes-Regel (Bayes' rule) erlaubt es, bedingte Wahrscheinlichkeiten umzudrehen.
+
+Oft kennen wir
+
+\[
+    p(y \mid x),
+\]
+
+brauchen aber
+
+\[
+    p(x \mid y).
+\]
+
+Oder umgekehrt.
+
+\subsection{Herleitung der Bayes-Regel}
+
+Wir starten mit der Produktregel:
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x).
+\]
+
+Gleichzeitig gilt:
+
+\[
+    p(x,y)
+    =
+    p(x \mid y)p(y).
+\]
+
+Da beide rechten Seiten dieselbe gemeinsame Wahrscheinlichkeit \(p(x,y)\) beschreiben, setzen wir sie gleich:
+
+\[
+    p(y \mid x)p(x)
+    =
+    p(x \mid y)p(y).
+\]
+
+Nun teilen wir durch \(p(x)\), sofern \(p(x)>0\):
+
+\[
+    p(y \mid x)
+    =
+    \frac{p(x \mid y)p(y)}{p(x)}.
+\]
+
+Damit erhalten wir die Bayes-Regel.
+
+\begin{definitionbox}
+Die Bayes-Regel (Bayes' rule) lautet:
+
+\[
+    p(y \mid x)
+    =
+    \frac{p(x \mid y)p(y)}{p(x)}.
+\]
+
+Mit der Summenregel kann der Nenner geschrieben werden als:
+
+\[
+    p(x)
+    =
+    \sum_{y'} p(x \mid y')p(y').
+\]
+
+Daher gilt auch:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        \sum_{y'} p(x \mid y')p(y')
+    }.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Im Nenner verwendet man oft \(y'\) statt \(y\), weil \(y\) im Zähler bereits der konkrete Wert ist, für den man die Wahrscheinlichkeit berechnen möchte.
+Die Variable \(y'\) ist nur eine Summationsvariable.
+\end{notebox}
+
+\section{Prior, Likelihood, Evidence und Posterior}
+
+Die Bayes-Regel hat im maschinellen Lernen eine spezielle Interpretation:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        p(x)
+    }.
+\]
+
+Die einzelnen Teile haben Namen:
+
+\[
+    \underbrace{p(y \mid x)}_{\text{Posterior}}
+    =
+    \frac{
+        \underbrace{p(x \mid y)}_{\text{Likelihood}}
+        \underbrace{p(y)}_{\text{Prior}}
+    }{
+        \underbrace{p(x)}_{\text{Evidence}}
+    }.
+\]
+
+\begin{definitionbox}
+Der Prior \(p(y)\) ist die Wahrscheinlichkeit von \(y\), bevor die Beobachtung \(x\) berücksichtigt wird.
+
+Die Likelihood \(p(x \mid y)\) beschreibt, wie plausibel die Beobachtung \(x\) wäre, wenn \(y\) gelten würde.
+
+Die Evidence \(p(x)\) ist die Gesamtwahrscheinlichkeit der Beobachtung \(x\).
+
+Der Posterior \(p(y \mid x)\) ist die aktualisierte Wahrscheinlichkeit von \(y\), nachdem \(x\) beobachtet wurde.
+\end{definitionbox}
+
+\begin{conceptbox}
+Bayes' Regel beschreibt Lernen als Aktualisierung von Wahrscheinlichkeiten:
+
+\[
+    \text{Posterior}
+    \propto
+    \text{Likelihood}
+    \cdot
+    \text{Prior}.
+\]
+
+Das Zeichen \(\propto\) bedeutet proportional zu.
+Der Nenner \(p(x)\) sorgt dafür, dass die Posterior-Wahrscheinlichkeiten wieder zu \(1\) summieren.
+\end{conceptbox}
+
+\section{Bayes-Regel im Schüssel-Frucht-Beispiel}
+
+Wir wollen wissen:
+
+\begin{center}
+Wenn eine Orange beobachtet wurde, wie wahrscheinlich ist es, dass aus Schüssel \(B\) gezogen wurde?
+\end{center}
+
+Mathematisch suchen wir:
+
+\[
+    p(S=B \mid Y=O).
+\]
+
+Angenommen, die Schüsseln werden so gewählt:
+
+\[
+    p(S=A) = \frac{2}{3},
+    \qquad
+    p(S=B) = \frac{1}{3}.
+\]
+
+Außerdem gelten die bedingten Wahrscheinlichkeiten:
+
+\[
+    p(Y=O \mid S=A) = \frac{1}{3},
+    \qquad
+    p(Y=O \mid S=B) = \frac{3}{4}.
+\]
+
+Dann liefert Bayes' Regel:
+
+\[
+    p(S=B \mid Y=O)
+    =
+    \frac{
+        p(Y=O \mid S=B)p(S=B)
+    }{
+        p(Y=O \mid S=A)p(S=A)
+        +
+        p(Y=O \mid S=B)p(S=B)
+    }.
+\]
+
+Einsetzen ergibt:
+
+\[
+    p(S=B \mid Y=O)
+    =
+    \frac{
+        \frac{3}{4}\cdot\frac{1}{3}
+    }{
+        \frac{1}{3}\cdot\frac{2}{3}
+        +
+        \frac{3}{4}\cdot\frac{1}{3}
+    }.
+\]
+
+Der Zähler ist:
+
+\[
+    \frac{3}{4}\cdot\frac{1}{3}
+    =
+    \frac{3}{12}
+    =
+    \frac{1}{4}.
+\]
+
+Der Nenner ist:
+
+\[
+    \frac{1}{3}\cdot\frac{2}{3}
+    +
+    \frac{3}{4}\cdot\frac{1}{3}
+    =
+    \frac{2}{9}
+    +
+    \frac{1}{4}.
+\]
+
+Auf gemeinsamen Nenner gebracht:
+
+\[
+    \frac{2}{9}
+    +
+    \frac{1}{4}
+    =
+    \frac{8}{36}
+    +
+    \frac{9}{36}
+    =
+    \frac{17}{36}.
+\]
+
+Also:
+
+\[
+    p(S=B \mid Y=O)
+    =
+    \frac{
+        \frac{1}{4}
+    }{
+        \frac{17}{36}
+    }
+    =
+    \frac{1}{4}
+    \cdot
+    \frac{36}{17}
+    =
+    \frac{9}{17}
+    \approx
+    0{,}529.
+\]
+
+Damit gilt:
+
+\[
+    p(S=B \mid Y=O)
+    \approx
+    53\%.
+\]
+
+\begin{examplebox}
+Vor dem Beobachten der Frucht war die Wahrscheinlichkeit für Schüssel \(B\)
+
+\[
+    p(S=B) = \frac{1}{3} \approx 33\%.
+\]
+
+Nach dem Beobachten einer Orange ist sie
+
+\[
+    p(S=B \mid Y=O) = \frac{9}{17} \approx 53\%.
+\]
+
+Die Beobachtung \(Y=O\) hat unsere Einschätzung also verändert.
+\end{examplebox}
+
+\section{Was bedeutet Bayes-Regel intuitiv?}
+
+Bayes' Regel verbindet drei Ideen:
+
+\begin{enumerate}
+    \item Wie plausibel war die Ursache vor der Beobachtung?
+    \item Wie gut erklärt diese Ursache die Beobachtung?
+    \item Wie plausibel ist die Ursache nach der Beobachtung?
+\end{enumerate}
+
+Im Schüssel-Frucht-Beispiel:
+
+\begin{itemize}
+    \item Der Prior \(p(S=B)\) sagt, wie wahrscheinlich Schüssel \(B\) vor der Beobachtung war.
+    \item Die Likelihood \(p(Y=O \mid S=B)\) sagt, wie gut Schüssel \(B\) die Orange erklärt.
+    \item Der Posterior \(p(S=B \mid Y=O)\) sagt, wie wahrscheinlich Schüssel \(B\) nach der Beobachtung ist.
+\end{itemize}
+
+\begin{conceptbox}
+Bayes' Regel ist im maschinellen Lernen so wichtig, weil viele Probleme genau diese Struktur haben:
+
+\[
+    \text{unbekannte Klasse oder Ursache}
+    \longrightarrow
+    \text{beobachtete Daten}.
+\]
+
+Wir beobachten aber die Daten und wollen auf die Klasse oder Ursache schließen:
+
+\[
+    \text{beobachtete Daten}
+    \longrightarrow
+    \text{wahrscheinliche Klasse oder Ursache}.
+\]
+\end{conceptbox}
+
+\section{Bayes-Regel für Klassifikation}
+
+In einem Klassifikationsproblem ist \(c\) eine Klasse und \(\vec{x}\) eine beobachtete Eingabe.
+Gesucht ist oft:
+
+\[
+    p(c \mid \vec{x}).
+\]
+
+Das ist die Wahrscheinlichkeit der Klasse \(c\), nachdem die Eingabe \(\vec{x}\) beobachtet wurde.
+Mit Bayes' Regel gilt:
+
+\[
+    p(c \mid \vec{x})
+    =
+    \frac{
+        p(\vec{x} \mid c)p(c)
+    }{
+        p(\vec{x})
+    }.
+\]
+
+Der Nenner ist:
+
+\[
+    p(\vec{x})
+    =
+    \sum_{c'} p(\vec{x} \mid c')p(c').
+\]
+
+Also:
+
+\[
+    p(c \mid \vec{x})
+    =
+    \frac{
+        p(\vec{x} \mid c)p(c)
+    }{
+        \sum_{c'} p(\vec{x} \mid c')p(c')
+    }.
+\]
+
+\begin{definitionbox}
+In der Klassifikation bedeutet:
+
+\[
+    p(c)
+\]
+
+Prior-Wahrscheinlichkeit der Klasse \(c\),
+
+\[
+    p(\vec{x} \mid c)
+\]
+
+Likelihood der Eingabe \(\vec{x}\) unter Klasse \(c\),
+
+\[
+    p(c \mid \vec{x})
+\]
+
+Posterior-Wahrscheinlichkeit der Klasse \(c\) nach Beobachtung von \(\vec{x}\).
+\end{definitionbox}
+
+Eine typische Entscheidungsregel ist:
+
+\[
+    \hat{c}
+    =
+    \arg\max_c p(c \mid \vec{x}).
+\]
+
+Das bedeutet:
+Wir wählen die Klasse mit der höchsten Posterior-Wahrscheinlichkeit.
+
+\begin{examtipbox}
+Für Klassifikationsaufgaben ist wichtig:
+
+\[
+    p(c \mid \vec{x})
+\]
+
+ist meistens die Größe, die wir für die Entscheidung brauchen.
+
+Bayes' Regel erlaubt es, diese Größe aus
+
+\[
+    p(\vec{x} \mid c)
+    \quad
+    \text{und}
+    \quad
+    p(c)
+\]
+
+zu berechnen.
+\end{examtipbox}
+
+\section{Unabhängigkeit}
+
+Zwei Zufallsvariablen sind unabhängig (independent), wenn die Information über die eine Variable nichts an der Wahrscheinlichkeit der anderen Variable ändert.
+
+\begin{definitionbox}
+Zwei diskrete Zufallsvariablen \(X\) und \(Y\) heißen unabhängig (independent), wenn für alle \(x \in \Omega_x\) und \(y \in \Omega_y\) gilt:
+
+\[
+    p(x,y)
+    =
+    p(x)p(y).
+\]
+\end{definitionbox}
+
+Aus der Produktregel
+
+\[
+    p(x,y)
+    =
+    p(y \mid x)p(x)
+\]
+
+und der Unabhängigkeit
+
+\[
+    p(x,y)
+    =
+    p(x)p(y)
+\]
+
+folgt für \(p(x)>0\):
+
+\[
+    p(y \mid x)
+    =
+    p(y).
+\]
+
+Das bedeutet:
+Wenn \(X\) und \(Y\) unabhängig sind, dann verändert das Wissen über \(X=x\) die Wahrscheinlichkeit von \(Y=y\) nicht.
+
+\begin{conceptbox}
+Unabhängigkeit bedeutet:
+
+\[
+    p(y \mid x)
+    =
+    p(y).
+\]
+
+Abhängigkeit bedeutet:
+
+\[
+    p(y \mid x)
+    \neq
+    p(y).
+\]
+\end{conceptbox}
+
+\begin{examplebox}
+Wenn in beiden Schüsseln der gleiche Anteil an Orangen liegt, dann sagt die beobachtete Frucht wenig oder nichts darüber aus, aus welcher Schüssel gezogen wurde.
+
+Dann wären Schüssel und Fruchttyp unabhängig oder näherungsweise unabhängig.
+\end{examplebox}
+
+\section{Bedingte Unabhängigkeit}
+
+In maschinellem Lernen ist bedingte Unabhängigkeit (conditional independence) oft wichtiger als normale Unabhängigkeit.
+
+\begin{definitionbox}
+Zwei Zufallsvariablen \(X\) und \(Y\) heißen bedingt unabhängig gegeben \(Z\), wenn gilt:
+
+\[
+    p(x,y \mid z)
+    =
+    p(x \mid z)p(y \mid z).
+\]
+
+Man schreibt manchmal:
+
+\[
+    X \perp Y \mid Z.
+\]
+\end{definitionbox}
+
+Das bedeutet:
+Wenn \(Z\) bekannt ist, liefert \(X\) keine zusätzliche Information über \(Y\).
+
+\begin{notebox}
+Bedingte Unabhängigkeit ist eine der wichtigsten Ideen hinter probabilistischen graphischen Modellen, Naive Bayes, Hidden Markov Models und vielen generativen Modellen.
+In diesem Kapitel reicht es, die Grundidee zu kennen.
+\end{notebox}
+
+\section{Kettenregel für Wahrscheinlichkeiten}
+
+Die Produktregel kann auf mehr als zwei Variablen erweitert werden.
+Für drei Variablen gilt:
+
+\[
+    p(x,y,z)
+    =
+    p(x \mid y,z)p(y,z).
+\]
+
+Dann zerlegen wir \(p(y,z)\) wieder mit der Produktregel:
+
+\[
+    p(y,z)
+    =
+    p(y \mid z)p(z).
+\]
+
+Damit erhalten wir:
+
+\[
+    p(x,y,z)
+    =
+    p(x \mid y,z)p(y \mid z)p(z).
+\]
+
+\begin{definitionbox}
+Die Kettenregel (chain rule) der Wahrscheinlichkeit lautet für mehrere Zufallsvariablen:
+
+\[
+    p(x_1,x_2,\dots,x_D)
+    =
+    p(x_1 \mid x_2,\dots,x_D)
+    p(x_2 \mid x_3,\dots,x_D)
+    \cdots
+    p(x_{D-1} \mid x_D)
+    p(x_D).
+\]
+\end{definitionbox}
+
+Eine alternative Reihenfolge ist genauso möglich:
+
+\[
+    p(x_1,x_2,\dots,x_D)
+    =
+    p(x_D \mid x_1,\dots,x_{D-1})
+    \cdots
+    p(x_2 \mid x_1)
+    p(x_1).
+\]
+
+\begin{notebox}
+Die Kettenregel ist keine zusätzliche Annahme.
+Sie folgt aus wiederholter Anwendung der Produktregel.
+\end{notebox}
+
+\section{Normalisierung}
+
+Eine Wahrscheinlichkeitsverteilung muss immer auf \(1\) summieren.
+
+Für eine diskrete Zufallsvariable \(Y\) gilt:
+
+\[
+    \sum_y p(y) = 1.
+\]
+
+Auch für eine bedingte Verteilung gilt:
+
+\[
+    \sum_y p(y \mid x) = 1
+\]
+
+für jedes feste \(x\).
+
+\begin{conceptbox}
+Der Nenner in Bayes' Regel ist eine Normalisierungskonstante.
+Er sorgt dafür, dass die Posterior-Verteilung über alle möglichen Werte von \(y\) wieder zu \(1\) summiert.
+\end{conceptbox}
+
+Wir können das direkt sehen:
+
+\[
+    p(y \mid x)
+    =
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        \sum_{y'} p(x \mid y')p(y')
+    }.
+\]
+
+Wenn wir über alle \(y\) summieren, erhalten wir:
+
+\[
+    \sum_y p(y \mid x)
+    =
+    \sum_y
+    \frac{
+        p(x \mid y)p(y)
+    }{
+        \sum_{y'} p(x \mid y')p(y')
+    }.
+\]
+
+Der Nenner hängt nicht von \(y\) ab, also kann man ihn aus der Summe ziehen:
+
+\[
+    \sum_y p(y \mid x)
+    =
+    \frac{
+        \sum_y p(x \mid y)p(y)
+    }{
+        \sum_{y'} p(x \mid y')p(y')
+    }.
+\]
+
+Zähler und Nenner sind dieselbe Summe, nur mit anderen Summationsnamen:
+
+\[
+    \sum_y p(y \mid x)
+    =
+    1.
+\]
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei Wahrscheinlichkeiten:
+
+\begin{enumerate}
+    \item \(p(x \mid y)\) und \(p(y \mid x)\) verwechseln.
+    \item Den Nenner in Bayes' Regel vergessen.
+    \item Bei der Summenregel nicht über alle möglichen Werte zu summieren.
+    \item Gemeinsame Wahrscheinlichkeit \(p(x,y)\) mit bedingter Wahrscheinlichkeit \(p(x \mid y)\) verwechseln.
+    \item Unabhängigkeit anzunehmen, obwohl sie nicht gegeben ist.
+    \item Die Kurzschreibweise \(p(x)\) zu wörtlich zu nehmen und zu vergessen, dass eigentlich \(p(X=x)\) gemeint ist.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Gemeinsame Wahrscheinlichkeit}
+
+Angenommen,
+
+\[
+    p(S=A) = 0{,}6
+\]
+
+und
+
+\[
+    p(Y=O \mid S=A) = 0{,}2.
+\]
+
+Berechne
+
+\[
+    p(S=A,Y=O).
+\]
+
+\begin{examplebox}
+Mit der Produktregel gilt:
+
+\[
+    p(S=A,Y=O)
+    =
+    p(Y=O \mid S=A)p(S=A).
+\]
+
+Also:
+
+\[
+    p(S=A,Y=O)
+    =
+    0{,}2 \cdot 0{,}6
+    =
+    0{,}12.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Randwahrscheinlichkeit}
+
+Angenommen,
+
+\[
+    p(S=A,Y=O) = 0{,}12
+\]
+
+und
+
+\[
+    p(S=B,Y=O) = 0{,}30.
+\]
+
+Berechne
+
+\[
+    p(Y=O).
+\]
+
+\begin{examplebox}
+Mit der Summenregel gilt:
+
+\[
+    p(Y=O)
+    =
+    p(S=A,Y=O)
+    +
+    p(S=B,Y=O).
+\]
+
+Also:
+
+\[
+    p(Y=O)
+    =
+    0{,}12 + 0{,}30
+    =
+    0{,}42.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: Bedingte Wahrscheinlichkeit}
+
+Angenommen,
+
+\[
+    p(S=A,Y=O) = 0{,}12
+\]
+
+und
+
+\[
+    p(S=A) = 0{,}6.
+\]
+
+Berechne
+
+\[
+    p(Y=O \mid S=A).
+\]
+
+\begin{examplebox}
+Mit der Definition der bedingten Wahrscheinlichkeit gilt:
+
+\[
+    p(Y=O \mid S=A)
+    =
+    \frac{p(S=A,Y=O)}{p(S=A)}.
+\]
+
+Also:
+
+\[
+    p(Y=O \mid S=A)
+    =
+    \frac{0{,}12}{0{,}6}
+    =
+    0{,}2.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Eine Zufallsvariable (random variable) beschreibt eine Größe, deren Wert vom Zufall abhängt.
+    \item Eine diskrete Wahrscheinlichkeitsverteilung ordnet jedem möglichen Wert eine Wahrscheinlichkeit zu.
+    \item Wahrscheinlichkeiten sind nichtnegativ und summieren sich zu \(1\).
+    \item Eine gemeinsame Wahrscheinlichkeit (joint probability) beschreibt das gleichzeitige Auftreten mehrerer Ereignisse.
+    \item Eine Randwahrscheinlichkeit (marginal probability) erhält man durch Summieren über nicht interessierende Variablen.
+    \item Die Summenregel (sum rule) lautet:
+    \[
+        p(x) = \sum_y p(x,y).
+    \]
+    \item Eine bedingte Wahrscheinlichkeit (conditional probability) beschreibt Wahrscheinlichkeit unter gegebener Information:
+    \[
+        p(y \mid x) = \frac{p(x,y)}{p(x)}.
+    \]
+    \item Die Produktregel (product rule) lautet:
+    \[
+        p(x,y) = p(y \mid x)p(x) = p(x \mid y)p(y).
+    \]
+    \item Die Bayes-Regel (Bayes' rule) lautet:
+    \[
+        p(y \mid x)
+        =
+        \frac{p(x \mid y)p(y)}{p(x)}.
+    \]
+    \item Prior, Likelihood, Evidence und Posterior sind zentrale Begriffe probabilistischen Lernens.
+    \item Unabhängigkeit bedeutet:
+    \[
+        p(x,y) = p(x)p(y).
+    \]
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Definiere eine diskrete Zufallsvariable.
+    \item Was ist der Unterschied zwischen \(p(x,y)\), \(p(x)\) und \(p(y \mid x)\)?
+    \item Erkläre die Summenregel (sum rule).
+    \item Erkläre die Produktregel (product rule).
+    \item Leite die Bayes-Regel (Bayes' rule) aus der Produktregel her.
+    \item Was bedeuten Prior, Likelihood und Posterior?
+    \item Warum steht im Nenner der Bayes-Regel eine Summe?
+    \item Was bedeutet Unabhängigkeit zweier Zufallsvariablen?
+    \item Warum ist Bayes' Regel für Klassifikation nützlich?
+    \item Berechne in einem Schüssel-Frucht-Beispiel eine Posterior-Wahrscheinlichkeit.
+\end{enumerate}
+\end{examtipbox}

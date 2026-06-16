@@ -1,0 +1,1350 @@
+\chapter{Nichtparametrische Methoden}
+
+\section{Ziel dieses Kapitels}
+
+In den bisherigen Kapiteln haben wir viele parametrische Modelle betrachtet.
+Beispiele sind lineare Regression, logistische Regression, neuronale Netze, Gaussian Mixture Models und PCA.
+Diese Modelle haben eine feste Anzahl von Parametern, die aus den Daten gelernt werden.
+
+Nichtparametrische Methoden (nonparametric methods) funktionieren anders.
+Sie legen nicht im Voraus eine feste endliche Modellform mit fester Parameterzahl fest.
+Stattdessen kann ihre effektive Komplexität mit der Datenmenge wachsen.
+
+\begin{conceptbox}
+Nichtparametrische Methoden (nonparametric methods) sind Methoden, deren effektive Modellkomplexität nicht durch eine feste endliche Parameterzahl begrenzt ist.
+
+Sie verwenden oft die Trainingsdaten selbst direkt für Vorhersagen oder Dichteschätzungen.
+\end{conceptbox}
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Was bedeutet nichtparametrisch (nonparametric)?
+    \item Was ist der Unterschied zwischen parametrischen und nichtparametrischen Methoden?
+    \item Was ist ein Histogramm als Dichteschätzer?
+    \item Was ist Kernel Density Estimation?
+    \item Was ist ein Kernel?
+    \item Was ist die Bandbreite (bandwidth)?
+    \item Was ist der Bias-Varianz-Trade-off bei Dichteschätzung?
+    \item Wie funktioniert \(k\)-nearest neighbors?
+    \item Wie verwendet man \(k\)-NN für Klassifikation?
+    \item Wie verwendet man \(k\)-NN für Regression?
+    \item Warum ist Feature-Skalierung bei nichtparametrischen Methoden wichtig?
+    \item Was sind Vorteile und Nachteile nichtparametrischer Methoden?
+    \item Warum leiden nichtparametrische Methoden unter dem Fluch der Dimensionalität?
+\end{itemize}
+
+\section{Parametrische und nichtparametrische Modelle}
+
+Ein parametrisches Modell (parametric model) besitzt eine feste Anzahl von Parametern.
+Diese Anzahl hängt nicht von der Anzahl der Trainingsdaten ab.
+
+Beispiele:
+
+\begin{itemize}
+    \item Lineare Regression mit \(D\) Merkmalen:
+    \[
+        y(\vec{x},\vec{w})
+        =
+        \vec{w}^{\top}\vec{x}.
+    \]
+
+    \item Logistische Regression:
+    \[
+        p(t=1\mid\vec{x},\vec{w})
+        =
+        \sigma(\vec{w}^{\top}\vec{x}).
+    \]
+
+    \item Gauß-Verteilung:
+    \[
+        \mathcal{N}(\vec{x}\mid\vec{\mu},\Sigma).
+    \]
+\end{itemize}
+
+Bei solchen Modellen wird eine feste Form angenommen.
+Die Daten bestimmen nur die Parameter.
+
+\begin{definitionbox}
+Ein parametrisches Modell (parametric model) hat eine feste endliche Anzahl von Parametern.
+
+Die Anzahl der Parameter bleibt gleich, auch wenn die Anzahl der Trainingsdaten wächst.
+\end{definitionbox}
+
+Nichtparametrische Methoden haben keine feste endliche Parameterzahl in diesem Sinn.
+Das bedeutet nicht, dass sie keine Parameter oder Hyperparameter haben.
+Sie können Hyperparameter wie Bandbreite oder Anzahl der Nachbarn besitzen.
+Aber ihre effektive Komplexität kann mit der Datenmenge wachsen.
+
+\begin{definitionbox}
+Eine nichtparametrische Methode (nonparametric method) ist nicht auf eine feste endliche Parameterzahl beschränkt.
+
+Die Modellkomplexität kann mit der Anzahl der Datenpunkte wachsen.
+\end{definitionbox}
+
+\begin{notebox}
+Nichtparametrisch bedeutet nicht parameterfrei.
+
+Zum Beispiel hat Kernel Density Estimation eine Bandbreite \(h\).
+\(k\)-nearest neighbors hat den Hyperparameter \(k\).
+Diese Größen sind aber keine festen Modellparameter wie die Gewichte eines linearen Modells.
+\end{notebox}
+
+\section{Warum nichtparametrische Methoden?}
+
+Parametrische Modelle sind oft effizient und gut interpretierbar.
+Sie können aber zu eingeschränkt sein, wenn die wahre Datenstruktur komplex ist.
+
+Nichtparametrische Methoden sind flexibler.
+Sie können komplexe Strukturen abbilden, weil sie weniger starke Annahmen über die Form der Datenverteilung oder Entscheidungsfunktion machen.
+
+\begin{conceptbox}
+Nichtparametrische Methoden sind nützlich, wenn man wenig über die Form der zugrunde liegenden Funktion oder Verteilung voraussetzen möchte.
+\end{conceptbox}
+
+Typische Anwendungen:
+
+\begin{itemize}
+    \item Dichteschätzung (density estimation),
+    \item Klassifikation (classification),
+    \item Regression (regression),
+    \item Glättung von Daten,
+    \item explorative Datenanalyse,
+    \item einfache Baseline-Modelle.
+\end{itemize}
+
+\section{Dichteschätzung}
+
+Bei der Dichteschätzung (density estimation) wollen wir aus Daten eine Wahrscheinlichkeitsdichte schätzen.
+
+Gegeben seien Datenpunkte
+
+\[
+    x_1,\dots,x_N
+\]
+
+aus einer unbekannten Verteilung mit Dichte
+
+\[
+    p(x).
+\]
+
+Wir wollen eine Schätzung
+
+\[
+    \hat{p}(x)
+\]
+
+konstruieren.
+
+\begin{definitionbox}
+Dichteschätzung (density estimation) bedeutet, aus Daten eine unbekannte Wahrscheinlichkeitsdichte \(p(x)\) zu schätzen.
+\end{definitionbox}
+
+Parametrisch könnten wir zum Beispiel annehmen:
+
+\[
+    p(x)
+    =
+    \mathcal{N}(x\mid\mu,\sigma^2).
+\]
+
+Dann müssten wir nur \(\mu\) und \(\sigma^2\) schätzen.
+Nichtparametrisch versuchen wir dagegen, die Dichteform flexibler aus den Daten selbst zu rekonstruieren.
+
+\section{Histogramm-Dichteschätzung}
+
+Das Histogramm ist eine einfache nichtparametrische Dichteschätzung.
+
+Wir teilen den Wertebereich in Intervalle, sogenannte Bins.
+Für jeden Bin zählen wir, wie viele Datenpunkte hineinfallen.
+
+Sei die Bin-Breite
+
+\[
+    \Delta.
+\]
+
+Sei \(n_j\) die Anzahl der Datenpunkte im \(j\)-ten Bin.
+Dann ist die geschätzte Dichte im \(j\)-ten Bin:
+
+\[
+    \hat{p}(x)
+    =
+    \frac{n_j}{N\Delta}
+\]
+
+für \(x\) im \(j\)-ten Bin.
+
+\begin{definitionbox}
+Ein Histogramm schätzt die Dichte durch
+
+\[
+    \hat{p}(x)
+    =
+    \frac{\text{Anzahl der Punkte im Bin}}{N\cdot \text{Bin-Breite}}.
+\]
+\end{definitionbox}
+
+Warum teilen wir durch \(N\Delta\)?
+
+Die Wahrscheinlichkeit für den Bin ist ungefähr:
+
+\[
+    \frac{n_j}{N}.
+\]
+
+Für eine Dichte gilt näherungsweise:
+
+\[
+    p(x)\Delta
+    \approx
+    \frac{n_j}{N}.
+\]
+
+Also:
+
+\[
+    p(x)
+    \approx
+    \frac{n_j}{N\Delta}.
+\]
+
+\begin{notebox}
+Ein Histogramm ist einfach und anschaulich, aber die Schätzung hängt stark von der Bin-Breite und von der Lage der Bin-Grenzen ab.
+\end{notebox}
+
+\section{Bin-Breite und Bias-Varianz-Trade-off}
+
+Die Bin-Breite \(\Delta\) steuert die Glättung.
+
+\subsection{Große Bin-Breite}
+
+Wenn \(\Delta\) groß ist, werden viele Datenpunkte in einem Bin zusammengefasst.
+Die Schätzung ist glatt, aber grob.
+
+\[
+    \Delta \text{ groß}
+    \quad
+    \Rightarrow
+    \quad
+    \text{hoher Bias, niedrige Varianz}.
+\]
+
+\subsection{Kleine Bin-Breite}
+
+Wenn \(\Delta\) klein ist, gibt es viele Bins.
+Dann schwankt das Histogramm stark, weil manche Bins wenige oder keine Punkte enthalten.
+
+\[
+    \Delta \text{ klein}
+    \quad
+    \Rightarrow
+    \quad
+    \text{niedriger Bias, hohe Varianz}.
+\]
+
+\begin{conceptbox}
+Die Bin-Breite eines Histogramms steuert den Bias-Varianz-Trade-off.
+
+Zu große Bins glätten zu stark.
+Zu kleine Bins reagieren zu stark auf Zufallsschwankungen.
+\end{conceptbox}
+
+\section{Kernel Density Estimation}
+
+Kernel Density Estimation, kurz KDE, ist eine glattere Form der nichtparametrischen Dichteschätzung.
+
+Die Idee:
+Statt harte Bins zu zählen, legt man um jeden Datenpunkt eine kleine glatte Dichte.
+Die Gesamtschätzung ist der Durchschnitt dieser Dichten.
+
+Für eindimensionale Daten lautet die Schätzung:
+
+\[
+    \hat{p}(x)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \frac{1}{h}
+    K
+    \left(
+        \frac{x-x_n}{h}
+    \right).
+\]
+
+Dabei ist:
+
+\begin{itemize}
+    \item \(K\) der Kernel,
+    \item \(h>0\) die Bandbreite (bandwidth),
+    \item \(x_n\) ein Trainingsdatenpunkt.
+\end{itemize}
+
+\begin{definitionbox}
+Kernel Density Estimation schätzt eine Dichte durch
+
+\[
+    \hat{p}(x)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \frac{1}{h}
+    K
+    \left(
+        \frac{x-x_n}{h}
+    \right).
+\]
+\end{definitionbox}
+
+\begin{conceptbox}
+KDE ersetzt jeden Datenpunkt durch eine kleine glatte Glocke.
+
+Die geschätzte Dichte ist die Summe dieser Glocken.
+\end{conceptbox}
+
+\section{Kernel}
+
+Ein Kernel \(K(u)\) ist eine Funktion, die typischerweise folgende Eigenschaften hat:
+
+\[
+    K(u)\geq 0
+\]
+
+und
+
+\[
+    \int K(u)\,du=1.
+\]
+
+Dadurch ist \(K\) selbst eine Dichte.
+
+Ein häufiger Kernel ist der Gauß-Kernel:
+
+\[
+    K(u)
+    =
+    \frac{1}{\sqrt{2\pi}}
+    \exp
+    \left(
+        -\frac{u^2}{2}
+    \right).
+\]
+
+Dann ist die KDE:
+
+\[
+    \hat{p}(x)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \frac{1}{h\sqrt{2\pi}}
+    \exp
+    \left(
+        -\frac{(x-x_n)^2}{2h^2}
+    \right).
+\]
+
+\begin{definitionbox}
+Der Gauß-Kernel ist:
+
+\[
+    K(u)
+    =
+    \frac{1}{\sqrt{2\pi}}
+    \exp
+    \left(
+        -\frac{u^2}{2}
+    \right).
+\]
+\end{definitionbox}
+
+Andere mögliche Kernel sind:
+
+\begin{itemize}
+    \item Rechteck-Kernel,
+    \item Dreieck-Kernel,
+    \item Epanechnikov-Kernel,
+    \item Gauß-Kernel.
+\end{itemize}
+
+\begin{notebox}
+In der Praxis ist die Wahl der Bandbreite \(h\) meist wichtiger als die genaue Wahl des Kernels.
+\end{notebox}
+
+\section{Bandbreite}
+
+Die Bandbreite (bandwidth) \(h\) steuert die Breite des Kernels.
+
+\subsection{Kleine Bandbreite}
+
+Bei kleiner Bandbreite ist jeder Kernel sehr schmal.
+Die Dichteschätzung kann stark schwanken.
+
+\[
+    h \text{ klein}
+    \quad
+    \Rightarrow
+    \quad
+    \text{hohe Varianz}.
+\]
+
+\subsection{Große Bandbreite}
+
+Bei großer Bandbreite ist jeder Kernel breit.
+Die Dichteschätzung wird sehr glatt.
+
+\[
+    h \text{ groß}
+    \quad
+    \Rightarrow
+    \quad
+    \text{hoher Bias}.
+\]
+
+\begin{conceptbox}
+Die Bandbreite \(h\) ist der zentrale Hyperparameter bei Kernel Density Estimation.
+
+Sie kontrolliert den Bias-Varianz-Trade-off.
+\end{conceptbox}
+
+\section{Mehrdimensionale KDE}
+
+Für Datenpunkte
+
+\[
+    \vec{x}_n\in\mathbb{R}^D
+\]
+
+kann KDE verallgemeinert werden.
+
+Mit isotroper Bandbreite \(h\):
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \frac{1}{h^D}
+    K
+    \left(
+        \frac{\vec{x}-\vec{x}_n}{h}
+    \right).
+\]
+
+Für einen multivariaten Gauß-Kernel:
+
+\[
+    K(\vec{u})
+    =
+    \frac{1}{(2\pi)^{D/2}}
+    \exp
+    \left(
+        -\frac{1}{2}
+        \vec{u}^{\top}\vec{u}
+    \right).
+\]
+
+Dann:
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \frac{1}{(2\pi h^2)^{D/2}}
+    \exp
+    \left(
+        -\frac{\|\vec{x}-\vec{x}_n\|^2}{2h^2}
+    \right).
+\]
+
+\begin{definitionbox}
+Mehrdimensionale KDE mit Gauß-Kernel ist:
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mathcal{N}(\vec{x}\mid\vec{x}_n,h^2I).
+\]
+\end{definitionbox}
+
+\section{KDE und Gaussian Mixture Models}
+
+Mehrdimensionale KDE mit Gauß-Kernel kann als spezielles Gaussian Mixture Model interpretiert werden.
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mathcal{N}(\vec{x}\mid\vec{x}_n,h^2I).
+\]
+
+Das ist eine Mischung aus \(N\) Gauß-Komponenten.
+Jede Komponente hat:
+
+\[
+    \vec{\mu}_n=\vec{x}_n,
+\]
+
+\[
+    \Sigma_n=h^2I,
+\]
+
+und Mischgewicht:
+
+\[
+    \pi_n=\frac{1}{N}.
+\]
+
+\begin{conceptbox}
+KDE mit Gauß-Kernel ist wie ein GMM mit einer Komponente pro Datenpunkt.
+
+Die Zentren sind nicht gelernt, sondern direkt die Trainingsdaten.
+\end{conceptbox}
+
+\section{\(k\)-nearest neighbors}
+
+Eine weitere zentrale nichtparametrische Methode ist \(k\)-nearest neighbors, kurz \(k\)-NN.
+
+Die Idee:
+Für eine neue Eingabe \(\vec{x}\) suchen wir die \(k\) nächsten Trainingspunkte.
+Die Vorhersage wird aus deren Zielwerten gebildet.
+
+\begin{definitionbox}
+\(k\)-nearest neighbors (\(k\)-NN) sagt für einen neuen Punkt \(\vec{x}\) basierend auf den \(k\) nächsten Trainingspunkten vorher.
+\end{definitionbox}
+
+Gegeben sei ein Trainingsdatensatz:
+
+\[
+    \mathcal{D}
+    =
+    \{(\vec{x}_1,t_1),\dots,(\vec{x}_N,t_N)\}.
+\]
+
+Für einen neuen Punkt \(\vec{x}\) bestimmen wir die Menge der \(k\) nächsten Nachbarn:
+
+\[
+    \mathcal{N}_k(\vec{x})
+    =
+    \text{Menge der } k \text{ Trainingspunkte mit kleinster Distanz zu } \vec{x}.
+\]
+
+\begin{notebox}
+\(k\)-NN ist ein lazy learning Verfahren.
+
+Das bedeutet:
+Beim Training wird fast nichts berechnet.
+Die eigentliche Arbeit passiert bei der Vorhersage.
+\end{notebox}
+
+\section{\(k\)-NN für Klassifikation}
+
+Bei Klassifikation sind die Zielwerte Klassen:
+
+\[
+    t_n\in\{1,\dots,C\}.
+\]
+
+Für einen neuen Punkt \(\vec{x}\) suchen wir die \(k\) nächsten Nachbarn.
+Dann wählen wir die Klasse, die unter diesen Nachbarn am häufigsten vorkommt.
+
+\[
+    \hat{t}
+    =
+    \arg\max_{c}
+    \sum_{n\in\mathcal{N}_k(\vec{x})}
+    \mathbb{1}(t_n=c).
+\]
+
+\begin{definitionbox}
+\(k\)-NN-Klassifikation verwendet Mehrheitsentscheidung:
+
+\[
+    \hat{t}
+    =
+    \arg\max_{c}
+    \sum_{n\in\mathcal{N}_k(\vec{x})}
+    \mathbb{1}(t_n=c).
+\]
+\end{definitionbox}
+
+\begin{examplebox}
+Wenn \(k=5\) und die Nachbarn die Klassen
+
+\[
+    1,1,2,1,3
+\]
+
+haben, dann kommt Klasse \(1\) dreimal vor.
+Also ist:
+
+\[
+    \hat{t}=1.
+\]
+\end{examplebox}
+
+\section{\(k\)-NN für Regression}
+
+Bei Regression sind die Zielwerte reell:
+
+\[
+    t_n\in\mathbb{R}.
+\]
+
+Für einen neuen Punkt \(\vec{x}\) wird meist der Durchschnitt der Zielwerte der \(k\) nächsten Nachbarn verwendet:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{1}{k}
+    \sum_{n\in\mathcal{N}_k(\vec{x})}
+    t_n.
+\]
+
+\begin{definitionbox}
+\(k\)-NN-Regression verwendet den Mittelwert der Zielwerte der \(k\) nächsten Nachbarn:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{1}{k}
+    \sum_{n\in\mathcal{N}_k(\vec{x})}
+    t_n.
+\]
+\end{definitionbox}
+
+Man kann auch gewichtete \(k\)-NN-Regression verwenden.
+Dann bekommen nähere Punkte ein größeres Gewicht:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{
+        \sum_{n\in\mathcal{N}_k(\vec{x})}
+        w_n t_n
+    }{
+        \sum_{n\in\mathcal{N}_k(\vec{x})}
+        w_n
+    }.
+\]
+
+Ein mögliches Gewicht ist:
+
+\[
+    w_n
+    =
+    \frac{1}{\|\vec{x}-\vec{x}_n\|+\varepsilon}.
+\]
+
+\section{Wahl von \(k\)}
+
+Der Hyperparameter \(k\) steuert die Glättung.
+
+\subsection{Kleines \(k\)}
+
+Wenn \(k=1\), wird der Zielwert des nächsten Trainingspunkts verwendet.
+Das Modell kann sehr flexibel sein, aber stark auf Rauschen reagieren.
+
+\[
+    k \text{ klein}
+    \quad
+    \Rightarrow
+    \quad
+    \text{niedriger Bias, hohe Varianz}.
+\]
+
+\subsection{Großes \(k\)}
+
+Wenn \(k\) groß ist, werden viele Nachbarn gemittelt.
+Das Modell ist glatter, kann aber lokale Struktur verlieren.
+
+\[
+    k \text{ groß}
+    \quad
+    \Rightarrow
+    \quad
+    \text{hoher Bias, niedrige Varianz}.
+\]
+
+\begin{conceptbox}
+Bei \(k\)-NN steuert \(k\) den Bias-Varianz-Trade-off.
+
+Kleines \(k\): flexibel, aber rauschsensitiv.
+
+Großes \(k\): stabil, aber möglicherweise zu glatt.
+\end{conceptbox}
+
+\section{Entscheidungsgrenzen bei \(k\)-NN}
+
+Bei \(1\)-NN können Entscheidungsgrenzen sehr komplex sein.
+Jeder Trainingspunkt beeinflusst eine Region des Raums.
+Diese Regionen hängen mit Voronoi-Zellen zusammen.
+
+\begin{definitionbox}
+Eine Voronoi-Zelle eines Trainingspunkts enthält alle Punkte im Raum, die näher an diesem Trainingspunkt liegen als an allen anderen Trainingspunkten.
+\end{definitionbox}
+
+Bei \(1\)-NN wird jeder Punkt im Raum der Klasse des nächstgelegenen Trainingspunkts zugeordnet.
+Dadurch können sehr unregelmäßige Entscheidungsgrenzen entstehen.
+
+Wenn \(k\) größer wird, werden die Entscheidungsgrenzen glatter.
+
+\begin{notebox}
+\(1\)-NN hat oft sehr niedrigen Trainingsfehler, kann aber stark überanpassen.
+\end{notebox}
+
+\section{Distanzmaße}
+
+Die Wahl des Distanzmaßes ist entscheidend.
+
+\subsection{Euklidische Distanz}
+
+\[
+    d(\vec{x},\vec{x}')
+    =
+    \sqrt{
+        \sum_{j=1}^{D}
+        (x_j-x_j')^2
+    }.
+\]
+
+\subsection{Manhattan-Distanz}
+
+\[
+    d(\vec{x},\vec{x}')
+    =
+    \sum_{j=1}^{D}
+    |x_j-x_j'|.
+\]
+
+\subsection{Minkowski-Distanz}
+
+\[
+    d_p(\vec{x},\vec{x}')
+    =
+    \left(
+        \sum_{j=1}^{D}
+        |x_j-x_j'|^p
+    \right)^{1/p}.
+\]
+
+Für \(p=2\) erhält man die euklidische Distanz.
+Für \(p=1\) erhält man die Manhattan-Distanz.
+
+\begin{definitionbox}
+Die Minkowski-Distanz ist:
+
+\[
+    d_p(\vec{x},\vec{x}')
+    =
+    \left(
+        \sum_{j=1}^{D}
+        |x_j-x_j'|^p
+    \right)^{1/p}.
+\]
+\end{definitionbox}
+
+\begin{notebox}
+Das richtige Distanzmaß hängt vom Datentyp und Problem ab.
+Für Bilder, Texte oder kategoriale Daten sind einfache euklidische Distanzen nicht immer sinnvoll.
+\end{notebox}
+
+\section{Feature-Skalierung bei \(k\)-NN}
+
+Da \(k\)-NN direkt auf Distanzen basiert, ist Feature-Skalierung sehr wichtig.
+
+Wenn ein Merkmal eine viel größere Skala hat als andere, dominiert es die Distanz.
+
+Eine Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+Dabei sind \(\mu_j\) und \(\sigma_j\) Mittelwert und Standardabweichung des Merkmals im Trainingsdatensatz.
+
+\begin{examtipbox}
+Bei \(k\)-NN und KDE sollte man Merkmale mit unterschiedlichen Einheiten oder Skalen fast immer skalieren oder standardisieren.
+
+Die Skalierungsparameter müssen nur auf den Trainingsdaten berechnet werden, um Data Leakage zu vermeiden.
+\end{examtipbox}
+
+\section{Fluch der Dimensionalität}
+
+Nichtparametrische Methoden leiden stark unter dem Fluch der Dimensionalität (curse of dimensionality).
+
+In hohen Dimensionen werden Datenpunkte sehr dünn verteilt.
+Lokale Nachbarschaften enthalten dann oft kaum noch sinnvolle Information.
+
+Bei \(k\)-NN bedeutet das:
+Der nächste Nachbar kann trotzdem weit entfernt sein.
+Dann ist die Annahme lokaler Ähnlichkeit schwächer.
+
+Bei KDE bedeutet das:
+Man braucht sehr viele Datenpunkte, um eine Dichte in hoher Dimension zuverlässig zu schätzen.
+
+\begin{conceptbox}
+Nichtparametrische Methoden brauchen in hoher Dimension sehr viele Daten.
+
+Der Grund ist:
+Lokale Methoden benötigen genügend Datenpunkte in der Nähe jedes Abfragepunkts.
+\end{conceptbox}
+
+\section{Speicher- und Rechenaufwand}
+
+Viele nichtparametrische Methoden speichern die Trainingsdaten.
+
+Bei \(k\)-NN muss man für eine neue Eingabe oft Distanzen zu vielen Trainingspunkten berechnen.
+
+Naiv kostet eine Vorhersage:
+
+\[
+    O(ND),
+\]
+
+wobei:
+
+\begin{itemize}
+    \item \(N\) die Anzahl der Trainingsdaten,
+    \item \(D\) die Dimension ist.
+\end{itemize}
+
+\begin{notebox}
+\(k\)-NN ist beim Training billig, aber bei der Vorhersage teuer.
+
+Parametrische Modelle sind oft beim Training teurer, aber bei der Vorhersage schneller.
+\end{notebox}
+
+Zur Beschleunigung kann man Datenstrukturen verwenden:
+
+\begin{itemize}
+    \item \(k\)-d-Trees,
+    \item Ball Trees,
+    \item approximate nearest neighbor search.
+\end{itemize}
+
+In sehr hoher Dimension funktionieren klassische Baumstrukturen aber oft schlechter.
+
+\section{Parzen-Fenster}
+
+Kernel Density Estimation wird auch als Parzen-Fenster-Methode (Parzen window method) bezeichnet.
+
+Die Grundidee:
+Ein Fenster wird um den Punkt \(x\) gelegt.
+Man zählt oder gewichtet, wie viele Trainingspunkte in diesem Fenster liegen.
+
+Mit einem Rechteck-Kernel zählt man Punkte innerhalb eines festen Fensters.
+Mit einem Gauß-Kernel werden alle Punkte berücksichtigt, aber nahe Punkte stärker gewichtet.
+
+\begin{definitionbox}
+Parzen-Fenster-Dichteschätzung ist eine nichtparametrische Dichteschätzung, bei der lokale Nachbarschaften zur Schätzung von \(p(x)\) verwendet werden.
+\end{definitionbox}
+
+\section{\(k\)-NN-Dichteschätzung}
+
+Neben KDE gibt es auch \(k\)-NN-Dichteschätzung.
+Die Idee:
+Für einen Punkt \(\vec{x}\) sucht man das kleinste Volumen \(V\), das \(k\) Trainingspunkte enthält.
+
+Wenn \(N\) Datenpunkte insgesamt vorhanden sind, ist die geschätzte Wahrscheinlichkeit in diesem Volumen:
+
+\[
+    \frac{k}{N}.
+\]
+
+Die Dichte ist ungefähr Wahrscheinlichkeit pro Volumen:
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{k}{NV}.
+\]
+
+\begin{definitionbox}
+Die \(k\)-NN-Dichteschätzung ist:
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{k}{N V(\vec{x})},
+\]
+
+wobei \(V(\vec{x})\) das Volumen der kleinsten Umgebung um \(\vec{x}\) ist, die \(k\) Datenpunkte enthält.
+\end{definitionbox}
+
+\begin{conceptbox}
+KDE verwendet feste Bandbreite und variable Punktanzahl.
+
+\(k\)-NN-Dichteschätzung verwendet feste Punktanzahl und variable Bandbreite.
+\end{conceptbox}
+
+\section{Nichtparametrische Regression als lokale Mittelung}
+
+\(k\)-NN-Regression kann als lokale Mittelung verstanden werden.
+
+Für einen Punkt \(\vec{x}\) wird nicht ein globaler Parametervektor gelernt.
+Stattdessen wird lokal in der Umgebung von \(\vec{x}\) gemittelt:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{1}{k}
+    \sum_{n\in\mathcal{N}_k(\vec{x})}
+    t_n.
+\]
+
+Allgemeiner kann man Kernel-Regression verwenden:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{
+        \sum_{n=1}^{N}
+        K
+        \left(
+            \frac{\|\vec{x}-\vec{x}_n\|}{h}
+        \right)
+        t_n
+    }{
+        \sum_{n=1}^{N}
+        K
+        \left(
+            \frac{\|\vec{x}-\vec{x}_n\|}{h}
+        \right)
+    }.
+\]
+
+\begin{definitionbox}
+Kernel-Regression sagt einen Zielwert als gewichteten Durchschnitt der Trainingszielwerte vorher:
+
+\[
+    \hat{y}(\vec{x})
+    =
+    \frac{
+        \sum_{n=1}^{N}
+        w_n(\vec{x})t_n
+    }{
+        \sum_{n=1}^{N}
+        w_n(\vec{x})
+    }.
+\]
+
+Die Gewichte \(w_n(\vec{x})\) sind größer für Trainingspunkte nahe bei \(\vec{x}\).
+\end{definitionbox}
+
+\section{Vergleich parametrisch und nichtparametrisch}
+
+\[
+\begin{array}{c|c|c}
+\text{Eigenschaft}
+&
+\text{parametrisch}
+&
+\text{nichtparametrisch}
+\\
+\hline
+\text{Parameterzahl}
+&
+\text{fest}
+&
+\text{kann mit Daten wachsen}
+\\
+\hline
+\text{Training}
+&
+\text{oft Optimierung}
+&
+\text{oft Speichern der Daten}
+\\
+\hline
+\text{Vorhersage}
+&
+\text{oft schnell}
+&
+\text{oft teuer}
+\\
+\hline
+\text{Flexibilität}
+&
+\text{durch Modellform begrenzt}
+&
+\text{hoch}
+\\
+\hline
+\text{Datenbedarf}
+&
+\text{oft geringer}
+&
+\text{oft höher}
+\\
+\hline
+\text{Interpretierbarkeit}
+&
+\text{modellabhängig}
+&
+\text{oft lokal}
+\end{array}
+\]
+
+\begin{conceptbox}
+Parametrische Modelle verwenden starke Annahmen und können dadurch effizient lernen.
+
+Nichtparametrische Methoden machen weniger starke Annahmen, brauchen aber oft mehr Daten.
+\end{conceptbox}
+
+\section{Vorteile nichtparametrischer Methoden}
+
+\begin{itemize}
+    \item flexibel,
+    \item einfach zu verstehen,
+    \item wenige Modellannahmen,
+    \item gute Baselines,
+    \item natürlich lokal,
+    \item können komplexe Entscheidungsgrenzen modellieren.
+\end{itemize}
+
+\begin{conceptbox}
+Nichtparametrische Methoden sind besonders nützlich, wenn lokale Ähnlichkeit aussagekräftig ist.
+\end{conceptbox}
+
+\section{Nachteile nichtparametrischer Methoden}
+
+\begin{itemize}
+    \item hoher Speicherbedarf,
+    \item teure Vorhersage bei großen Datensätzen,
+    \item empfindlich gegenüber Feature-Skalierung,
+    \item empfindlich gegenüber irrelevanten Merkmalen,
+    \item leiden stark unter hoher Dimension,
+    \item Hyperparameter wie \(k\) oder \(h\) müssen gewählt werden,
+    \item weniger kompakte Modellzusammenfassung.
+\end{itemize}
+
+\begin{notebox}
+Nichtparametrische Methoden sind nicht automatisch besser, nur weil sie flexibler sind.
+
+Ohne genug Daten oder sinnvolle Distanzen können sie schlechter generalisieren als einfache parametrische Modelle.
+\end{notebox}
+
+\section{Modellwahl und Validierung}
+
+Hyperparameter nichtparametrischer Methoden sollten mit Validierungsdaten gewählt werden.
+
+Beispiele:
+
+\[
+    k
+\]
+
+bei \(k\)-NN,
+
+\[
+    h
+\]
+
+bei KDE oder Kernel-Regression,
+
+\[
+    \Delta
+\]
+
+beim Histogramm.
+
+Man kann wählen:
+
+\[
+    k^*
+    =
+    \arg\min_k
+    E_{\mathrm{val}}(k),
+\]
+
+oder
+
+\[
+    h^*
+    =
+    \arg\min_h
+    E_{\mathrm{val}}(h).
+\]
+
+\begin{examtipbox}
+Auch bei nichtparametrischen Methoden gilt:
+
+Testdaten dürfen nicht zur Wahl von \(k\), \(h\), Distanzmaß oder Vorverarbeitung verwendet werden.
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Histogramm-Dichte}
+
+Ein Datensatz enthält
+
+\[
+    N=100
+\]
+
+Punkte.
+In einem Bin der Breite
+
+\[
+    \Delta=0{,}5
+\]
+
+liegen
+
+\[
+    n_j=10
+\]
+
+Punkte.
+Berechne die Histogramm-Dichteschätzung in diesem Bin.
+
+\begin{examplebox}
+Die Histogramm-Dichte ist:
+
+\[
+    \hat{p}(x)
+    =
+    \frac{n_j}{N\Delta}.
+\]
+
+Einsetzen:
+
+\[
+    \hat{p}(x)
+    =
+    \frac{10}{100\cdot 0{,}5}
+    =
+    \frac{10}{50}
+    =
+    0{,}2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: \(k\)-NN-Klassifikation}
+
+Für einen neuen Punkt seien die \(5\) nächsten Nachbarn mit Klassen:
+
+\[
+    A,A,B,A,B.
+\]
+
+Welche Klasse sagt \(5\)-NN vorher?
+
+\begin{examplebox}
+Klasse \(A\) kommt dreimal vor.
+Klasse \(B\) kommt zweimal vor.
+
+Also sagt \(5\)-NN voraus:
+
+\[
+    \hat{t}=A.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 3: \(k\)-NN-Regression}
+
+Die \(3\) nächsten Nachbarn haben Zielwerte:
+
+\[
+    2,
+    \quad
+    4,
+    \quad
+    10.
+\]
+
+Berechne die \(3\)-NN-Regressionsvorhersage.
+
+\begin{examplebox}
+Die Vorhersage ist der Mittelwert:
+
+\[
+    \hat{y}
+    =
+    \frac{2+4+10}{3}
+    =
+    \frac{16}{3}.
+\]
+
+Also:
+
+\[
+    \hat{y}
+    \approx
+    5{,}33.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Bias und Varianz bei \(k\)}
+
+Was passiert typischerweise, wenn \(k\) bei \(k\)-NN sehr klein gewählt wird?
+
+\begin{examplebox}
+Ein sehr kleines \(k\), zum Beispiel \(k=1\), macht das Modell sehr flexibel.
+
+Typischerweise gilt:
+
+\[
+    \text{Bias niedrig},
+    \qquad
+    \text{Varianz hoch}.
+\]
+
+Das Modell kann stark auf Rauschen und einzelne Trainingspunkte reagieren.
+\end{examplebox}
+
+\subsection{Aufgabe 5: KDE als GMM}
+
+Erkläre, warum KDE mit Gauß-Kernel wie ein Gaussian Mixture Model mit \(N\) Komponenten aussieht.
+
+\begin{examplebox}
+KDE mit Gauß-Kernel ist:
+
+\[
+    \hat{p}(\vec{x})
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \mathcal{N}(\vec{x}\mid\vec{x}_n,h^2I).
+\]
+
+Das ist eine Mischung von \(N\) Gauß-Verteilungen.
+
+Jede Komponente hat:
+
+\[
+    \vec{\mu}_n=\vec{x}_n,
+\]
+
+\[
+    \Sigma_n=h^2I,
+\]
+
+und
+
+\[
+    \pi_n=\frac{1}{N}.
+\]
+
+Daher kann man KDE als spezielles GMM mit einer Komponente pro Datenpunkt interpretieren.
+\end{examplebox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei nichtparametrischen Methoden:
+
+\begin{enumerate}
+    \item Nichtparametrisch mit parameterfrei verwechseln.
+    \item Histogramme ohne Beachtung der Bin-Breite interpretieren.
+    \item Bei KDE die Bandbreite \(h\) ignorieren.
+    \item Bei \(k\)-NN die Feature-Skalierung vergessen.
+    \item Euklidische Distanz verwenden, obwohl sie für die Daten nicht sinnvoll ist.
+    \item \(k=1\) verwenden und Overfitting übersehen.
+    \item Sehr großes \(k\) verwenden und Underfitting übersehen.
+    \item Testdaten zur Wahl von \(k\) oder \(h\) verwenden.
+    \item Den Fluch der Dimensionalität unterschätzen.
+    \item \(k\)-NN als schnelles Vorhersagemodell bei riesigen Datensätzen erwarten.
+    \item Irrelevante Merkmale nicht entfernen, obwohl sie Distanzen verzerren.
+    \item KDE in hoher Dimension ohne genug Daten verwenden.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Parametrische Modelle haben eine feste endliche Parameterzahl.
+    \item Nichtparametrische Methoden haben keine feste endliche Parameterzahl in diesem Sinn.
+    \item Nichtparametrisch bedeutet nicht parameterfrei.
+    \item Histogramme sind einfache nichtparametrische Dichteschätzer.
+    \item Die Histogramm-Dichte in einem Bin ist:
+    \[
+        \hat{p}(x)
+        =
+        \frac{n_j}{N\Delta}.
+    \]
+    \item Kernel Density Estimation schätzt:
+    \[
+        \hat{p}(x)
+        =
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        \frac{1}{h}
+        K
+        \left(
+            \frac{x-x_n}{h}
+        \right).
+    \]
+    \item Die Bandbreite \(h\) kontrolliert Glättung, Bias und Varianz.
+    \item Mehrdimensionale KDE mit Gauß-Kernel ist:
+    \[
+        \hat{p}(\vec{x})
+        =
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        \mathcal{N}(\vec{x}\mid\vec{x}_n,h^2I).
+    \]
+    \item \(k\)-NN verwendet die \(k\) nächsten Trainingspunkte für Vorhersagen.
+    \item \(k\)-NN-Klassifikation verwendet Mehrheitsentscheidung:
+    \[
+        \hat{t}
+        =
+        \arg\max_c
+        \sum_{n\in\mathcal{N}_k(\vec{x})}
+        \mathbb{1}(t_n=c).
+    \]
+    \item \(k\)-NN-Regression verwendet lokale Mittelung:
+    \[
+        \hat{y}(\vec{x})
+        =
+        \frac{1}{k}
+        \sum_{n\in\mathcal{N}_k(\vec{x})}
+        t_n.
+    \]
+    \item Kleines \(k\) bedeutet niedrigen Bias und hohe Varianz.
+    \item Großes \(k\) bedeutet höheren Bias und niedrigere Varianz.
+    \item Nichtparametrische Methoden sind flexibel, brauchen aber oft viele Daten.
+    \item Feature-Skalierung und Distanzwahl sind entscheidend.
+    \item In hoher Dimension leiden nichtparametrische Methoden stark unter dem Fluch der Dimensionalität.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was bedeutet nichtparametrisch?
+    \item Warum heißt nichtparametrisch nicht parameterfrei?
+    \item Was ist der Unterschied zwischen parametrischen und nichtparametrischen Modellen?
+    \item Was ist Dichteschätzung?
+    \item Wie funktioniert ein Histogramm als Dichteschätzer?
+    \item Welche Rolle spielt die Bin-Breite?
+    \item Was ist Kernel Density Estimation?
+    \item Was ist ein Kernel?
+    \item Was ist die Bandbreite \(h\)?
+    \item Wie beeinflusst \(h\) Bias und Varianz?
+    \item Schreibe KDE mit Gauß-Kernel auf.
+    \item Wie hängt KDE mit Gaussian Mixture Models zusammen?
+    \item Was ist \(k\)-nearest neighbors?
+    \item Wie funktioniert \(k\)-NN-Klassifikation?
+    \item Wie funktioniert \(k\)-NN-Regression?
+    \item Welche Rolle spielt der Hyperparameter \(k\)?
+    \item Warum ist \(1\)-NN oft varianzreich?
+    \item Warum kann großes \(k\) zu Underfitting führen?
+    \item Welche Distanzmaße können bei \(k\)-NN verwendet werden?
+    \item Warum ist Feature-Skalierung bei \(k\)-NN wichtig?
+    \item Was ist \(k\)-NN-Dichteschätzung?
+    \item Was ist Kernel-Regression?
+    \item Warum sind nichtparametrische Methoden in hoher Dimension schwierig?
+    \item Welche Vor- und Nachteile haben nichtparametrische Methoden?
+\end{enumerate}
+\end{examtipbox}

@@ -1,0 +1,2058 @@
+\chapter{PCA und Dimensionsreduktion}
+
+\section{Ziel dieses Kapitels}
+
+In vielen Anwendungen des maschinellen Lernens sind Daten hochdimensional.
+Ein Bild mit \(28 \times 28\) Pixeln kann zum Beispiel als Vektor in
+
+\[
+    \mathbb{R}^{784}
+\]
+
+dargestellt werden.
+Moderne Datensätze können sogar Tausende oder Millionen Merkmale enthalten.
+
+Hohe Dimensionen sind aber nicht immer hilfreich.
+Oft liegen die Daten näherungsweise auf einer niedrigdimensionalen Struktur.
+Dimensionsreduktion (dimensionality reduction) versucht, eine niedrigdimensionale Darstellung der Daten zu finden, die möglichst viel relevante Information erhält.
+
+\begin{conceptbox}
+Dimensionsreduktion (dimensionality reduction) bedeutet, Daten aus einem hochdimensionalen Raum in einen niedrigdimensionalen Raum abzubilden.
+
+Dabei soll möglichst viel wichtige Struktur der Daten erhalten bleiben.
+\end{conceptbox}
+
+In diesem Kapitel betrachten wir vor allem Hauptkomponentenanalyse (principal component analysis), kurz PCA.
+PCA ist eine der wichtigsten linearen Methoden zur Dimensionsreduktion.
+
+Nach diesem Kapitel solltest du folgende Fragen beantworten können:
+
+\begin{itemize}
+    \item Warum braucht man Dimensionsreduktion (dimensionality reduction)?
+    \item Was ist der Fluch der Dimensionalität (curse of dimensionality)?
+    \item Was ist PCA (principal component analysis)?
+    \item Was bedeutet Zentrierung der Daten?
+    \item Was ist eine Kovarianzmatrix (covariance matrix)?
+    \item Was sind Eigenwerte und Eigenvektoren?
+    \item Wie findet PCA die Richtungen maximaler Varianz?
+    \item Wie projiziert man Daten auf Hauptkomponenten?
+    \item Wie rekonstruiert man Daten aus einer reduzierten Darstellung?
+    \item Was ist Rekonstruktionsfehler (reconstruction error)?
+    \item Wie wählt man die Anzahl der Hauptkomponenten?
+    \item Was ist erklärte Varianz (explained variance)?
+    \item Wie hängt PCA mit Singular Value Decomposition zusammen?
+\end{itemize}
+
+\section{Motivation für Dimensionsreduktion}
+
+Ein Datenpunkt sei ein Vektor
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        x_1 \\
+        x_2 \\
+        \vdots \\
+        x_D
+    \end{pmatrix}
+    \in \mathbb{R}^D.
+\]
+
+Wenn \(D\) groß ist, sprechen wir von hochdimensionalen Daten.
+
+Beispiele:
+
+\begin{itemize}
+    \item Bilder mit vielen Pixeln,
+    \item Genexpressionsdaten mit vielen Genen,
+    \item medizinische Zeitreihen mit vielen Messwerten,
+    \item Textdaten mit vielen Wortmerkmalen,
+    \item Sensordaten mit vielen Kanälen.
+\end{itemize}
+
+Dimensionsreduktion versucht, eine Abbildung zu finden:
+
+\[
+    \vec{x}
+    \in
+    \mathbb{R}^D
+    \quad
+    \longrightarrow
+    \quad
+    \vec{z}
+    \in
+    \mathbb{R}^M,
+\]
+
+wobei
+
+\[
+    M < D.
+\]
+
+Der Vektor \(\vec{z}\) ist die niedrigdimensionale Darstellung (low-dimensional representation).
+
+\begin{definitionbox}
+Dimensionsreduktion (dimensionality reduction) sucht eine Darstellung
+
+\[
+    \vec{z}\in\mathbb{R}^M
+\]
+
+für Datenpunkte
+
+\[
+    \vec{x}\in\mathbb{R}^D,
+\]
+
+wobei
+
+\[
+    M<D.
+\]
+\end{definitionbox}
+
+\section{Warum hohe Dimensionen problematisch sind}
+
+Hohe Dimensionen können mehrere Probleme verursachen.
+
+\subsection{Rechenaufwand}
+
+Viele Algorithmen werden mit steigender Dimension teurer.
+Matrixoperationen, Distanzberechnungen und Optimierung können deutlich langsamer werden.
+
+\subsection{Speicherbedarf}
+
+Ein Datensatz mit \(N\) Datenpunkten und \(D\) Merkmalen kann als Matrix geschrieben werden:
+
+\[
+    X \in \mathbb{R}^{N\times D}.
+\]
+
+Wenn \(N\) und \(D\) groß sind, braucht diese Matrix viel Speicher.
+
+\subsection{Rauschen und irrelevante Merkmale}
+
+Nicht alle Merkmale sind gleich wichtig.
+Manche Merkmale enthalten vor allem Rauschen (noise) oder redundante Information.
+
+\subsection{Visualisierung}
+
+Menschen können Daten in zwei oder drei Dimensionen gut visualisieren.
+Daten in
+
+\[
+    \mathbb{R}^{100}
+\]
+
+oder
+
+\[
+    \mathbb{R}^{1000}
+\]
+
+sind dagegen schwer direkt darzustellen.
+
+\begin{conceptbox}
+Dimensionsreduktion hilft bei:
+
+\begin{itemize}
+    \item Kompression,
+    \item Visualisierung,
+    \item Rauschreduktion,
+    \item schnellerer Berechnung,
+    \item besserer Generalisierung,
+    \item Erkennen wichtiger Datenrichtungen.
+\end{itemize}
+\end{conceptbox}
+
+\section{Der Fluch der Dimensionalität}
+
+Der Fluch der Dimensionalität (curse of dimensionality) beschreibt Probleme, die auftreten, wenn die Dimension sehr groß wird.
+
+Eine wichtige Intuition:
+In hohen Dimensionen wird der Raum extrem groß.
+Bei gleicher Anzahl von Datenpunkten wird der Raum sehr dünn besetzt.
+
+\begin{examplebox}
+Betrachte das Intervall \([0,1]\) in einer Dimension.
+Wenn wir \(10\) Punkte gleichmäßig verteilen, ist der Abstand ungefähr klein.
+
+In zwei Dimensionen hat das Einheitsquadrat \([0,1]^2\).
+Um in jeder Richtung \(10\) Positionen zu haben, brauchen wir
+
+\[
+    10^2 = 100
+\]
+
+Punkte.
+
+In \(D\) Dimensionen brauchen wir
+
+\[
+    10^D
+\]
+
+Punkte.
+\end{examplebox}
+
+Für \(D=10\) wären das bereits
+
+\[
+    10^{10}
+\]
+
+Punkte.
+
+\begin{conceptbox}
+Der Fluch der Dimensionalität (curse of dimensionality) bedeutet:
+Mit steigender Dimension wächst der Raum so schnell, dass endliche Datensätze sehr dünn werden.
+
+Dadurch werden Distanzen, Dichteschätzungen und Nachbarschaftsbegriffe schwieriger.
+\end{conceptbox}
+
+\section{Lineare Dimensionsreduktion}
+
+PCA ist eine lineare Methode.
+Das bedeutet:
+Die niedrigdimensionale Darstellung entsteht durch Projektion auf lineare Richtungen.
+
+Wir suchen \(M\) Richtungen
+
+\[
+    \vec{u}_1,\dots,\vec{u}_M
+    \in
+    \mathbb{R}^D,
+\]
+
+und projizieren einen Datenpunkt \(\vec{x}\) auf diese Richtungen.
+
+Für eine Richtung \(\vec{u}_j\) ist die Projektion:
+
+\[
+    z_j
+    =
+    \vec{u}_j^{\top}\vec{x}.
+\]
+
+Die reduzierte Darstellung ist:
+
+\[
+    \vec{z}
+    =
+    \begin{pmatrix}
+        z_1 \\
+        \vdots \\
+        z_M
+    \end{pmatrix}.
+\]
+
+Wenn wir die Richtungen als Spalten einer Matrix sammeln,
+
+\[
+    U_M
+    =
+    \begin{pmatrix}
+        \vec{u}_1 & \vec{u}_2 & \dots & \vec{u}_M
+    \end{pmatrix}
+    \in
+    \mathbb{R}^{D\times M},
+\]
+
+dann ist:
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}\vec{x}.
+\]
+
+\begin{definitionbox}
+Eine lineare Dimensionsreduktion projiziert Daten mit einer Matrix \(U_M\) auf einen niedrigdimensionalen Raum:
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}\vec{x},
+\]
+
+wobei
+
+\[
+    U_M\in\mathbb{R}^{D\times M}
+\]
+
+und
+
+\[
+    M<D.
+\]
+\end{definitionbox}
+
+\section{Zentrierung der Daten}
+
+PCA wird auf zentrierten Daten durchgeführt.
+Das bedeutet:
+Man zieht von jedem Datenpunkt den empirischen Mittelwert ab.
+
+Gegeben seien Datenpunkte
+
+\[
+    \vec{x}_1,\dots,\vec{x}_N
+    \in
+    \mathbb{R}^D.
+\]
+
+Der empirische Mittelwert ist:
+
+\[
+    \vec{\mu}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \vec{x}_n.
+\]
+
+Die zentrierten Daten sind:
+
+\[
+    \tilde{\vec{x}}_n
+    =
+    \vec{x}_n-\vec{\mu}.
+\]
+
+\begin{definitionbox}
+Zentrierung (centering) bedeutet, den empirischen Mittelwert von allen Datenpunkten abzuziehen:
+
+\[
+    \tilde{\vec{x}}_n
+    =
+    \vec{x}_n-\vec{\mu}.
+\]
+\end{definitionbox}
+
+Nach der Zentrierung gilt:
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \tilde{\vec{x}}_n
+    =
+    \vec{0}.
+\]
+
+\begin{notebox}
+PCA sucht Richtungen der Varianz um den Mittelwert.
+Deshalb müssen die Daten vorher zentriert werden.
+
+Wenn man nicht zentriert, kann die erste Hauptkomponente stark durch die Lage des Mittelwerts beeinflusst werden.
+\end{notebox}
+
+\section{Datenmatrix}
+
+Wir sammeln die zentrierten Daten in einer Matrix:
+
+\[
+    \tilde{X}
+    =
+    \begin{pmatrix}
+        \tilde{\vec{x}}_1^{\top} \\
+        \tilde{\vec{x}}_2^{\top} \\
+        \vdots \\
+        \tilde{\vec{x}}_N^{\top}
+    \end{pmatrix}
+    \in
+    \mathbb{R}^{N\times D}.
+\]
+
+Jede Zeile ist ein Datenpunkt.
+Jede Spalte ist ein Merkmal.
+
+\begin{notebox}
+Je nach Literatur liegen Datenpunkte manchmal als Spalten statt als Zeilen in der Datenmatrix.
+Dann ändern sich manche Matrixformeln durch Transposition.
+
+In diesem Kapitel verwenden wir:
+
+\[
+    \tilde{X}\in\mathbb{R}^{N\times D}.
+\]
+\end{notebox}
+
+\section{Kovarianzmatrix}
+
+Die Kovarianzmatrix beschreibt, wie Merkmale gemeinsam variieren.
+Für zentrierte Daten ist die empirische Kovarianzmatrix:
+
+\[
+    S
+    =
+    \frac{1}{N}
+    \tilde{X}^{\top}\tilde{X}.
+\]
+
+Damit gilt:
+
+\[
+    S \in \mathbb{R}^{D\times D}.
+\]
+
+\begin{definitionbox}
+Die empirische Kovarianzmatrix (empirical covariance matrix) zentrierter Daten ist:
+
+\[
+    S
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \tilde{\vec{x}}_n\tilde{\vec{x}}_n^{\top}.
+\]
+
+In Matrixform:
+
+\[
+    S
+    =
+    \frac{1}{N}
+    \tilde{X}^{\top}\tilde{X}.
+\]
+\end{definitionbox}
+
+Der Eintrag \(S_{ij}\) ist die empirische Kovarianz zwischen Merkmal \(i\) und Merkmal \(j\).
+
+\[
+    S_{ij}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \tilde{x}_{ni}\tilde{x}_{nj}.
+\]
+
+\begin{conceptbox}
+Die Diagonale der Kovarianzmatrix enthält Varianzen.
+
+Die Nicht-Diagonaleinträge enthalten Kovarianzen zwischen verschiedenen Merkmalen.
+\end{conceptbox}
+
+\section{Symmetrie und positive Semidefinitheit}
+
+Die Kovarianzmatrix \(S\) ist symmetrisch:
+
+\[
+    S^{\top}
+    =
+    S.
+\]
+
+Außerdem ist sie positiv semidefinit.
+Das bedeutet:
+
+\[
+    \vec{v}^{\top}S\vec{v}
+    \geq
+    0
+\]
+
+für alle
+
+\[
+    \vec{v}\in\mathbb{R}^D.
+\]
+
+Warum?
+
+\[
+    \vec{v}^{\top}S\vec{v}
+    =
+    \vec{v}^{\top}
+    \left(
+        \frac{1}{N}
+        \tilde{X}^{\top}\tilde{X}
+    \right)
+    \vec{v}.
+\]
+
+Also:
+
+\[
+    \vec{v}^{\top}S\vec{v}
+    =
+    \frac{1}{N}
+    \vec{v}^{\top}
+    \tilde{X}^{\top}\tilde{X}
+    \vec{v}.
+\]
+
+Das ist:
+
+\[
+    \vec{v}^{\top}S\vec{v}
+    =
+    \frac{1}{N}
+    (\tilde{X}\vec{v})^{\top}
+    (\tilde{X}\vec{v}).
+\]
+
+Damit:
+
+\[
+    \vec{v}^{\top}S\vec{v}
+    =
+    \frac{1}{N}
+    \|\tilde{X}\vec{v}\|^2
+    \geq
+    0.
+\]
+
+\begin{definitionbox}
+Eine Matrix \(S\) heißt positiv semidefinit (positive semidefinite), wenn gilt:
+
+\[
+    \vec{v}^{\top}S\vec{v}\geq 0
+\]
+
+für alle Vektoren \(\vec{v}\).
+\end{definitionbox}
+
+\section{Varianz in einer Richtung}
+
+PCA sucht Richtungen, in denen die Daten möglichst stark variieren.
+Sei \(\vec{u}\) eine Richtung mit Norm \(1\):
+
+\[
+    \|\vec{u}\|=1.
+\]
+
+Die Projektion eines zentrierten Datenpunkts auf \(\vec{u}\) ist:
+
+\[
+    z_n
+    =
+    \vec{u}^{\top}\tilde{\vec{x}}_n.
+\]
+
+Die empirische Varianz der projizierten Daten ist:
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    z_n^2.
+\]
+
+Einsetzen von \(z_n\):
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (\vec{u}^{\top}\tilde{\vec{x}}_n)^2.
+\]
+
+Da
+
+\[
+    (\vec{u}^{\top}\tilde{\vec{x}}_n)^2
+    =
+    \vec{u}^{\top}
+    \tilde{\vec{x}}_n
+    \tilde{\vec{x}}_n^{\top}
+    \vec{u},
+\]
+
+gilt:
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    (\vec{u}^{\top}\tilde{\vec{x}}_n)^2
+    =
+    \vec{u}^{\top}
+    \left(
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        \tilde{\vec{x}}_n
+        \tilde{\vec{x}}_n^{\top}
+    \right)
+    \vec{u}.
+\]
+
+Der Ausdruck in der Klammer ist die Kovarianzmatrix \(S\).
+Also:
+
+\[
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    z_n^2
+    =
+    \vec{u}^{\top}S\vec{u}.
+\]
+
+\begin{definitionbox}
+Die Varianz der Daten in Richtung \(\vec{u}\) ist:
+
+\[
+    \mathrm{Var}_{\vec{u}}
+    =
+    \vec{u}^{\top}S\vec{u},
+\]
+
+wobei
+
+\[
+    \|\vec{u}\|=1.
+\]
+\end{definitionbox}
+
+\section{Erste Hauptkomponente}
+
+Die erste Hauptkomponente (first principal component) ist die Richtung mit maximaler Varianz.
+
+Wir suchen:
+
+\[
+    \vec{u}_1
+    =
+    \arg\max_{\vec{u}}
+    \vec{u}^{\top}S\vec{u}
+\]
+
+unter der Nebenbedingung
+
+\[
+    \vec{u}^{\top}\vec{u}=1.
+\]
+
+\begin{definitionbox}
+Die erste Hauptkomponente ist die Richtung
+
+\[
+    \vec{u}_1
+\]
+
+mit maximaler projizierter Varianz:
+
+\[
+    \vec{u}_1
+    =
+    \arg\max_{\|\vec{u}\|=1}
+    \vec{u}^{\top}S\vec{u}.
+\]
+\end{definitionbox}
+
+\section{Herleitung mit Lagrange-Multiplikatoren}
+
+Wir maximieren:
+
+\[
+    \vec{u}^{\top}S\vec{u}
+\]
+
+unter der Nebenbedingung:
+
+\[
+    \vec{u}^{\top}\vec{u}=1.
+\]
+
+Dafür verwenden wir einen Lagrange-Multiplikator \(\lambda\).
+Die Lagrange-Funktion ist:
+
+\[
+    \mathcal{L}(\vec{u},\lambda)
+    =
+    \vec{u}^{\top}S\vec{u}
+    -
+    \lambda
+    (\vec{u}^{\top}\vec{u}-1).
+\]
+
+Ableiten nach \(\vec{u}\):
+
+\[
+    \nabla_{\vec{u}}\mathcal{L}
+    =
+    2S\vec{u}
+    -
+    2\lambda\vec{u}.
+\]
+
+Setze gleich \(\vec{0}\):
+
+\[
+    2S\vec{u}
+    -
+    2\lambda\vec{u}
+    =
+    \vec{0}.
+\]
+
+Teilen durch \(2\):
+
+\[
+    S\vec{u}
+    =
+    \lambda\vec{u}.
+\]
+
+Das ist ein Eigenwertproblem.
+
+\begin{definitionbox}
+Die Hauptkomponenten von PCA sind Eigenvektoren der Kovarianzmatrix:
+
+\[
+    S\vec{u}
+    =
+    \lambda\vec{u}.
+\]
+\end{definitionbox}
+
+Der Wert der Varianz in Richtung \(\vec{u}\) ist:
+
+\[
+    \vec{u}^{\top}S\vec{u}.
+\]
+
+Wenn \(\vec{u}\) ein Eigenvektor mit Eigenwert \(\lambda\) ist, gilt:
+
+\[
+    S\vec{u}
+    =
+    \lambda\vec{u}.
+\]
+
+Dann:
+
+\[
+    \vec{u}^{\top}S\vec{u}
+    =
+    \vec{u}^{\top}\lambda\vec{u}
+    =
+    \lambda\vec{u}^{\top}\vec{u}.
+\]
+
+Da
+
+\[
+    \vec{u}^{\top}\vec{u}=1,
+\]
+
+ist:
+
+\[
+    \vec{u}^{\top}S\vec{u}
+    =
+    \lambda.
+\]
+
+\begin{conceptbox}
+Der Eigenwert \(\lambda\) einer Hauptkomponente ist die Varianz der Daten in dieser Richtung.
+\end{conceptbox}
+
+Die erste Hauptkomponente ist daher der Eigenvektor zum größten Eigenwert.
+
+\section{Weitere Hauptkomponenten}
+
+Die zweite Hauptkomponente soll ebenfalls möglichst viel Varianz erklären, aber orthogonal zur ersten Hauptkomponente sein.
+
+Allgemein:
+Die \(m\)-te Hauptkomponente ist die Richtung maximaler Varianz unter der Nebenbedingung, dass sie orthogonal zu den vorherigen Hauptkomponenten ist.
+
+\[
+    \vec{u}_m^{\top}\vec{u}_j=0
+    \quad
+    \text{für}
+    \quad
+    j<m.
+\]
+
+\begin{definitionbox}
+Die Hauptkomponenten sind orthonormale Eigenvektoren der Kovarianzmatrix.
+
+Sie erfüllen:
+
+\[
+    \vec{u}_i^{\top}\vec{u}_j
+    =
+    \begin{cases}
+        1, & i=j, \\
+        0, & i\neq j.
+    \end{cases}
+\]
+\end{definitionbox}
+
+Da \(S\) symmetrisch ist, können die Eigenvektoren orthonormal gewählt werden.
+Wir ordnen die Eigenwerte absteigend:
+
+\[
+    \lambda_1
+    \geq
+    \lambda_2
+    \geq
+    \dots
+    \geq
+    \lambda_D
+    \geq
+    0.
+\]
+
+Die zugehörigen Eigenvektoren sind:
+
+\[
+    \vec{u}_1,\vec{u}_2,\dots,\vec{u}_D.
+\]
+
+\begin{conceptbox}
+PCA nimmt die Eigenvektoren mit den größten Eigenwerten.
+
+Diese Richtungen erklären die größte Varianz der Daten.
+\end{conceptbox}
+
+\section{Projektion auf Hauptkomponenten}
+
+Wenn wir nur die ersten \(M\) Hauptkomponenten behalten, definieren wir:
+
+\[
+    U_M
+    =
+    \begin{pmatrix}
+        \vec{u}_1 & \vec{u}_2 & \dots & \vec{u}_M
+    \end{pmatrix}
+    \in
+    \mathbb{R}^{D\times M}.
+\]
+
+Ein zentrierter Datenpunkt \(\tilde{\vec{x}}\) wird projiziert durch:
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}\tilde{\vec{x}}.
+\]
+
+Dabei ist:
+
+\[
+    \vec{z}\in\mathbb{R}^M.
+\]
+
+\begin{definitionbox}
+Die PCA-Projektion auf \(M\) Hauptkomponenten ist:
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}(\vec{x}-\vec{\mu}).
+\]
+\end{definitionbox}
+
+Für alle Datenpunkte in Matrixform:
+
+\[
+    Z
+    =
+    \tilde{X}U_M.
+\]
+
+Hier gilt:
+
+\[
+    Z\in\mathbb{R}^{N\times M}.
+\]
+
+\section{Rekonstruktion aus der reduzierten Darstellung}
+
+Aus der reduzierten Darstellung \(\vec{z}\) kann man den Datenpunkt näherungsweise rekonstruieren.
+
+Für zentrierte Daten:
+
+\[
+    \hat{\vec{x}}
+    =
+    U_M\vec{z}.
+\]
+
+Für ursprüngliche nichtzentrierte Daten addieren wir den Mittelwert zurück:
+
+\[
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    U_M\vec{z}.
+\]
+
+Da
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}
+    (\vec{x}-\vec{\mu}),
+\]
+
+gilt:
+
+\[
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    U_MU_M^{\top}
+    (\vec{x}-\vec{\mu}).
+\]
+
+\begin{definitionbox}
+Die PCA-Rekonstruktion aus \(M\) Komponenten ist:
+
+\[
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    U_MU_M^{\top}
+    (\vec{x}-\vec{\mu}).
+\]
+\end{definitionbox}
+
+Wenn
+
+\[
+    M=D,
+\]
+
+und alle Hauptkomponenten verwendet werden, dann ist die Rekonstruktion exakt:
+
+\[
+    \hat{\vec{x}}=\vec{x}.
+\]
+
+Wenn
+
+\[
+    M<D,
+\]
+
+geht Information verloren.
+
+\section{Rekonstruktionsfehler}
+
+Der Rekonstruktionsfehler misst, wie stark ein Datenpunkt durch die niedrigdimensionale Darstellung verändert wird:
+
+\[
+    \|\vec{x}-\hat{\vec{x}}\|^2.
+\]
+
+Für alle Datenpunkte:
+
+\[
+    E_{\mathrm{rec}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\hat{\vec{x}}_n\|^2.
+\]
+
+\begin{definitionbox}
+Der Rekonstruktionsfehler (reconstruction error) ist:
+
+\[
+    E_{\mathrm{rec}}
+    =
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\hat{\vec{x}}_n\|^2.
+\]
+\end{definitionbox}
+
+Ein wichtiges Resultat:
+PCA minimiert den mittleren quadratischen Rekonstruktionsfehler unter allen \(M\)-dimensionalen linearen Unterräumen.
+
+\begin{conceptbox}
+PCA kann auf zwei äquivalente Arten verstanden werden:
+
+\begin{itemize}
+    \item Finde Richtungen maximaler Varianz.
+    \item Finde einen niedrigdimensionalen linearen Unterraum mit minimalem quadratischem Rekonstruktionsfehler.
+\end{itemize}
+\end{conceptbox}
+
+\section{Erklärte Varianz}
+
+Die Eigenwerte der Kovarianzmatrix geben an, wie viel Varianz jede Hauptkomponente erklärt.
+
+Die Gesamtvarianz der Daten ist:
+
+\[
+    \sum_{j=1}^{D}
+    \lambda_j.
+\]
+
+Die durch die ersten \(M\) Hauptkomponenten erklärte Varianz ist:
+
+\[
+    \sum_{j=1}^{M}
+    \lambda_j.
+\]
+
+Der erklärte Varianzanteil (explained variance ratio) ist:
+
+\[
+    r_M
+    =
+    \frac{
+        \sum_{j=1}^{M}
+        \lambda_j
+    }{
+        \sum_{j=1}^{D}
+        \lambda_j
+    }.
+\]
+
+\begin{definitionbox}
+Der erklärte Varianzanteil der ersten \(M\) Hauptkomponenten ist:
+
+\[
+    r_M
+    =
+    \frac{
+        \sum_{j=1}^{M}
+        \lambda_j
+    }{
+        \sum_{j=1}^{D}
+        \lambda_j
+    }.
+\]
+\end{definitionbox}
+
+\begin{examplebox}
+Wenn
+
+\[
+    r_M=0{,}95,
+\]
+
+dann erklären die ersten \(M\) Hauptkomponenten
+
+\[
+    95\%
+\]
+
+der Gesamtvarianz.
+\end{examplebox}
+
+\section{Wahl der Anzahl der Komponenten}
+
+Die Anzahl \(M\) der Hauptkomponenten ist ein Hyperparameter.
+
+Typische Kriterien:
+
+\begin{itemize}
+    \item Wähle \(M\), sodass ein bestimmter Varianzanteil erklärt wird.
+    \item Verwende einen Scree Plot.
+    \item Wähle \(M\) mit Validierungsdaten für eine nachgelagerte Aufgabe.
+    \item Wähle \(M\) so, dass Visualisierung möglich ist, zum Beispiel \(M=2\) oder \(M=3\).
+\end{itemize}
+
+\subsection{Varianzschwelle}
+
+Man kann \(M\) so wählen, dass:
+
+\[
+    r_M \geq 0{,}95.
+\]
+
+Das bedeutet:
+Mindestens \(95\%\) der Varianz sollen erhalten bleiben.
+
+\subsection{Scree Plot}
+
+Ein Scree Plot zeigt die Eigenwerte
+
+\[
+    \lambda_1,\lambda_2,\dots,\lambda_D
+\]
+
+in absteigender Reihenfolge.
+Oft sucht man nach einem Knickpunkt.
+Nach diesem Punkt bringen zusätzliche Komponenten nur noch wenig zusätzliche Varianz.
+
+\begin{notebox}
+Ein hoher erklärter Varianzanteil bedeutet nicht automatisch gute Leistung für jede Aufgabe.
+Manchmal liegen für Klassifikation wichtige Informationen in Richtungen mit kleiner Varianz.
+\end{notebox}
+
+\section{PCA-Algorithmus}
+
+Der PCA-Algorithmus kann so zusammengefasst werden:
+
+\begin{enumerate}
+    \item Datenmatrix \(X\) aufstellen.
+    \item Empirischen Mittelwert berechnen:
+    \[
+        \vec{\mu}
+        =
+        \frac{1}{N}
+        \sum_{n=1}^{N}
+        \vec{x}_n.
+    \]
+    \item Daten zentrieren:
+    \[
+        \tilde{\vec{x}}_n
+        =
+        \vec{x}_n-\vec{\mu}.
+    \]
+    \item Kovarianzmatrix berechnen:
+    \[
+        S
+        =
+        \frac{1}{N}
+        \tilde{X}^{\top}\tilde{X}.
+    \]
+    \item Eigenwertproblem lösen:
+    \[
+        S\vec{u}_j
+        =
+        \lambda_j\vec{u}_j.
+    \]
+    \item Eigenwerte absteigend sortieren.
+    \item Die ersten \(M\) Eigenvektoren wählen:
+    \[
+        U_M
+        =
+        (\vec{u}_1,\dots,\vec{u}_M).
+    \]
+    \item Daten projizieren:
+    \[
+        Z
+        =
+        \tilde{X}U_M.
+    \]
+\end{enumerate}
+
+\begin{definitionbox}
+PCA-Projektion für einen neuen Datenpunkt:
+
+\[
+    \vec{z}
+    =
+    U_M^{\top}(\vec{x}-\vec{\mu}).
+\]
+
+Wichtig:
+Der Mittelwert \(\vec{\mu}\) und die Matrix \(U_M\) werden auf den Trainingsdaten gelernt.
+\end{definitionbox}
+
+\section{PCA und Data Leakage}
+
+Wenn PCA als Vorverarbeitung für ein überwachtes Lernproblem verwendet wird, muss PCA nur auf den Trainingsdaten gefittet werden.
+
+Falsch wäre:
+
+\[
+    \text{PCA auf allen Daten fitten}
+    \quad
+    \rightarrow
+    \quad
+    \text{Train/Test Split}.
+\]
+
+Richtig ist:
+
+\[
+    \text{Train/Test Split}
+    \quad
+    \rightarrow
+    \quad
+    \text{PCA auf Training fitten}
+    \quad
+    \rightarrow
+    \quad
+    \text{Training und Test transformieren}.
+\]
+
+\begin{examtipbox}
+PCA muss bei einem ML-Workflow wie andere Vorverarbeitung behandelt werden.
+
+Fit auf Trainingsdaten.
+Transformation mit denselben PCA-Komponenten auf Validierungs- und Testdaten.
+\end{examtipbox}
+
+\section{Standardisierung vor PCA}
+
+PCA ist empfindlich gegenüber Skalierung.
+Wenn ein Merkmal sehr große numerische Werte hat, kann es die Hauptkomponenten dominieren.
+
+Beispiel:
+Ein Merkmal wird in Metern gemessen, ein anderes in Millimetern.
+Dann ist die Varianz des Millimeter-Merkmals numerisch viel größer, obwohl es nicht unbedingt wichtiger ist.
+
+Eine Standardisierung ist:
+
+\[
+    x_j'
+    =
+    \frac{x_j-\mu_j}{\sigma_j}.
+\]
+
+\begin{notebox}
+Ob man vor PCA standardisieren sollte, hängt vom Problem ab.
+
+Wenn die Skalen der Merkmale bedeutungsvoll sind, kann Zentrierung reichen.
+Wenn Merkmale unterschiedliche Einheiten oder Größenordnungen haben, ist Standardisierung oft sinnvoll.
+\end{notebox}
+
+\section{PCA und Dekorrelation}
+
+Wenn wir alle Hauptkomponenten verwenden, sind die projizierten Koordinaten unkorreliert.
+
+Sei
+
+\[
+    U
+    =
+    (\vec{u}_1,\dots,\vec{u}_D)
+\]
+
+die Matrix aller Eigenvektoren.
+Dann gilt:
+
+\[
+    U^{\top}SU
+    =
+    \Lambda,
+\]
+
+wobei
+
+\[
+    \Lambda
+    =
+    \mathrm{diag}(\lambda_1,\dots,\lambda_D).
+\]
+
+Das bedeutet:
+Die Kovarianzmatrix im PCA-Koordinatensystem ist diagonal.
+
+\begin{conceptbox}
+PCA rotiert das Koordinatensystem so, dass die Kovarianzmatrix diagonal wird.
+
+Die neuen Koordinaten sind unkorreliert.
+\end{conceptbox}
+
+\section{Whitening}
+
+Whitening geht einen Schritt weiter.
+Nach PCA kann man jede Komponente durch die Wurzel ihres Eigenwerts teilen.
+
+Wenn
+
+\[
+    \vec{z}
+    =
+    U^{\top}(\vec{x}-\vec{\mu}),
+\]
+
+dann ist eine whitened Darstellung:
+
+\[
+    \vec{z}_{\mathrm{white}}
+    =
+    \Lambda^{-1/2}
+    \vec{z}.
+\]
+
+Dabei ist:
+
+\[
+    \Lambda^{-1/2}
+    =
+    \mathrm{diag}
+    \left(
+        \frac{1}{\sqrt{\lambda_1}},
+        \dots,
+        \frac{1}{\sqrt{\lambda_D}}
+    \right).
+\]
+
+\begin{definitionbox}
+Whitening transformiert Daten so, dass sie Mittelwert \(0\) und Kovarianzmatrix \(I\) haben.
+\end{definitionbox}
+
+\begin{notebox}
+Whitening kann nützlich sein, verstärkt aber Komponenten mit kleinen Eigenwerten.
+Diese können viel Rauschen enthalten.
+\end{notebox}
+
+\section{PCA über Singular Value Decomposition}
+
+In der Praxis berechnet man PCA häufig über Singular Value Decomposition (SVD).
+
+Für die zentrierte Datenmatrix
+
+\[
+    \tilde{X}
+    \in
+    \mathbb{R}^{N\times D}
+\]
+
+lautet die SVD:
+
+\[
+    \tilde{X}
+    =
+    A\Sigma V^{\top}.
+\]
+
+Dabei sind:
+
+\[
+    A\in\mathbb{R}^{N\times N},
+\]
+
+\[
+    \Sigma\in\mathbb{R}^{N\times D},
+\]
+
+\[
+    V\in\mathbb{R}^{D\times D}.
+\]
+
+Die Kovarianzmatrix ist:
+
+\[
+    S
+    =
+    \frac{1}{N}
+    \tilde{X}^{\top}\tilde{X}.
+\]
+
+Einsetzen der SVD:
+
+\[
+    \tilde{X}^{\top}\tilde{X}
+    =
+    (A\Sigma V^{\top})^{\top}
+    (A\Sigma V^{\top}).
+\]
+
+Also:
+
+\[
+    \tilde{X}^{\top}\tilde{X}
+    =
+    V\Sigma^{\top}A^{\top}
+    A\Sigma V^{\top}.
+\]
+
+Da \(A\) orthogonal ist:
+
+\[
+    A^{\top}A=I.
+\]
+
+Somit:
+
+\[
+    \tilde{X}^{\top}\tilde{X}
+    =
+    V\Sigma^{\top}\Sigma V^{\top}.
+\]
+
+Also:
+
+\[
+    S
+    =
+    V
+    \left(
+        \frac{1}{N}
+        \Sigma^{\top}\Sigma
+    \right)
+    V^{\top}.
+\]
+
+\begin{conceptbox}
+Die rechten Singulärvektoren der zentrierten Datenmatrix sind die PCA-Richtungen.
+
+Die Eigenwerte der Kovarianzmatrix hängen mit den quadrierten Singulärwerten zusammen.
+\end{conceptbox}
+
+Wenn \(\sigma_j\) der \(j\)-te Singulärwert ist, dann gilt:
+
+\[
+    \lambda_j
+    =
+    \frac{\sigma_j^2}{N}.
+\]
+
+Je nach Konvention wird statt \(N\) auch \(N-1\) verwendet.
+
+\section{PCA für Visualisierung}
+
+Eine häufige Anwendung von PCA ist Visualisierung.
+Dazu setzt man:
+
+\[
+    M=2
+\]
+
+oder
+
+\[
+    M=3.
+\]
+
+Dann kann man Datenpunkte in zwei oder drei Dimensionen darstellen:
+
+\[
+    \vec{z}_n
+    =
+    U_M^{\top}
+    (\vec{x}_n-\vec{\mu}).
+\]
+
+\begin{notebox}
+PCA-Visualisierung zeigt nur lineare Projektionen.
+
+Wenn die interessante Struktur nichtlinear ist, kann PCA sie möglicherweise nicht gut sichtbar machen.
+\end{notebox}
+
+Für nichtlineare Visualisierung verwendet man oft Methoden wie \(t\)-SNE oder UMAP.
+Diese sind aber schwieriger zu interpretieren und haben eigene Hyperparameter.
+
+\section{PCA für Rauschreduktion}
+
+Wenn Rauschen vor allem in Richtungen kleiner Varianz liegt, kann PCA zur Rauschreduktion verwendet werden.
+Man behält die Hauptkomponenten mit großen Eigenwerten und verwirft die mit kleinen Eigenwerten.
+
+\[
+    \vec{x}
+    \quad
+    \longrightarrow
+    \quad
+    \vec{z}
+    =
+    U_M^{\top}
+    (\vec{x}-\vec{\mu})
+    \quad
+    \longrightarrow
+    \quad
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    U_M\vec{z}.
+\]
+
+\begin{conceptbox}
+PCA-Rauschreduktion funktioniert gut, wenn Signal in Richtungen großer Varianz liegt und Rauschen in Richtungen kleiner Varianz.
+
+Diese Annahme ist nicht immer erfüllt.
+\end{conceptbox}
+
+\section{PCA und Kompression}
+
+PCA kann auch als lineare Kompression verstanden werden.
+Ein Datenpunkt in \(\mathbb{R}^D\) wird durch \(M\) Koeffizienten beschrieben:
+
+\[
+    \vec{z}\in\mathbb{R}^M,
+\]
+
+wobei
+
+\[
+    M<D.
+\]
+
+Zusätzlich braucht man den Mittelwert \(\vec{\mu}\) und die Komponenten \(U_M\), um zu rekonstruieren.
+
+\[
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    U_M\vec{z}.
+\]
+
+\begin{examplebox}
+Ein Bildvektor mit
+
+\[
+    D=784
+\]
+
+Pixelwerten könnte mit
+
+\[
+    M=50
+\]
+
+PCA-Koeffizienten approximiert werden.
+
+Das ist eine starke Reduktion der Dimension.
+\end{examplebox}
+
+\section{PCA und Klassifikation}
+
+PCA ist unüberwacht (unsupervised).
+Das bedeutet:
+PCA verwendet die Labels nicht.
+
+PCA sucht Richtungen großer Varianz in den Eingaben \(\vec{x}\), nicht Richtungen, die besonders gut Klassen trennen.
+
+\begin{notebox}
+PCA kann für Klassifikation hilfreich sein, muss es aber nicht.
+
+Eine Richtung mit kleiner Varianz kann für die Klassentrennung sehr wichtig sein.
+PCA könnte diese Richtung verwerfen.
+\end{notebox}
+
+Wenn das Ziel Klassifikation ist, sollte die Anzahl der PCA-Komponenten oft mit Validierungsdaten gewählt werden.
+
+\section{Probabilistische Interpretation}
+
+PCA kann auch probabilistisch interpretiert werden.
+In probabilistischer PCA (probabilistic PCA) nimmt man an, dass Daten aus einem niedrigdimensionalen latenten Vektor entstehen:
+
+\[
+    \vec{z}
+    \in
+    \mathbb{R}^M.
+\]
+
+Ein lineares generatives Modell ist:
+
+\[
+    \vec{x}
+    =
+    W\vec{z}
+    +
+    \vec{\mu}
+    +
+    \vec{\epsilon}.
+\]
+
+Dabei ist:
+
+\[
+    \vec{\epsilon}
+    \sim
+    \mathcal{N}(\vec{0},\sigma^2 I).
+\]
+
+\begin{conceptbox}
+Probabilistische PCA betrachtet PCA als generatives Modell mit latenten Variablen.
+
+Die beobachteten Daten entstehen aus niedrigdimensionalen latenten Faktoren plus Gaußschem Rauschen.
+\end{conceptbox}
+
+Die Details der probabilistischen PCA gehen über die klassische PCA hinaus, sind aber wichtig für den Zusammenhang zu latenten Variablenmodellen und Gaussian Mixture Models.
+
+\section{Lineare und nichtlineare Dimensionsreduktion}
+
+PCA ist linear.
+Das heißt:
+Die reduzierte Darstellung entsteht durch lineare Projektion.
+
+Viele Daten liegen aber auf nichtlinearen Mannigfaltigkeiten (manifolds).
+Dann kann lineare PCA unzureichend sein.
+
+Nichtlineare Methoden sind zum Beispiel:
+
+\begin{itemize}
+    \item Kernel PCA,
+    \item Isomap,
+    \item Locally Linear Embedding,
+    \item \(t\)-SNE,
+    \item UMAP,
+    \item Autoencoder.
+\end{itemize}
+
+\begin{notebox}
+Nichtlineare Methoden können komplexere Strukturen erfassen, sind aber oft schwerer zu interpretieren.
+
+PCA bleibt wichtig, weil sie einfach, schnell, stabil und mathematisch gut verstanden ist.
+\end{notebox}
+
+\section{PCA im Vergleich zu Autoencodern}
+
+Ein Autoencoder ist ein neuronales Netz, das lernt, Eingaben zu rekonstruieren.
+
+Encoder:
+
+\[
+    \vec{z}
+    =
+    f_{\mathrm{enc}}(\vec{x}).
+\]
+
+Decoder:
+
+\[
+    \hat{\vec{x}}
+    =
+    f_{\mathrm{dec}}(\vec{z}).
+\]
+
+Das Training minimiert typischerweise:
+
+\[
+    \sum_{n=1}^{N}
+    \|\vec{x}_n-\hat{\vec{x}}_n\|^2.
+\]
+
+Wenn Encoder und Decoder linear sind und der Fehler quadratisch ist, hängt der Autoencoder eng mit PCA zusammen.
+
+\begin{conceptbox}
+PCA kann als lineares Rekonstruktionsmodell verstanden werden.
+
+Autoencoder verallgemeinern diese Idee mit nichtlinearen Encodern und Decodern.
+\end{conceptbox}
+
+\section{Praktische Aspekte}
+
+\subsection{Vorverarbeitung}
+
+Vor PCA sollte man meistens:
+
+\begin{itemize}
+    \item fehlende Werte behandeln,
+    \item Daten zentrieren,
+    \item je nach Problem standardisieren,
+    \item Ausreißer prüfen.
+\end{itemize}
+
+\subsection{Ausreißer}
+
+PCA kann empfindlich gegenüber Ausreißern sein.
+Ein einzelner extremer Datenpunkt kann die Kovarianzmatrix und damit die Hauptkomponenten stark beeinflussen.
+
+\subsection{Interpretierbarkeit}
+
+Die Hauptkomponenten sind Linearkombinationen der ursprünglichen Merkmale:
+
+\[
+    z_j
+    =
+    \vec{u}_j^{\top}
+    (\vec{x}-\vec{\mu}).
+\]
+
+Die Einträge von \(\vec{u}_j\) heißen Loadings.
+Sie zeigen, welche ursprünglichen Merkmale stark zur Komponente beitragen.
+
+\begin{definitionbox}
+Loadings sind die Einträge eines Hauptkomponentenvektors \(\vec{u}_j\).
+
+Sie beschreiben, wie stark jedes ursprüngliche Merkmal in die jeweilige Hauptkomponente eingeht.
+\end{definitionbox}
+
+\section{Häufige Fehler}
+
+\begin{examtipbox}
+Typische Fehler bei PCA und Dimensionsreduktion:
+
+\begin{enumerate}
+    \item Daten vor PCA nicht zentrieren.
+    \item PCA auf allen Daten fitten und dadurch Data Leakage erzeugen.
+    \item PCA-Komponenten mit ursprünglichen Merkmalen verwechseln.
+    \item Denken, PCA verwende Labels.
+    \item Hohe erklärte Varianz mit guter Klassifikationsleistung gleichsetzen.
+    \item Standardisierung vergessen, obwohl Merkmale unterschiedliche Einheiten haben.
+    \item Eigenwerte und Eigenvektoren verwechseln.
+    \item Die Dimensionen von \(U_M\), \(\vec{z}\) und \(\vec{x}\) verwechseln.
+    \item PCA als nichtlineare Methode interpretieren.
+    \item Rekonstruktionsfehler und Klassifikationsfehler verwechseln.
+    \item Scree Plot als exakte mathematische Regel statt als Diagnosewerkzeug verstehen.
+\end{enumerate}
+\end{examtipbox}
+
+\section{Mini-Aufgaben}
+
+\subsection{Aufgabe 1: Zentrierung}
+
+Gegeben seien eindimensionale Daten:
+
+\[
+    x_1=2,
+    \qquad
+    x_2=4,
+    \qquad
+    x_3=6.
+\]
+
+Berechne den Mittelwert und die zentrierten Daten.
+
+\begin{examplebox}
+Der Mittelwert ist:
+
+\[
+    \mu
+    =
+    \frac{2+4+6}{3}
+    =
+    4.
+\]
+
+Die zentrierten Daten sind:
+
+\[
+    \tilde{x}_1=2-4=-2,
+\]
+
+\[
+    \tilde{x}_2=4-4=0,
+\]
+
+\[
+    \tilde{x}_3=6-4=2.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 2: Erklärte Varianz}
+
+Gegeben seien Eigenwerte:
+
+\[
+    \lambda_1=5,
+    \qquad
+    \lambda_2=3,
+    \qquad
+    \lambda_3=2.
+\]
+
+Wie viel Varianz erklären die ersten zwei Hauptkomponenten?
+
+\begin{examplebox}
+Die Gesamtvarianz ist:
+
+\[
+    \lambda_1+\lambda_2+\lambda_3
+    =
+    5+3+2
+    =
+    10.
+\]
+
+Die ersten zwei Komponenten erklären:
+
+\[
+    \lambda_1+\lambda_2
+    =
+    5+3
+    =
+    8.
+\]
+
+Der erklärte Varianzanteil ist:
+
+\[
+    r_2
+    =
+    \frac{8}{10}
+    =
+    0{,}8.
+\]
+
+Also erklären die ersten zwei Hauptkomponenten
+
+\[
+    80\%
+\]
+
+der Varianz.
+\end{examplebox}
+
+\subsection{Aufgabe 3: Projektion}
+
+Gegeben sei
+
+\[
+    \vec{x}
+    =
+    \begin{pmatrix}
+        3 \\
+        4
+    \end{pmatrix},
+    \qquad
+    \vec{\mu}
+    =
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix},
+\]
+
+und die Hauptkomponente
+
+\[
+    \vec{u}_1
+    =
+    \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}.
+\]
+
+Berechne die eindimensionale PCA-Koordinate \(z_1\).
+
+\begin{examplebox}
+Zuerst zentrieren:
+
+\[
+    \tilde{\vec{x}}
+    =
+    \vec{x}-\vec{\mu}
+    =
+    \begin{pmatrix}
+        3 \\
+        4
+    \end{pmatrix}
+    -
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        2 \\
+        3
+    \end{pmatrix}.
+\]
+
+Dann projizieren:
+
+\[
+    z_1
+    =
+    \vec{u}_1^{\top}\tilde{\vec{x}}
+    =
+    \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        1 & 1
+    \end{pmatrix}
+    \begin{pmatrix}
+        2 \\
+        3
+    \end{pmatrix}.
+\]
+
+Also:
+
+\[
+    z_1
+    =
+    \frac{1}{\sqrt{2}}
+    (2+3)
+    =
+    \frac{5}{\sqrt{2}}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 4: Rekonstruktion}
+
+Verwende die Werte aus Aufgabe 3 und rekonstruiere \(\hat{\vec{x}}\) aus einer Komponente.
+
+\begin{examplebox}
+Die Rekonstruktion ist:
+
+\[
+    \hat{\vec{x}}
+    =
+    \vec{\mu}
+    +
+    \vec{u}_1z_1.
+\]
+
+Einsetzen:
+
+\[
+    \vec{u}_1z_1
+    =
+    \frac{1}{\sqrt{2}}
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}
+    \frac{5}{\sqrt{2}}
+    =
+    \frac{5}{2}
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}.
+\]
+
+Also:
+
+\[
+    \vec{u}_1z_1
+    =
+    \begin{pmatrix}
+        2{,}5 \\
+        2{,}5
+    \end{pmatrix}.
+\]
+
+Damit:
+
+\[
+    \hat{\vec{x}}
+    =
+    \begin{pmatrix}
+        1 \\
+        1
+    \end{pmatrix}
+    +
+    \begin{pmatrix}
+        2{,}5 \\
+        2{,}5
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        3{,}5 \\
+        3{,}5
+    \end{pmatrix}.
+\]
+\end{examplebox}
+
+\subsection{Aufgabe 5: Dimensionen}
+
+Gegeben sei eine Datenmatrix mit
+
+\[
+    N=100
+\]
+
+Datenpunkten und
+
+\[
+    D=20
+\]
+
+Merkmalen.
+PCA soll auf
+
+\[
+    M=3
+\]
+
+Dimensionen reduzieren.
+Welche Dimensionen haben \(\tilde{X}\), \(S\), \(U_M\) und \(Z\)?
+
+\begin{examplebox}
+Die zentrierte Datenmatrix ist:
+
+\[
+    \tilde{X}\in\mathbb{R}^{100\times 20}.
+\]
+
+Die Kovarianzmatrix ist:
+
+\[
+    S\in\mathbb{R}^{20\times 20}.
+\]
+
+Die ersten \(M=3\) Hauptkomponenten bilden:
+
+\[
+    U_M\in\mathbb{R}^{20\times 3}.
+\]
+
+Die projizierten Daten sind:
+
+\[
+    Z=\tilde{X}U_M
+    \in
+    \mathbb{R}^{100\times 3}.
+\]
+\end{examplebox}
+
+\section{Zusammenfassung}
+
+\begin{itemize}
+    \item Dimensionsreduktion (dimensionality reduction) bildet Daten aus \(\mathbb{R}^D\) nach \(\mathbb{R}^M\) ab, wobei \(M<D\).
+    \item PCA (principal component analysis) ist eine lineare Methode zur Dimensionsreduktion.
+    \item PCA sucht Richtungen maximaler Varianz.
+    \item Die Daten müssen vor PCA zentriert werden:
+    \[
+        \tilde{\vec{x}}_n
+        =
+        \vec{x}_n-\vec{\mu}.
+    \]
+    \item Die empirische Kovarianzmatrix ist:
+    \[
+        S
+        =
+        \frac{1}{N}
+        \tilde{X}^{\top}\tilde{X}.
+    \]
+    \item Die Varianz in Richtung \(\vec{u}\) ist:
+    \[
+        \vec{u}^{\top}S\vec{u}.
+    \]
+    \item Die Hauptkomponenten sind Eigenvektoren von \(S\):
+    \[
+        S\vec{u}_j
+        =
+        \lambda_j\vec{u}_j.
+    \]
+    \item Die Eigenwerte \(\lambda_j\) geben die erklärte Varianz der Komponenten an.
+    \item Die PCA-Projektion ist:
+    \[
+        \vec{z}
+        =
+        U_M^{\top}(\vec{x}-\vec{\mu}).
+    \]
+    \item Die PCA-Rekonstruktion ist:
+    \[
+        \hat{\vec{x}}
+        =
+        \vec{\mu}
+        +
+        U_MU_M^{\top}
+        (\vec{x}-\vec{\mu}).
+    \]
+    \item PCA minimiert den quadratischen Rekonstruktionsfehler unter allen linearen \(M\)-dimensionalen Unterräumen.
+    \item Der erklärte Varianzanteil ist:
+    \[
+        r_M
+        =
+        \frac{\sum_{j=1}^{M}\lambda_j}
+        {\sum_{j=1}^{D}\lambda_j}.
+    \]
+    \item PCA ist unüberwacht und verwendet keine Labels.
+    \item PCA muss bei ML-Workflows nur auf Trainingsdaten gefittet werden, um Data Leakage zu vermeiden.
+\end{itemize}
+
+\section{Typische Prüfungsfragen}
+
+\begin{examtipbox}
+Mögliche Prüfungsfragen zu diesem Kapitel:
+
+\begin{enumerate}
+    \item Was ist Dimensionsreduktion?
+    \item Warum kann hohe Dimensionalität problematisch sein?
+    \item Was ist der Fluch der Dimensionalität?
+    \item Was ist PCA?
+    \item Warum müssen Daten vor PCA zentriert werden?
+    \item Definiere die empirische Kovarianzmatrix.
+    \item Zeige, dass die Kovarianzmatrix positiv semidefinit ist.
+    \item Was bedeutet Varianz in einer Richtung?
+    \item Leite das Eigenwertproblem der PCA mit Lagrange-Multiplikatoren her.
+    \item Warum ist die erste Hauptkomponente der Eigenvektor zum größten Eigenwert?
+    \item Warum sind Hauptkomponenten orthogonal?
+    \item Wie projiziert man einen Datenpunkt auf die ersten \(M\) Hauptkomponenten?
+    \item Wie rekonstruiert man einen Datenpunkt aus PCA-Koordinaten?
+    \item Was ist Rekonstruktionsfehler?
+    \item Erkläre die Äquivalenz zwischen maximaler Varianz und minimalem Rekonstruktionsfehler.
+    \item Was ist erklärte Varianz?
+    \item Wie wählt man die Anzahl der Komponenten?
+    \item Warum kann PCA für Klassifikation ungeeignet sein?
+    \item Wie hängt PCA mit SVD zusammen?
+    \item Was ist Whitening?
+    \item Warum kann PCA Data Leakage verursachen?
+    \item Was ist der Unterschied zwischen PCA und Autoencodern?
+\end{enumerate}
+\end{examtipbox}
