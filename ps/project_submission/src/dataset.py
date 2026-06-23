@@ -14,8 +14,7 @@ from sklearn.model_selection import train_test_split
 
 
 def load_labels(data_root: str | Path) -> pd.DataFrame:
-    """Load labels.csv from the dataset folder.
-    """
+    """Load labels.csv from the dataset folder."""
     data_root = Path(data_root)
     labels_path = data_root / "labels.csv"
 
@@ -53,8 +52,7 @@ def load_labels(data_root: str | Path) -> pd.DataFrame:
 
 
 def make_label_mapping(labels) -> Tuple[dict[str, int], dict[int, str]]:
-    """Create label mappings.
-    """
+    """Create label mappings."""
     classes = sorted(pd.Series(labels).astype(str).unique().tolist())
     label_to_idx = {label: idx for idx, label in enumerate(classes)}
     idx_to_label = {idx: label for label, idx in label_to_idx.items()}
@@ -62,7 +60,8 @@ def make_label_mapping(labels) -> Tuple[dict[str, int], dict[int, str]]:
 
 
 def make_transforms(image_size: int = 64, augment: bool = False):
-    """    Preprocessing pipeline.
+    """
+    Preprocessing pipeline.
 
     - grayscale
     - resize
