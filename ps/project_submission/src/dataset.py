@@ -1,5 +1,3 @@
-kannst du jede zeile einmal dahiner kommentieren was das macht
-
 from __future__ import annotations
 
 from pathlib import Path
