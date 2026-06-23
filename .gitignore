@@ -1,11 +1,15 @@
+*/.venv
+
 # Python
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
 # Datasets / große Trainingsdaten
+*.zip
 ps/project/sign_lang_train/
 ps/project/sign_lang_train.zip
+ps/project_submission/sign_lang_train
 
 # LaTeX build files
 *.aux
@@ -25,3 +29,4 @@ ps/project/sign_lang_train.zip
 *.snm
 *.vrb
 *.xdv
+
