@@ -76,8 +76,8 @@ Accuracy is sample-based, so frequent classes influence it more strongly. Macro-
 
 ## Future work
 
-A CNN would likely be better suited for image classification, because it can exploit local spatial structure. Due to time and computational constraints, this submission focuses on a reliable Logistic Regression / MLP comparison and mentions CNNs as a possible improvement.
+We did not implement a CNN in this version. This could be tried later.
 
 ## AI assistance
 
-AI assistance was used for code structuring, debugging support, and documentation wording. The final code was reviewed, adapted, executed, and checked by the authors. The implemented training pipeline, model architecture, evaluation procedure, and reported results can be explained by the authors.
+AI tools were used for debugging and code organization. We checked and ran the final code ourselves.
